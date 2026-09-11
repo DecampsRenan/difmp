@@ -479,6 +479,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             })
             produced = {
               ...pendingResult(criterion, hash),
+              evaluator: { kind: "model", provider: provider.id, model: provider.modelId },
               status: "inconclusive",
               observed: "the token budget was exhausted before this criterion could be evaluated",
               limitations: decision.error.message,
@@ -521,14 +522,32 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
                   requestedBy: "verifier",
                   note: outcomeValue.hint
                 })
-                return
+                // ... but the final pass IS the last chance. Leaving the criterion `pending` would
+                // record "never looked at" for something that was looked at and could not be
+                // settled: it resolves to `inconclusive`, naming what was missing.
+                if (requestedBy !== "runner") return
+                produced = {
+                  ...pendingResult(criterion, hash),
+                  evaluator: { kind: "model", provider: provider.id, model: provider.modelId },
+                  status: "inconclusive",
+                  observed: `the available evidence does not settle this criterion: ${
+                    outcomeValue.missing.join("; ")
+                  }`,
+                  limitations: outcomeValue.hint,
+                  evaluatedAtSeq: seq
+                }
+              } else {
+                produced = outcomeValue.result
               }
-              produced = outcomeValue.result
             }
           }
         }
 
-        const guarded = enforceEvidenceIntegrity({ result: produced, attemptArtifacts })
+        // Re-read the inventory: a code check mints its own probe evidence WHILE it runs, so the
+        // snapshot taken before the evaluation would reject the very artifact it just produced.
+        // The integrity rule is unchanged — the id must exist and belong to this attempt.
+        const knownArtifacts = yield* store.attemptArtifacts(attemptId)
+        const guarded = enforceEvidenceIntegrity({ result: produced, attemptArtifacts: knownArtifacts })
         results.set(criterionId, guarded)
         yield* emit({ type: "verificationFinished", attemptId, criterionId, result: guarded })
       })
@@ -558,13 +577,40 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
           return { ...base, status: "error", observed: binding.failure.message, evaluatedAtSeq: seq }
         }
 
+        // A check's probe output is journalled AND persisted: an artifact the report can cite must
+        // have something behind it, so the payload is written next to the attempt's other evidence.
         const recordEvidence = (e: { readonly label: string; readonly data: unknown }): Promise<string> =>
-          Effect.runPromise(
-            registerArtifact(
-              { kind: "check-evidence", state: "present", label: e.label },
-              { summary: `check evidence "${e.label}"`, data: e.data, sourceSeq: seq }
-            )
-          )
+          Effect.runPromise(Effect.gen(function*() {
+            const id = yield* store.mintArtifactId(attemptId)
+            const relative = `attempts/${attemptId}/evidence/${id}.json`
+            const body = `${JSON.stringify({ label: e.label, data: e.data }, null, 2)}\n`
+            const written = yield* store.writeRunFile(relative, body).pipe(Effect.result)
+            const now = DateTime.formatIso(yield* DateTime.now)
+            const failed = written._tag === "Failure"
+            yield* store.recordArtifact({
+              artifactId: id,
+              attemptId,
+              kind: "check-evidence",
+              label: e.label,
+              ...(failed ? {} : { path: relative }),
+              state: failed ? "failed" : "present",
+              ...(failed ? { reason: written.failure.message } : {}),
+              ts: now,
+              sourceSeq: seq
+            }).pipe(Effect.ignore)
+            if (!failed) {
+              evidenceIndex.set(id, {
+                artifactId: id,
+                kind: "check-evidence",
+                label: e.label,
+                capturedAt: now,
+                sourceSeq: seq,
+                summary: `check evidence "${e.label}"`,
+                data: e.data
+              })
+            }
+            return id
+          }))
 
         const executed = yield* Effect.tryPromise({
           try: () =>

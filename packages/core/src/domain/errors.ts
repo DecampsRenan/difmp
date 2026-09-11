@@ -48,7 +48,7 @@ export class ConfigInvalidError extends Schema.TaggedError<ConfigInvalidError>()
 
 /** A fixture or check name does not resolve in the project registry, or is bound to the wrong criterion. */
 export class RegistryError extends Schema.TaggedError<RegistryError>()("RegistryError", {
-  kind: Schema.Literals(["fixture", "check"]),
+  kind: Schema.Literals(["fixture", "check", "script"]),
   name: Schema.String,
   reason: Schema.String,
   registered: Schema.Array(Schema.String)

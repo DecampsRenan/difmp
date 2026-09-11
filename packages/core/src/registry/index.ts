@@ -74,8 +74,33 @@ export interface CheckResult {
 
 export type Check = (ctx: CheckContext) => Promise<CheckResult>
 
+/**
+ * What a scripted-adapter script factory is given. A deterministic script has to name real
+ * accessible controls and real input values, and both are only known once the run id exists and
+ * the inputs are resolved — so the registry holds FACTORIES, not finished scripts.
+ *
+ * Core stays free of any model SDK: the returned value is opaque here and is typed by the package
+ * that owns the scripted adapter (`@harness/agent-runtime`).
+ */
+export interface ScriptFactoryContext {
+  readonly runId: string
+  readonly attemptId: string
+  readonly scenarioId: string
+  /** Relative to the config root, exactly as it appears in the contract. */
+  readonly specPath: string
+  readonly baseUrl: string
+  /** Resolved inputs (config < spec < --inputs-file < --input), with `{{ run.id }}` substituted. */
+  readonly inputs: InputsRecord
+  /** Criterion ids in source order — a script asks for `check` by id. */
+  readonly criterionIds: ReadonlyArray<string>
+}
+
+export type ScriptFactory<A = unknown> = (ctx: ScriptFactoryContext) => A
+
+export type RegistryKind = "fixture" | "check" | "script"
+
 export interface Registry<A> {
-  readonly kind: "fixture" | "check"
+  readonly kind: RegistryKind
   readonly names: ReadonlyArray<string>
   readonly has: (name: string) => boolean
   readonly lookup: (name: string) => Effect.Effect<A, RegistryError>
@@ -83,7 +108,7 @@ export interface Registry<A> {
 
 /** Names are NEVER paths or code: a spec can only reference what the project registered. */
 export const makeRegistry = <A>(
-  kind: "fixture" | "check",
+  kind: RegistryKind,
   entries: Readonly<Record<string, A>> = {}
 ): Registry<A> => {
   const names = Object.keys(entries).sort()
@@ -101,17 +126,23 @@ export const makeRegistry = <A>(
 export interface Registries {
   readonly fixtures: Registry<Fixture>
   readonly checks: Registry<Check>
+  /**
+   * Optional: only a run using the deterministic (scripted) adapter resolves a name here. It is
+   * declared in `harness.config.ts` next to `fixtures` and `checks` and, like them, a name is
+   * never a module path.
+   */
+  readonly scripts?: Registry<ScriptFactory>
 }
 
 /** Reject a registry value that is not a function before a spec ever references it. */
 export const validateRegistryShape = (
-  kind: "fixture" | "check",
+  kind: RegistryKind,
   entries: unknown
 ): Effect.Effect<Readonly<Record<string, unknown>>, RegistryError> => {
   if (entries === undefined) return Effect.succeed({})
   if (typeof entries !== "object" || entries === null || Array.isArray(entries)) {
     return Effect.fail(
-      new RegistryError({ kind, name: kind === "fixture" ? "fixtures" : "checks", reason: "must be an object mapping names to functions", registered: [] })
+      new RegistryError({ kind, name: `${kind}s`, reason: "must be an object mapping names to functions", registered: [] })
     )
   }
   const record = entries as Record<string, unknown>

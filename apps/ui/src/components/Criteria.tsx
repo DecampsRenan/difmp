@@ -51,8 +51,10 @@ export const Criteria = (props: { readonly criteria: ReadonlyArray<CriterionView
               <li key={criterion.id} className="criterion" data-testid={`criterion-${criterion.id}`}>
                 <div className="criterion-head">
                   <code className="criterion-id">{criterion.id}</code>
-                  <Badge tone={statusTone[criterion.status]}>
-                    <span data-testid={`criterion-status-${criterion.id}`}>{statusLabel[criterion.status]}</span>
+                  <Badge tone={statusTone[criterion.status]} title={statusLabel[criterion.status]}>
+                    {/* The domain literal, not a translation: it is what `result.json`, `junit.xml`
+                        and the console reporter print, so it stays greppable across artefacts. */}
+                    <span data-testid={`criterion-status-${criterion.id}`}>{criterion.status}</span>
                   </Badge>
                   <span
                     className={`method method-${criterion.method ?? "unknown"}`}

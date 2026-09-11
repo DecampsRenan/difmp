@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "specPath": "../scenarios/project-create.e2e.md",
+  "id": "project-create",
+  "tags": [
+    "smoke",
+    "projects"
+  ],
+  "fixtureName": "authenticated-workspace",
+  "body": "\n# Créer un projet\n\nDepuis l'accueil de l'espace de travail Espace r_fttvannvtzn4m-a1, créer un projet nommé\nProjet r_fttvannvtzn4m.\n\nUtiliser le parcours proposé à un utilisateur standard.\n\nRecharger ensuite la page pour observer l'état réellement conservé par l'application.\n\nLes résultats attendus sont décrits dans verification.\n",
+  "criteria": [
+    {
+      "id": "c1",
+      "text": "Le projet Projet r_fttvannvtzn4m apparaît dans la liste des projets après sa création.",
+      "sourceText": "Le projet {{ projectName }} apparaît dans la liste des projets après sa création.",
+      "line": 11,
+      "column": 5,
+      "method": "model"
+    },
+    {
+      "id": "c2",
+      "text": "Le projet Projet r_fttvannvtzn4m est toujours présent dans la liste des projets après un rechargement complet de la page.",
+      "sourceText": "Le projet {{ projectName }} est toujours présent dans la liste des projets après un rechargement complet de la page.",
+      "line": 12,
+      "column": 5,
+      "method": "model"
+    },
+    {
+      "id": "c3",
+      "text": "Après ce rechargement, la liste affichée ne contient qu'une seule entrée portant le nom Projet r_fttvannvtzn4m. Cette attente porte uniquement sur ce que la liste affiche : elle ne dit rien de ce qui est enregistré côté serveur, et une liste filtrée ou paginée ne permet pas d'en déduire une unicité globale.",
+      "sourceText": "Après ce rechargement, la liste affichée ne contient qu'une seule entrée portant le nom {{ projectName }}. Cette attente porte uniquement sur ce que la liste affiche : elle ne dit rien de ce qui est enregistré côté serveur, et une liste filtrée ou paginée ne permet pas d'en déduire une unicité globale.",
+      "line": 13,
+      "column": 5,
+      "method": "model"
+    }
+  ],
+  "inputs": {
+    "projectName": "Projet r_fttvannvtzn4m"
+  },
+  "maxActions": 25,
+  "budgets": {
+    "attemptTimeoutMs": 90000,
+    "operationTimeoutMs": 15000,
+    "maxModelCalls": 40,
+    "maxTokens": 200000,
+    "verifierReserveTokens": 20000,
+    "fixtureCleanupTimeoutMs": 15000
+  },
+  "hashes": {
+    "spec": "e880ac1ae62012d7d05f905cc64446eb3593f98a9b5ac41d12a28070c76b97c3",
+    "contract": "76cd363a17487c70374c26aeb09df3999240fec4621e1b7d6fbac5f0f7462ec8",
+    "criteria": {
+      "c1": "b3b6eed51425e15d744e78aa28708f8274c8c25d3510f83fa204722a4017aeba",
+      "c2": "722bf6ab6038dd3e087098475b73dd63805aeb17de63586527104eb778cc83e7",
+      "c3": "9a396f13e04d7e8ba061aa249eb916d21bb9f5c40fa8886f1a0e4e2418632c07"
+    },
+    "prompts": {}
+  }
+}

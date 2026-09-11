@@ -41,15 +41,51 @@ export const toOverrides = (flags: OverrideFlags): Effect.Effect<ConfigOverrides
     }
   })
 
-const secretish = /(key|token|secret|password|credential|auth)/i
+/**
+ * Words that make a KEY look like a credential. Matching is per word, not per substring, so
+ * `maxTokens` and `verifierReserveTokens` — plural, and a count of units, never a credential —
+ * are printed, while `token`, `sessionToken` and `apiKey` are not.
+ */
+const secretWords = new Set([
+  "key",
+  "keys",
+  "apikey",
+  "token",
+  "secret",
+  "secrets",
+  "password",
+  "passwd",
+  "credential",
+  "credentials",
+  "auth",
+  "authorization",
+  "bearer",
+  "cookie",
+  "cookies",
+  "session"
+])
 
-/** Never print a value that looks like a credential, whatever the project put in `providerOptions`. */
-export const redactProviderOptions = (
+/** `apiKeyEnvVar` -> ["api","key","env","var"]; `api_key` -> ["api","key"]. */
+const words = (key: string): ReadonlyArray<string> =>
+  key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .split(/[^A-Za-z0-9]+|\s+/)
+    .filter((w) => w !== "")
+    .map((w) => w.toLowerCase())
+
+export const looksSensitive = (key: string): boolean => words(key).some((w) => secretWords.has(w))
+
+/**
+ * Never print a value whose key looks like a credential, whatever the project put in the config.
+ * Real secrets belong in environment variables — `apiKeyEnvVar` names a variable, not a value —
+ * but a project can still put something sensitive in `inputs` or `providerOptions` by mistake.
+ */
+export const redactSensitive = (
   options: Readonly<Record<string, unknown>>
 ): Readonly<Record<string, unknown>> => {
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(options)) {
-    out[key] = secretish.test(key) ? "«redacted»" : value
+    out[key] = looksSensitive(key) ? "«redacted»" : value
   }
   return out
 }
@@ -72,13 +108,13 @@ export const describeConfig = (options: {
   row("allowedOrigins", config.allowedOrigins.join(", "))
   row("provider", config.provider)
   row("model", config.model ?? "(provider default — none set)")
-  row("providerOptions", JSON.stringify(redactProviderOptions(config.providerOptions)))
+  row("providerOptions", JSON.stringify(redactSensitive(config.providerOptions)))
   row("maxActions", `${config.maxActions} (indicative only)`)
   row("budgets", JSON.stringify(config.budgets))
   row("capture", JSON.stringify(config.capture))
   row("outputDir", options.outputDir)
   row("reporters", config.reporters.join(", "))
-  row("inputs", JSON.stringify(config.inputs))
+  row("inputs", JSON.stringify(redactSensitive(config.inputs)))
   row("include", JSON.stringify(config.include))
   row("exclude", JSON.stringify(config.exclude))
   row("scenarios", `${options.specs.length}`)

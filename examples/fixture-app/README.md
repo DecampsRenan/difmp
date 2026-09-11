@@ -16,7 +16,9 @@ node dist/main.js --port 3000 --variant healthy --seed
 
 CLI flags: `--port N` (default 0 → ephemeral), `--variant <variant>`, `--persist-dir DIR`,
 `--seed` (create a demo workspace/user/session at boot and print the credentials),
-`--no-seed-endpoints` (disable the test-only endpoints entirely).
+`--seed-email E` / `--seed-password P` (fixed demo credentials instead of random ones — what a
+scenario that signs in through the UI needs, since it has to write them in its own text; they imply
+`--seed`), `--no-seed-endpoints` (disable the test-only endpoints entirely).
 
 The server **always binds 127.0.0.1 only** — never `0.0.0.0`.
 

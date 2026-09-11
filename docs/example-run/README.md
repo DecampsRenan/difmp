@@ -1,0 +1,35 @@
+# Example run — `project-create` against the `false-success` variant
+
+A real, unedited run directory, produced by:
+
+```sh
+node examples/fixture-app/dist/main.js --port 0 --variant false-success --seed   # note the URL + x-seed-token it prints
+HARNESS_BASE_URL=<url> FIXTURE_APP_SEED_TOKEN=<token> \
+  node apps/cli/dist/bin/harness.js run examples/scenarios/project-create.e2e.md \
+       --config examples/support/harness.config.ts
+```
+
+`runs/` is gitignored, so this is a copy. **One file was pruned: `attempts/a1/trace.zip`
+(1.3 MB).** It is still listed in `artifacts.json` as `art_9`, `state: "present"` — that record
+describes the run as it happened, and editing it to hide the pruning would be a lie about the
+evidence. Everything else is byte-for-byte what the harness wrote.
+
+## What it shows
+
+The `false-success` variant answers `201 Created` and the page optimistically adds the project to
+the list — but nothing is written server-side. The verdicts split exactly where they should:
+
+| criterion | status | why |
+| --- | --- | --- |
+| c1 — appears in the list after creation | `passed` | `art_2` (aria snapshot after submit) contains the project |
+| c2 — still present after a full reload | `failed` | `art_5` (aria snapshot after the reload) does not |
+| c3 — exactly one entry with that name after the reload | `failed` | no entry of that name is visible at all |
+
+Run verdict: `failed`, CLI exit code `1`. `attempts/a1/network.jsonl` carries the `201` that made
+the UI believe the creation had worked, which is what makes the diagnosis legible.
+
+Open `report.html` directly in a browser — it is standalone and offline, and the screenshots and
+snapshots it links are the relative paths under `attempts/a1/`.
+
+`manifest.json` names the adapter: `scripted`. A scripted run exercises the harness's decisions and
+real Playwright against the demo app; it is never evidence that a model can navigate.

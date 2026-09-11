@@ -1,5 +1,6 @@
 import type { ReportInput, ReportOutput, ReporterName, RunResult } from "@harness/core"
 import { Reporter } from "@harness/core"
+import type { RunOutcome } from "./runOne.js"
 import { fileReporterLayer } from "@harness/reporting"
 import { Console, Effect, FileSystem, Path } from "effect"
 import { ExecutionError } from "./errors.js"
@@ -51,9 +52,12 @@ const truncate = (text: string, max = 160): string => {
 /**
  * One block per scenario: name, status, duration, the indicative-threshold crossing when there is
  * one, and — when the verdict is not `passed` — the criteria that explain it.
+ *
+ * `report` is absent when the run died before freezing its contract; the block then carries the
+ * verdict and the reason, and says plainly that no report was produced.
  */
-export const renderRunLines = (input: ReportInput): ReadonlyArray<string> => {
-  const { contract, result } = input
+export const renderRunLines = (outcome: RunOutcome): ReadonlyArray<string> => {
+  const { report, result } = outcome
   const attempt = result.attempts[result.attempts.length - 1]
   const lines: Array<string> = []
   lines.push(
@@ -66,8 +70,12 @@ export const renderRunLines = (input: ReportInput): ReadonlyArray<string> => {
       lines.push(
         `      ! ${actions.used} actions / ${actions.guidance} indicatives — indicative threshold only, the verdict is unchanged`
       )
-    } else {
-      lines.push(`      actions ${actions.used}/${actions.guidance} indicatives · model calls ${attempt.model.calls} · tokens ${attempt.model.inputTokens + attempt.model.outputTokens}`)
+    } else if (actions.used > 0 || attempt.model.calls > 0) {
+      lines.push(
+        `      actions ${actions.used}/${actions.guidance} indicatives · model calls ${attempt.model.calls} · tokens ${
+          attempt.model.inputTokens + attempt.model.outputTokens
+        }`
+      )
     }
     if (result.status !== "passed") {
       for (const criterion of attempt.criteria) {
@@ -80,11 +88,21 @@ export const renderRunLines = (input: ReportInput): ReadonlyArray<string> => {
       }
     }
   }
-  if (result.status === "inconclusive") lines.push(`      reason: ${result.reason}${result.detail === undefined ? "" : ` — ${result.detail}`}`)
+  if (result.status === "inconclusive") {
+    lines.push(`      reason: ${result.reason}${result.detail === undefined ? "" : ` — ${result.detail}`}`)
+  }
   if (result.status === "error") lines.push(`      error at stage ${result.stage}: ${truncate(result.reason)}`)
   if (result.status === "cancelled") lines.push(`      cancelled: ${truncate(result.reason)}`)
-  if (!input.finalized) lines.push("      ! the journal was not finalised — the run was interrupted while writing")
-  lines.push(`      criteria: ${contract.criteria.length} · run ${result.runId} · report ${input.layout.report}`)
+  if (report !== undefined) {
+    if (!report.finalized) {
+      lines.push("      ! the journal was not finalised — the run was interrupted while writing")
+    }
+    lines.push(
+      `      criteria: ${report.contract.criteria.length} · run ${result.runId} · report ${report.layout.report}`
+    )
+  } else {
+    lines.push(`      run ${result.runId} · no report: the contract was never frozen`)
+  }
   return lines
 }
 
@@ -122,15 +140,15 @@ export const renderSummaryLines = (results: ReadonlyArray<RunResult>): ReadonlyA
 /** The single JSON document `--reporter json` puts on stdout. */
 export const renderJsonDocument = (
   harnessVersion: string,
-  inputs: ReadonlyArray<ReportInput>
+  outcomes: ReadonlyArray<RunOutcome>
 ): string => {
-  const counts = tally(inputs.map((i) => i.result))
+  const counts = tally(outcomes.map((o) => o.result))
   return JSON.stringify(
     {
       schemaVersion: 1,
       harnessVersion,
       summary: {
-        total: inputs.length,
+        total: outcomes.length,
         passed: counts.passed,
         failed: counts.failed,
         inconclusive: counts.inconclusive,
@@ -138,13 +156,13 @@ export const renderJsonDocument = (
         cancelled: counts.cancelled,
         durationMs: counts.durationMs
       },
-      runs: inputs.map((input) => ({
-        runDirectory: input.layout.root,
-        report: input.layout.report,
-        junit: input.layout.junit,
-        finalized: input.finalized,
-        model: input.manifest.model,
-        result: input.result
+      runs: outcomes.map(({ report, result }) => ({
+        runDirectory: report?.layout.root ?? null,
+        report: report?.layout.report ?? null,
+        junit: report?.layout.junit ?? null,
+        finalized: report?.finalized ?? false,
+        model: report?.manifest.model ?? null,
+        result
       }))
     },
     null,

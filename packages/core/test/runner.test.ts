@@ -181,7 +181,9 @@ describe("runner", () => {
       })
       expect(out.result.status).toBe("inconclusive")
       const c2 = out.result.attempts[0]!.criteria.find((c) => c.criterionId === "c2")
-      expect(c2!.status).toBe("pending")
+      // The final pass is the last chance to settle it: a verifier that still asks for evidence
+      // there resolves to `inconclusive` (naming what was missing), never to `passed`.
+      expect(c2!.status).toBe("inconclusive")
     }).pipe(Effect.provide(platform)))
 
   it.effect("rejects a stale observation reference without touching another element", () =>

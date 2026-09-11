@@ -2,7 +2,7 @@ import type { ScriptedProviderScript, VerdictScript, VerdictSpec } from "@harnes
 import type { Variant } from "@harness/fixture-app"
 import type { JourneyOptions } from "./journey.js"
 import { loginThenCreateScript, projectCreateScript } from "./journey.js"
-import { budgetExhaustionScript, exceedActionsThenSucceed, prematureFinishOnFixtureApp, staleObservationOnFixtureApp } from "./risky.js"
+import { budgetExhaustionScript, exceedActionsThenSucceed, prematureFinishOnFixtureApp, skipLastCriterion, slowExplorationScript, staleObservationOnFixtureApp } from "./risky.js"
 
 export * from "./journey.js"
 export * from "./risky.js"
@@ -77,6 +77,24 @@ export const prematureFinishVerdicts: VerdictScript = {
   }
 }
 
+/**
+ * Two criteria settled, the third never requested by the agent and unsettleable by the runner's
+ * final pass. `passed` requires every criterion — the aggregate must be `inconclusive`.
+ */
+export const unevaluatedCriterionVerdicts: VerdictScript = {
+  byCriterion: {
+    c1: passed(expectations.created, "la liste affiche le projet juste après la soumission du formulaire"),
+    c2: passed(expectations.persisted, "après rechargement, la liste contient toujours le projet"),
+    c3: {
+      status: "inconclusive",
+      expected: expectations.unique,
+      observed: "aucune preuve n'a été demandée pour ce critère",
+      evidence: [],
+      missingEvidence: ["une observation de la liste prise après le rechargement, pour ce critère"]
+    }
+  }
+}
+
 /** Evidence that does not belong to the attempt must force `inconclusive`, never `passed`. */
 export const inventedEvidenceVerdicts: VerdictScript = {
   fallback: {
@@ -101,7 +119,9 @@ export const needsEvidenceThenPasses: VerdictScript = {
         evidenceHint: "prendre une capture après la soumission"
       },
       passed(expectations.created, "la capture postérieure à la soumission montre le projet dans la liste")
-    ]
+    ],
+    c2: passed(expectations.persisted, "après rechargement, la liste contient toujours le projet"),
+    c3: passed(expectations.unique, "une seule entrée de ce nom est visible après rechargement")
   }
 }
 
@@ -164,6 +184,12 @@ export const fixtureAppScripts = (
       agent: exceedActionsThenSucceed(options),
       verdicts: healthyVerdicts
     },
+    "cancellable": {
+      // Long enough on purpose: the cancellation case needs a run that is still going when the
+      // dashboard asks it to stop.
+      agent: slowExplorationScript(options),
+      verdicts: healthyVerdicts
+    },
     "stale-observation": {
       agent: staleObservationOnFixtureApp(options),
       verdicts: healthyVerdicts
@@ -173,6 +199,10 @@ export const fixtureAppScripts = (
       // model calls, well before `maxModelCalls` (40) — so this case is about the token budget.
       agent: budgetExhaustionScript(),
       defaultUsage: { inputTokens: 40_000, outputTokens: 2_000 }
+    },
+    "unevaluated-criterion": {
+      agent: skipLastCriterion(options),
+      verdicts: unevaluatedCriterionVerdicts
     },
     "invented-evidence": {
       agent: projectCreateScript(options),

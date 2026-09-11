@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "runId": "r_fttvannvtzn4m",
+  "createdAt": "2026-09-11T19:36:25.813Z",
+  "specPath": "../scenarios/project-create.e2e.md",
+  "scenarioId": "project-create",
+  "harnessVersion": "0.1.0",
+  "nodeVersion": "v24.19.0",
+  "dependencies": {
+    "node": "v24.19.0",
+    "@harness/cli": "0.1.0",
+    "effect": "4.0.0-rc.113",
+    "@effect/platform-node": "4.0.0-rc.113",
+    "@effect/ai-anthropic": "4.0.0-rc.113",
+    "playwright": "1.63.0",
+    "tsx": "4.23.13",
+    "yaml": "2.9.0",
+    "tinyglobby": "0.2.17"
+  },
+  "model": {
+    "provider": "scripted",
+    "modelId": "scripted-double",
+    "adapterId": "scripted"
+  },
+  "config": {
+    "include": [
+      "../scenarios/**/*.e2e.md"
+    ],
+    "exclude": [
+      "**/node_modules/**",
+      "**/runs/**",
+      "**/dist/**",
+      "**/invalid/**"
+    ],
+    "baseUrl": "http://127.0.0.1:41161",
+    "allowedOrigins": [
+      "http://127.0.0.1:41161"
+    ],
+    "inputs": {
+      "projectName": "Projet {{ run.id }}"
+    },
+    "provider": "scripted",
+    "providerOptions": {
+      "script": "auto",
+      "maxTokens": 2048,
+      "temperature": 0
+    },
+    "maxActions": 25,
+    "budgets": {
+      "attemptTimeoutMs": 120000,
+      "operationTimeoutMs": 15000,
+      "maxModelCalls": 40,
+      "maxTokens": 200000,
+      "verifierReserveTokens": 20000,
+      "fixtureCleanupTimeoutMs": 15000
+    },
+    "capture": {
+      "trace": "on",
+      "video": "off",
+      "screenshots": "checkpoints",
+      "retainTraceOn": "all"
+    },
+    "outputDir": "runs",
+    "reporters": [
+      "console",
+      "json",
+      "junit",
+      "html"
+    ]
+  },
+  "hashes": {
+    "spec": "e880ac1ae62012d7d05f905cc64446eb3593f98a9b5ac41d12a28070c76b97c3",
+    "contract": "76cd363a17487c70374c26aeb09df3999240fec4621e1b7d6fbac5f0f7462ec8",
+    "criteria": {
+      "c1": "b3b6eed51425e15d744e78aa28708f8274c8c25d3510f83fa204722a4017aeba",
+      "c2": "722bf6ab6038dd3e087098475b73dd63805aeb17de63586527104eb778cc83e7",
+      "c3": "9a396f13e04d7e8ba061aa249eb916d21bb9f5c40fa8886f1a0e4e2418632c07"
+    },
+    "prompts": {}
+  }
+}

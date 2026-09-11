@@ -30,22 +30,21 @@ export const Gauge = (props: {
   readonly used: number
   readonly limit: number
   readonly kind: "blocking" | "indicative"
-  readonly unit?: string
   readonly exhausted?: boolean
   readonly testId?: string
   readonly footnote?: string
+  /** How a raw number is rendered. Defaults to a grouped integer. */
+  readonly format?: (n: number) => string
 }) => {
   const ratio = props.limit > 0 ? Math.min(props.used / props.limit, 1) : 0
   const remaining = Math.max(props.limit - props.used, 0)
   const over = props.used > props.limit
-  const unit = props.unit === undefined ? "" : ` ${props.unit}`
+  const fmt = props.format ?? ((n: number) => n.toLocaleString("fr-FR"))
   return (
     <div className={`gauge gauge-${props.kind}`} data-testid={props.testId}>
       <div className="gauge-line">
         <span className="gauge-label">{props.label}</span>
-        <span className="gauge-value">
-          {props.used.toLocaleString("fr-FR")}{unit} / {props.limit.toLocaleString("fr-FR")}{unit}
-        </span>
+        <span className="gauge-value">{fmt(props.used)} / {fmt(props.limit)}</span>
       </div>
       <div className={`gauge-track${props.exhausted === true ? " is-exhausted" : ""}${over ? " is-over" : ""}`}>
         <div className="gauge-fill" style={{ width: `${Math.round(ratio * 100)}%` }} />
@@ -53,10 +52,10 @@ export const Gauge = (props: {
       <div className="gauge-line gauge-sub">
         <span>
           {props.kind === "blocking"
-            ? `reste ${remaining.toLocaleString("fr-FR")}${unit}`
+            ? `reste ${fmt(remaining)}`
             : over
-            ? `${(props.used - props.limit).toLocaleString("fr-FR")}${unit} au-delà de l'indication`
-            : `${remaining.toLocaleString("fr-FR")}${unit} avant l'indication`}
+            ? `${fmt(props.used - props.limit)} au-delà de l'indication`
+            : `${fmt(remaining)} avant l'indication`}
         </span>
         {props.footnote === undefined ? null : <span className="gauge-foot">{props.footnote}</span>}
       </div>

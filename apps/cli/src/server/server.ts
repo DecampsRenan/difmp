@@ -1,5 +1,5 @@
 import { NodeHttpServer } from "@effect/platform-node"
-import { Context, Effect, Layer, Scope } from "effect"
+import { Context, Duration, Effect, Layer, Scope } from "effect"
 import { HttpRouter, HttpServer } from "effect/unstable/http"
 import { createServer } from "node:http"
 import { ExecutionError } from "../errors.js"
@@ -13,6 +13,8 @@ export interface UiServerOptions {
   readonly host?: string
   /** `0` asks the OS for an ephemeral port. */
   readonly port?: number
+  /** Bounded so an open SSE connection cannot hold the process open. */
+  readonly gracefulShutdownTimeout?: Duration.Input
 }
 
 export interface UiServer {
@@ -35,7 +37,16 @@ export const openUiServer = (
     const host = options.host ?? "127.0.0.1"
     const port = options.port ?? 0
 
-    const serverLayer = NodeHttpServer.layer(createServer, { host, port, gracefulShutdownTimeout: 0 })
+    const serverLayer = NodeHttpServer.layer(createServer, {
+      host,
+      port,
+      // Small but NOT zero. The default is 20 s and an open SSE connection keeps a socket alive, so
+      // a run that ends with a dashboard attached would otherwise hang for 21 s after SIGTERM
+      // (api-effect-http-node.md §6). Zero is worse than small: `timeoutOrElse(shutdown, 0)`
+      // interrupts the cached shutdown effect immediately, and the scope's own finalizer then
+      // replays that interrupt as the program's exit.
+      gracefulShutdownTimeout: options.gracefulShutdownTimeout ?? Duration.millis(250)
+    })
     const appLayer = HttpRouter.serve(makeRoutes({ bus: options.bus, state: options.state }), {
       disableLogger: true,
       disableListenLog: true

@@ -2,7 +2,7 @@
   "name": "@harness/cli",
   "version": "0.1.0",
   "type": "module",
-  "description": "Agent-driven E2E test harness CLI",
+  "description": "Agent-driven end-to-end test harness: run *.e2e.md scenarios from any project",
   "bin": {
     "harness": "./dist/bin/harness.js"
   },
@@ -24,8 +24,12 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "build": "tsc -b tsconfig.json",
-    "clean": "rm -rf dist"
+    "build": "node scripts/copy-ui.mjs && tsc -b tsconfig.json",
+    "build:bundle": "node scripts/copy-ui.mjs && tsdown --config tsdown.config.ts",
+    "typecheck": "tsc -b tsconfig.json",
+    "test": "vitest run --config vitest.config.ts",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "prepack": "npm run build:bundle"
   },
   "dependencies": {
     "effect": "4.0.0-rc.113",
@@ -39,5 +43,9 @@
     "@harness/browser-playwright": "workspace:*",
     "@harness/agent-runtime": "workspace:*",
     "@harness/reporting": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "^0.23.0",
+    "vitest": "^5.0.0"
   }
 }

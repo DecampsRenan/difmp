@@ -7,3 +7,5 @@ runs/
 coverage/
 .recon/
 examples/fixture-app/dist/
+apps/ui/dist-types/
+apps/cli/assets/ui/

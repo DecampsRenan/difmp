@@ -96,6 +96,55 @@ export const staleObservationOnFixtureApp = (options: JourneyOptions): AgentScri
 }
 
 /**
+ * A long, slow, perfectly legal run: `turns` model calls, each spending `perTurn` browser actions.
+ * Actions are cheap in model calls, so this stays well inside `maxModelCalls` while lasting long
+ * enough for a cancellation to arrive mid-flight. It ends with the real journey, so an uncancelled
+ * run of this script still passes.
+ */
+export const slowExplorationScript = (
+  options: JourneyOptions & { readonly turns?: number; readonly perTurn?: number }
+): AgentScript => {
+  const turns = options.turns ?? 20
+  const perTurn = options.perTurn ?? 12
+  const steps: Array<ScriptedStep> = []
+  for (let t = 0; t < turns; t++) {
+    const calls: Array<ScriptedCall> = []
+    for (let i = 0; i < perTurn; i++) calls.push(i % 2 === 0 ? observe() : screenshot(`exploration-${t}-${i}`))
+    steps.push(turn(`exploration ${t + 1}`, calls))
+  }
+  steps.push(...createProjectSteps(options))
+  steps.push(turn("je demande l'évaluation de la présence avant rechargement", [check(criterionAt(options, 0))]))
+  steps.push(...reloadSteps(options))
+  steps.push(turn("je demande l'évaluation des critères restants", [
+    check(criterionAt(options, 1)),
+    check(criterionAt(options, 2))
+  ]))
+  steps.push(turn("terminé", [finish("exploration longue puis parcours complet")]))
+  return {
+    id: "slow-exploration",
+    description: `${turns} turns of ${perTurn} browser actions, then the journey`,
+    steps
+  }
+}
+
+/**
+ * Runs the journey to the end but asks for only the FIRST TWO criteria, then finishes. The third is
+ * never requested by the agent, so only the runner's final pass sees it — and with no evidence able
+ * to settle it, it resolves to `inconclusive`. Two passed criteria must not aggregate to `passed`.
+ */
+export const skipLastCriterion = (options: JourneyOptions): AgentScript => ({
+  id: "unevaluated-criterion",
+  description: "completes the journey but never requests the last criterion",
+  steps: [
+    ...createProjectSteps(options),
+    turn("je demande l'évaluation de la présence avant rechargement", [check(criterionAt(options, 0))]),
+    ...reloadSteps(options),
+    turn("je demande l'évaluation de la persistance", [check(criterionAt(options, 1))]),
+    turn("terminé", [finish("je n'ai pas demandé l'évaluation du dernier critère")])
+  ]
+})
+
+/**
  * Never finishes and never checks: only a BLOCKING budget can end this run. Paired with a large
  * `defaultUsage` (see `scripts/index.ts`) it exhausts `maxTokens`; left with the default usage it
  * ends on `maxModelCalls`. Either way the outcome is `inconclusive`, not `failed`, and no late

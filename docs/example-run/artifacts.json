@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "runId": "r_fttvannvtzn4m",
+  "artifacts": [
+    {
+      "artifactId": "art_1",
+      "attemptId": "a1",
+      "kind": "aria-snapshot",
+      "label": "obs_1",
+      "path": "attempts/a1/observations/art_1.txt",
+      "state": "present",
+      "ts": "2026-09-11T19:36:26.507Z",
+      "sourceSeq": 9
+    },
+    {
+      "artifactId": "art_2",
+      "attemptId": "a1",
+      "kind": "aria-snapshot",
+      "label": "obs_2",
+      "path": "attempts/a1/observations/art_2.txt",
+      "state": "present",
+      "ts": "2026-09-11T19:36:28.038Z",
+      "sourceSeq": 23
+    },
+    {
+      "artifactId": "art_3",
+      "attemptId": "a1",
+      "kind": "screenshot",
+      "label": "apres-creation",
+      "path": "attempts/a1/screenshots/art_3.png",
+      "state": "present",
+      "bytes": 32149,
+      "ts": "2026-09-11T19:36:28.245Z"
+    },
+    {
+      "artifactId": "art_4",
+      "attemptId": "a1",
+      "kind": "screenshot",
+      "label": "checkpoint-c1",
+      "path": "attempts/a1/screenshots/art_4.png",
+      "state": "present",
+      "bytes": 32149,
+      "ts": "2026-09-11T19:36:28.510Z"
+    },
+    {
+      "artifactId": "art_5",
+      "attemptId": "a1",
+      "kind": "aria-snapshot",
+      "label": "obs_3",
+      "path": "attempts/a1/observations/art_5.txt",
+      "state": "present",
+      "ts": "2026-09-11T19:36:28.805Z",
+      "sourceSeq": 45
+    },
+    {
+      "artifactId": "art_6",
+      "attemptId": "a1",
+      "kind": "screenshot",
+      "label": "apres-rechargement",
+      "path": "attempts/a1/screenshots/art_6.png",
+      "state": "present",
+      "bytes": 30438,
+      "ts": "2026-09-11T19:36:29.045Z"
+    },
+    {
+      "artifactId": "art_7",
+      "attemptId": "a1",
+      "kind": "screenshot",
+      "label": "checkpoint-c2",
+      "path": "attempts/a1/screenshots/art_7.png",
+      "state": "present",
+      "bytes": 30438,
+      "ts": "2026-09-11T19:36:29.334Z"
+    },
+    {
+      "artifactId": "art_8",
+      "attemptId": "a1",
+      "kind": "screenshot",
+      "label": "checkpoint-c3",
+      "path": "attempts/a1/screenshots/art_8.png",
+      "state": "present",
+      "bytes": 30438,
+      "ts": "2026-09-11T19:36:29.545Z"
+    },
+    {
+      "artifactId": "art_9",
+      "attemptId": "a1",
+      "kind": "trace",
+      "path": "attempts/a1/trace.zip",
+      "state": "present",
+      "bytes": 1400316,
+      "ts": "2026-09-11T19:36:29.780Z"
+    },
+    {
+      "artifactId": "art_10",
+      "attemptId": "a1",
+      "kind": "console-log",
+      "path": "attempts/a1/console.jsonl",
+      "state": "present",
+      "bytes": 0,
+      "ts": "2026-09-11T19:36:29.781Z"
+    },
+    {
+      "artifactId": "art_11",
+      "attemptId": "a1",
+      "kind": "network-log",
+      "path": "attempts/a1/network.jsonl",
+      "state": "present",
+      "bytes": 903,
+      "ts": "2026-09-11T19:36:29.783Z"
+    }
+  ]
+}

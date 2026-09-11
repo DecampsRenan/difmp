@@ -1,5 +1,13 @@
 import type { LoadedSpec, ReportInput, ResolvedConfig, Registries, RunResult } from "@harness/core"
-import { attemptId as makeAttemptId, makeRunId, RunStore, runScenario, Verifier } from "@harness/core"
+import {
+  attemptId as makeAttemptId,
+  makeRunId,
+  resolveInputPrecedence,
+  resolveInputs,
+  RunStore,
+  runScenario,
+  Verifier
+} from "@harness/core"
 import * as BrowserPlaywright from "@harness/browser-playwright"
 import { makeVerifier } from "@harness/agent-runtime"
 import { Crypto, Effect, FileSystem, Layer, Path, Stream } from "effect"
@@ -30,7 +38,11 @@ export interface RunOneOptions {
 
 export interface RunOutcome {
   readonly result: RunResult
-  readonly report: ReportInput
+  /**
+   * Absent when the run failed before it could freeze the contract and write the manifest — there
+   * is nothing to report from, and inventing a report would hide that.
+   */
+  readonly report?: ReportInput
 }
 
 /**
@@ -45,7 +57,38 @@ export const runOne = (
     const runId = yield* makeRunId.pipe(
       Effect.mapError((cause) => new ExecutionError({ message: `could not mint a run id: ${cause.message}` }))
     )
-    const provider = yield* modelProviderFor(config, spec).pipe(
+    const runDirectory = `${options.outputDir}/${runId}`
+    if (options.bus !== undefined) {
+      yield* options.bus.startRun({ runId, directory: runDirectory, specPath: options.specPath })
+    }
+    // A scripted script factory needs the values the run will actually use, so the same input
+    // resolution the runner performs is done here first. It is pure and deterministic, so doing it
+    // twice cannot diverge; a failure is left for the runner to journal and report properly.
+    const scriptInputs = yield* resolveInputPrecedence({
+      source: options.configSource,
+      configInputs: config.inputs,
+      specInputs: spec.frontmatter.inputs ?? {},
+      ...(options.fileInputs === undefined ? {} : { fileInputs: options.fileInputs }),
+      ...(options.cliInputs === undefined ? {} : { cliInputs: options.cliInputs })
+    }).pipe(
+      Effect.flatMap((declared) =>
+        resolveInputs({
+          declared,
+          source: spec.specPath,
+          run: { id: runId },
+          attempt: { id: attemptId },
+          ...(spec.fieldLines === undefined ? {} : { anchors: spec.fieldLines })
+        })
+      ),
+      Effect.orElseSucceed(() => ({}))
+    )
+
+    const provider = yield* modelProviderFor(config, spec, registries, {
+      runId,
+      attemptId,
+      specPath: options.specPath,
+      inputs: scriptInputs
+    }).pipe(
       Effect.mapError((error) => new ExecutionError({ message: error.message }))
     )
 
@@ -128,6 +171,14 @@ export const runOne = (
       Effect.mapError((error) => new ExecutionError({ message: error.message }))
     )
 
-    const report = yield* loadReportInput(`${options.outputDir}/${runId}`)
+    // `report <run-directory>` reads exactly these files, so if they are not both there the run
+    // never reached the point where a report is meaningful.
+    const fs = yield* FileSystem.FileSystem
+    const reportable = yield* Effect.all([
+      fs.exists(`${runDirectory}/manifest.json`),
+      fs.exists(`${runDirectory}/contract.json`)
+    ]).pipe(Effect.map(([a, b]) => a && b), Effect.orElseSucceed(() => false))
+    if (!reportable) return { result }
+    const report = yield* loadReportInput(runDirectory)
     return { result, report }
   })

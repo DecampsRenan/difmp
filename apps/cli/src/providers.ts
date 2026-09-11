@@ -1,4 +1,4 @@
-import type { LoadedSpec, ResolvedConfig } from "@harness/core"
+import type { InputsRecord, LoadedSpec, Registries, ResolvedConfig, ScriptFactoryContext } from "@harness/core"
 import { formatSchemaError, ModelProvider } from "@harness/core"
 import {
   anthropicAdapterId,
@@ -19,6 +19,12 @@ import { UsageError } from "./errors.js"
  * and its verdicts are labelled `scripted-model`, never presentable as a model judgement.
  */
 export const ScriptedProviderOptions = Schema.Struct({
+  /**
+   * Name of an entry in the config's `scripts` registry. Resolved like a fixture or a check —
+   * by name, never as a module path — and the entry is a FACTORY, because a real script needs the
+   * run id, the resolved inputs and the criterion ids, none of which exist when the config loads.
+   */
+  script: Schema.optionalKey(Schema.NonEmptyString),
   scenario: Schema.optionalKey(Schema.Literals(["happy-path", "premature-finish"])),
   /** Accessible name of the control that submits the form, when the walkthrough has one. */
   submit: Schema.optionalKey(Schema.NonEmptyString),
@@ -35,9 +41,24 @@ export type ScriptedProviderOptions = typeof ScriptedProviderOptions["Type"]
 // Anthropic options must still be usable with `--provider scripted`.
 const decodeScriptedOptions = Schema.decodeUnknownEffect(ScriptedProviderOptions)
 
+/** Everything a script factory needs that only exists once the run id is minted. */
+export interface ScriptedRunContext {
+  readonly runId: string
+  readonly attemptId: string
+  readonly specPath: string
+  readonly inputs: InputsRecord
+}
+
+const isScriptedScript = (value: unknown): value is ScriptedProviderScript =>
+  typeof value === "object" && value !== null &&
+  typeof (value as { agent?: { id?: unknown } }).agent?.id === "string" &&
+  Array.isArray((value as { agent?: { steps?: unknown } }).agent?.steps)
+
 export const scriptFor = (
   config: ResolvedConfig,
-  spec: LoadedSpec
+  spec: LoadedSpec,
+  registries?: Registries,
+  context?: ScriptedRunContext
 ): Effect.Effect<ScriptedProviderScript, UsageError> =>
   Effect.gen(function*() {
     const options = yield* decodeScriptedOptions(config.providerOptions).pipe(
@@ -46,6 +67,47 @@ export const scriptFor = (
       )
     )
     const criterionIds = spec.criteria.map((c) => c.id)
+
+    if (options.script !== undefined) {
+      const registry = registries?.scripts
+      if (registry === undefined || context === undefined) {
+        return yield* Effect.fail(
+          new UsageError({
+            message:
+              `providerOptions.script "${options.script}" cannot be resolved here: this command does not ` +
+              "build scripted runs (only `harness run` does)"
+          })
+        )
+      }
+      const factory = yield* registry.lookup(options.script).pipe(
+        Effect.mapError((error) => new UsageError({ message: `providerOptions.script: ${error.message}` }))
+      )
+      const factoryContext: ScriptFactoryContext = {
+        runId: context.runId,
+        attemptId: context.attemptId,
+        scenarioId: spec.frontmatter.id,
+        specPath: context.specPath,
+        baseUrl: config.baseUrl,
+        inputs: context.inputs,
+        criterionIds
+      }
+      const produced = yield* Effect.try({
+        try: () => factory(factoryContext),
+        catch: (cause) =>
+          new UsageError({
+            message: `scripts["${options.script!}"] threw: ${cause instanceof Error ? cause.message : String(cause)}`
+          })
+      })
+      if (!isScriptedScript(produced)) {
+        return yield* Effect.fail(
+          new UsageError({
+            message: `scripts["${options.script}"] must return { agent: AgentScript, verdicts?, defaultUsage? }`
+          })
+        )
+      }
+      return produced
+    }
+
     const agent = options.scenario === "premature-finish"
       ? prematureFinishScript()
       : happyPathScript({
@@ -84,7 +146,9 @@ export interface ProviderChoice {
 /** Wire the provider named by `--provider` or by `harness.config.ts`. */
 export const modelProviderFor = (
   config: ResolvedConfig,
-  spec: LoadedSpec
+  spec: LoadedSpec,
+  registries?: Registries,
+  context?: ScriptedRunContext
 ): Effect.Effect<ProviderChoice, UsageError> =>
   Effect.gen(function*() {
     if (config.provider === "anthropic") {
@@ -106,7 +170,7 @@ export const modelProviderFor = (
         adapterId: anthropicAdapterId
       }
     }
-    const script = yield* scriptFor(config, spec)
+    const script = yield* scriptFor(config, spec, registries, context)
     return {
       layer: scriptedModelProviderLayer(script),
       providerId: "scripted",

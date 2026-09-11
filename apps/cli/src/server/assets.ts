@@ -36,6 +36,23 @@ const mimeTypes: Readonly<Record<string, string>> = {
 export const contentTypeOf = (path: string): string =>
   mimeTypes[extname(path).toLowerCase()] ?? "application/octet-stream"
 
+/** Resolve `relativePath` inside `root`, or `undefined` when it would escape. */
+export const resolveUnder = (root: string, relativePath: string): string | undefined => {
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(relativePath)
+    } catch {
+      return undefined
+    }
+  })()
+  if (decoded === undefined || decoded.includes("\0")) return undefined
+  const cleaned = normalize(decoded).replace(/^(\.\.[/\\])+/, "").replace(/^[/\\]+/, "")
+  if (cleaned === "") return undefined
+  const candidate = resolve(root, cleaned)
+  const prefix = root.endsWith(sep) ? root : `${root}${sep}`
+  return candidate.startsWith(prefix) && existsSync(candidate) ? candidate : undefined
+}
+
 /**
  * Map a request path to a file inside `root`, or `undefined` when it escapes. A single-page app
  * route (no extension) falls back to `index.html`.

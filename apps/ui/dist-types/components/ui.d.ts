@@ -20,10 +20,11 @@ export declare const Gauge: (props: {
     readonly used: number;
     readonly limit: number;
     readonly kind: "blocking" | "indicative";
-    readonly unit?: string;
     readonly exhausted?: boolean;
     readonly testId?: string;
     readonly footnote?: string;
+    /** How a raw number is rendered. Defaults to a grouped integer. */
+    readonly format?: (n: number) => string;
 }) => import("react").JSX.Element;
 export declare const Empty: (props: {
     readonly children: ReactNode;

@@ -26,7 +26,7 @@ API facts live in the sibling `api-*.md` cheat-sheets — read the ones for your
 | `apps/ui` | `@harness/ui` | React live UI (built to static assets consumed by the CLI) |
 | `examples/fixture-app` | `@harness/fixture-app` | demo app + variants + probe endpoint |
 | `examples/scenarios` | — | `*.e2e.md` demo specs |
-| `examples/support` | `@harness/example-support` | demo `harness.config.ts`, fixtures, TS checks |
+| `examples/support` | `@harness/example-support` | demo `harness.config.ts`, fixtures, TS checks, scripted-adapter scripts |
 
 `@harness/core` must NOT depend on React, Playwright, or any model SDK. Driver/provider/verifier
 are `Context.Service` interfaces declared in core and implemented in the other packages.
@@ -63,10 +63,12 @@ export default defineConfig({
   // registries — names referenced by specs resolve HERE, never as import paths
   fixtures: { "authenticated-workspace": myFixture },
   checks:   { "project-unique-in-storage": myCheck },
+  scripts:  { "healthy": myScriptFactory },   // scripted adapter only — see §11
   // model
   provider: "scripted" | "anthropic",
   model: "claude-sonnet-5",                   // provider-specific id, never hardcoded in core
-  providerOptions: { maxTokens: 2048, temperature: 0 },
+  providerOptions: { maxTokens: 2048, temperature: 0,
+                     script: "healthy" },     // scripted adapter: names an entry of `scripts`
   // guidance vs budgets  (SEPARATE — see §7)
   maxActions: 25,                             // INDICATIVE ONLY
   budgets: {
@@ -88,8 +90,18 @@ export default defineConfig({
 })
 ```
 
-`defineConfig` is identity + types. The resolved config is validated with Schema. Unknown top-level
-keys are REJECTED. `harness.config.ts` is loaded as trusted project code (see api-tooling.md for the
+`fixtures`, `checks` and `scripts` hold FUNCTIONS: they are stripped before validation, never reach
+`manifest.json` and are exposed as `Registries`. `defineConfig` is identity + types. The resolved
+config is validated with Schema. Unknown top-level keys are REJECTED.
+
+**Discovery base.** `include`/`exclude` are resolved against the config's own directory; paths and
+globs given as CLI arguments are resolved against the invocation directory. Globbing runs from the
+deepest directory containing every pattern, not from that base, so `exclude` (and the mandatory
+`**/node_modules/**`, `**/runs/**`, `**/dist/**`) still applies when `include` reaches outside the
+config directory — `ignore` entries match paths relative to the glob's cwd, and `**/…` never matches
+a path beginning with `../`. **One literal `*.e2e.md` file named on the command line bypasses
+`exclude`**: naming a file is unambiguous, and it is what lets an intentionally invalid spec reach
+the loader and be rejected. `harness.config.ts` is loaded as trusted project code (see api-tooling.md for the
 TS loader); its path comes from `--config` or upward lookup from cwd, NEVER from a spec.
 
 ## 4. Spec → contract
@@ -209,7 +221,13 @@ interface CriterionResult {
 
 The harness validates the structure and that every referenced `artifactId` exists and belongs to the
 attempt. Invented/absent references ⇒ the criterion is forced to `inconclusive`, never `passed`.
-A criterion with no sufficient evidence stays `inconclusive`. Vague wording is never turned into an
+A criterion with no sufficient evidence stays `inconclusive`. A verifier may instead answer
+`needsEvidence`, and the loop may keep navigating within budget; but on the runner's FINAL pass
+there is no "next time", so a `needsEvidence` answer there resolves to `inconclusive` naming what
+was missing — never left `pending`, which would read as "never looked at". `pending` survives only
+when the attempt ended before the criterion could be reached (cancellation, execution error).
+Evidence minted DURING an evaluation (a code check's probe output) is part of the attempt: the
+artifact inventory is re-read after the evaluation, before the reference check. Vague wording is never turned into an
 invented threshold. `evaluator.kind === "scripted-model"` marks the deterministic test double so it
 is never confused with a real model judgement.
 
@@ -287,6 +305,26 @@ type Check = (ctx: {
   recordEvidence: (e: { label: string; data: unknown }) => Promise<string /* artifactId */>
 }) => Promise<{ status: "passed"|"failed"|"inconclusive"; expected: string; observed: string; evidence: string[] }>
 ```
+### Scripted-adapter scripts (`scripts`, resolved by name only)
+
+```ts
+type ScriptFactory = (ctx: {
+  runId: string; attemptId: string
+  scenarioId: string; specPath: string
+  baseUrl: string
+  inputs: Record<string, string|number|boolean>   // resolved, `{{ run.id }}` already substituted
+  criterionIds: ReadonlyArray<string>             // source order — a script asks for `check` by id
+}) => { agent: AgentScript; verdicts?: VerdictScript; defaultUsage?: { inputTokens, outputTokens } }
+```
+
+A FACTORY, not a finished script: a deterministic walkthrough has to type the value the run will
+really use (`Projet {{ run.id }}` is only a string once the run id exists) and to name the criteria
+of the spec being run. The CLI resolves `providerOptions.script` against this registry after minting
+the run id and resolving the inputs, and before opening the browser. Core declares the context and
+keeps the return value opaque (`ScriptFactory<A = unknown>`), so `@harness/core` still depends on no
+model SDK; `@harness/agent-runtime` owns the returned shape. `provider: "anthropic"` ignores the
+registry entirely.
+
 Every check probe is journalled as a harness operation. Cleanup runs after success, failure AND
 cancellation, under `budgets.fixtureCleanupTimeoutMs`. Without a `fixture`, open a clean context at
 `baseUrl` — inputs and fixture are genuinely optional.
@@ -361,3 +399,45 @@ Supporting facts now verified and available: run ids + sha256 via `Crypto.Crypto
 api-effect-http-node.md §C2), frontmatter field→line mapping (api-tooling.md §A-L),
 `--inputs-file` typed decoding (api-tooling.md §A-I), tool JSON-Schema emission
 (api-effect-ai.md §B1).
+
+---
+
+## 15. Live-UI ↔ CLI HTTP surface (added by the `apps/ui` lane)
+
+`apps/ui` is built by `vite build` to `apps/ui/dist` (`base: "./"`), so the CLI may mount it at any
+path. Every URL the app uses is RELATIVE to the page, and the CLI may override them by injecting
+one script tag before the bundle:
+
+```html
+<script>globalThis.__HARNESS_UI__ = {
+  eventsUrl: "events", cancelUrl: "cancel", contractUrl: "contract", artifactBaseUrl: "artifacts/",
+  pricing: { currency: "USD", inputPerMillionTokens: 3, outputPerMillionTokens: 15 }  // OPTIONAL
+}</script>
+```
+
+| route | method | contract |
+| --- | --- | --- |
+| `eventsUrl` | GET | `text/event-stream`. One frame per journal line: `id: <seq>`, `event: <event.type>`, `data: <the full HarnessEvent as JSON>`. MUST honour `Last-Event-ID` **and** a `?lastEventId=<seq>` query parameter (see below) and replay from the journal. Send `retry:` to set the client's reconnect delay. |
+| `cancelUrl` | POST | JSON body `{ reason: string }`. Any 2xx is treated as accepted; the UI then waits for `cancellationRequested` in the stream. |
+| `contractUrl` | GET | `contract.json` (`ScenarioContract`). |
+| `artifactBaseUrl` | GET | serves `ArtifactRecord.path` values, which are relative to the run directory. |
+
+**Why the query parameter too.** `EventSource` sends `Last-Event-ID` on the reconnects *it* drives,
+but the header cannot be set from script. When the browser gives up (readyState `CLOSED`) the UI
+opens a fresh `EventSource` and can only carry the cursor in the URL. Support both; they mean the
+same thing.
+
+**Replay is exclusive or inclusive — the client tolerates either.** The UI applies an event iff
+`seq > lastSeq`, which is exact because `seq` increases by 1 per run (§6). A server that replays
+`seq >= cursor` produces one absorbed duplicate, not a duplicated row.
+
+**Open gap — `contractFrozen` carries criterion ids only (§6).** §11 of the spec requires the live
+view to show each criterion's *text* and its `model` vs `code` *method* from the moment the contract
+is frozen, i.e. before any `verificationFinished`. The UI therefore fetches `contractUrl`. Two ways
+to close this properly, pick one:
+* keep the fetch and make `contractUrl` a required CLI route (what `apps/ui` implements today), or
+* widen `ContractFrozenEvent` with `criteria: Array<{ id, text, method, checkName? }>` — the UI
+  already reads that field when present and prefers it over the fetch.
+
+`pricing` is absent by default and there is no price table anywhere in core, so **cost renders as
+the literal string `indisponible`** — never an estimate, never `0`.

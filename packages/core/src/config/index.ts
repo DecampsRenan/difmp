@@ -3,7 +3,7 @@ import { alwaysExcluded, ProviderName, ReporterName, ResolvedConfig } from "../d
 import { decodeStrict, schemaProblems } from "../domain/decode.js"
 import { ConfigInvalidError } from "../domain/errors.js"
 import type { InputsRecord, InputValue } from "../domain/spec.js"
-import type { Check, Fixture, Registries } from "../registry/index.js"
+import type { Check, Fixture, Registries, ScriptFactory } from "../registry/index.js"
 import { makeRegistry, validateRegistryShape } from "../registry/index.js"
 
 export type HarnessConfigData = typeof ResolvedConfig["Encoded"]
@@ -13,6 +13,12 @@ export interface HarnessUserConfig extends HarnessConfigData {
   /** Names referenced by specs resolve HERE, never as import paths. */
   readonly fixtures?: Record<string, Fixture>
   readonly checks?: Record<string, Check>
+  /**
+   * Deterministic-adapter scripts, by name. Only `provider: "scripted"` resolves one, through
+   * `providerOptions.script`. Like fixtures and checks these are functions, so they are stripped
+   * before validation and never reach `manifest.json`.
+   */
+  readonly scripts?: Record<string, ScriptFactory<any>>
 }
 
 /** Identity + types. The real validation happens in `resolveConfig`. */
@@ -71,7 +77,7 @@ export const resolveConfig = (options: {
         new ConfigInvalidError({ source, problems: ["the default export must be an object (use defineConfig)"] })
       )
     }
-    const { checks: rawChecks, fixtures: rawFixtures, ...data } = config as Record<string, unknown>
+    const { checks: rawChecks, fixtures: rawFixtures, scripts: rawScripts, ...data } = config as Record<string, unknown>
 
     const toConfigError = (problems: ReadonlyArray<string>) => new ConfigInvalidError({ source, problems })
 
@@ -79,6 +85,9 @@ export const resolveConfig = (options: {
       Effect.mapError((e) => toConfigError([e.message]))
     )
     const checks = yield* validateRegistryShape("check", rawChecks).pipe(
+      Effect.mapError((e) => toConfigError([e.message]))
+    )
+    const scripts = yield* validateRegistryShape("script", rawScripts).pipe(
       Effect.mapError((e) => toConfigError([e.message]))
     )
 
@@ -117,7 +126,8 @@ export const resolveConfig = (options: {
       config: resolved,
       registries: {
         fixtures: makeRegistry<Fixture>("fixture", fixtures as Record<string, Fixture>),
-        checks: makeRegistry<Check>("check", checks as Record<string, Check>)
+        checks: makeRegistry<Check>("check", checks as Record<string, Check>),
+        scripts: makeRegistry<ScriptFactory>("script", scripts as Record<string, ScriptFactory>)
       }
     }
   })

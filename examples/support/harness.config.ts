@@ -1,6 +1,7 @@
 import { defineConfig } from "@harness/core"
 import { projectUniqueInStorage } from "./checks/project-unique-in-storage.js"
 import { authenticatedWorkspace } from "./fixtures/authenticated-workspace.js"
+import { fixtureAppScriptRegistry } from "./scripts/registry.js"
 
 /**
  * Demo configuration for the example scenarios.
@@ -12,10 +13,12 @@ import { authenticatedWorkspace } from "./fixtures/authenticated-workspace.js"
 const baseUrl = process.env["HARNESS_BASE_URL"] ?? "http://127.0.0.1:3000"
 
 export default defineConfig({
-  // Discovery. Globs are resolved against the directory the CLI runs in — these assume the
-  // workspace root. `harness run <path>` overrides them for a single scenario.
-  // `**/invalid/**` holds specs that MUST be rejected; they are fixtures for the loader, not runs.
-  include: ["examples/scenarios/**/*.e2e.md"],
+  // Discovery. `include`/`exclude` are resolved against the DIRECTORY OF THIS FILE, not the
+  // invocation directory — so a consumer gets the same selection wherever they run `harness` from.
+  // Paths given as CLI arguments are resolved against the invocation directory instead.
+  // `invalid/` holds specs that MUST be rejected; they are fixtures for the loader, not runs, and
+  // naming one explicitly (`harness run examples/scenarios/invalid/x.e2e.md`) still reaches it.
+  include: ["../scenarios/**/*.e2e.md"],
   exclude: ["**/invalid/**"],
 
   // Target.
@@ -37,6 +40,9 @@ export default defineConfig({
   checks: {
     "project-unique-in-storage": projectUniqueInStorage
   },
+  // Deterministic browsing scripts for `provider: "scripted"`, selected BY NAME below. Each entry
+  // is a factory: the real project name only exists once the run id is minted.
+  scripts: fixtureAppScriptRegistry(),
 
   // Model. `scripted` is the deterministic, network-free double, so the repository's tests need no
   // API key. Switch to the real adapter with:
@@ -45,6 +51,11 @@ export default defineConfig({
   // A scripted run never validates a model's ability to navigate — the report names the adapter.
   provider: "scripted",
   providerOptions: {
+    // "auto" picks the journey from the scenario and from FIXTURE_APP_VARIANT, so the four
+    // variants of spec §13 run without editing this file. HARNESS_SCRIPT selects one of the
+    // harness-behaviour cases instead (premature-finish, exceed-actions, stale-observation,
+    // budget-exhausted, invented-evidence, needs-evidence).
+    script: process.env["HARNESS_SCRIPT"] ?? "auto",
     maxTokens: 2048,
     temperature: 0
   },

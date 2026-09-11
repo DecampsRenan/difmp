@@ -97,12 +97,17 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
 
     /** A frame we cannot use is counted and logged rather than silently swallowed. */
     const drop = (raw: string, why: string) => {
-      // eslint-disable-next-line no-console
       console.warn(`[harness-ui] trame ignorée (${why}) :`, raw.slice(0, 200))
       dispatch({ kind: "malformed" })
     }
 
-    const onFrame = (message: MessageEvent<string>) => {
+    const onFrame = (message: Event) => {
+      /**
+       * `error` is BOTH a harness event type and EventSource's own failure event, so the listener
+       * registered for the journal type also receives the DOM one. The DOM event is a plain `Event`
+       * with no `data`; it belongs to `onerror` and must not be counted as a malformed frame.
+       */
+      if (!(message instanceof MessageEvent) || typeof message.data !== "string") return
       let parsed: unknown
       try {
         parsed = JSON.parse(message.data)
@@ -126,7 +131,7 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
 
     // The CLI names every frame after the event type; `onmessage` covers an unnamed frame.
     for (const type of harnessEventTypes) {
-      source.addEventListener(type, onFrame as EventListener)
+      source.addEventListener(type, onFrame)
     }
     source.onmessage = onFrame
 

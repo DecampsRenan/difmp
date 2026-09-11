@@ -11,16 +11,16 @@ import { Runtime, Schema } from "effect"
 export class UsageError extends Schema.TaggedError<UsageError>()("UsageError", {
   message: Schema.String
 }) {
-  readonly [Runtime.errorExitCode] = 2
-  readonly [Runtime.errorReported] = false
+  override readonly [Runtime.errorExitCode] = 2
+  override readonly [Runtime.errorReported] = false
 }
 
 /** An execution error: the harness itself could not complete the work. Exit 2. */
 export class ExecutionError extends Schema.TaggedError<ExecutionError>()("ExecutionError", {
   message: Schema.String
 }) {
-  readonly [Runtime.errorExitCode] = 2
-  readonly [Runtime.errorReported] = false
+  override readonly [Runtime.errorExitCode] = 2
+  override readonly [Runtime.errorReported] = false
 }
 
 /** A product verdict: at least one scenario is `failed` or `inconclusive`. Exit 1. */
@@ -28,8 +28,8 @@ export class ScenariosNotPassing extends Schema.TaggedError<ScenariosNotPassing>
   failed: Schema.Int,
   inconclusive: Schema.Int
 }) {
-  readonly [Runtime.errorExitCode] = 1
-  readonly [Runtime.errorReported] = false
+  override readonly [Runtime.errorExitCode] = 1
+  override readonly [Runtime.errorReported] = false
   override get message(): string {
     return `${this.failed} failed, ${this.inconclusive} inconclusive`
   }
@@ -43,8 +43,8 @@ export class ScenariosNotPassing extends Schema.TaggedError<ScenariosNotPassing>
 export class Cancelled extends Schema.TaggedError<Cancelled>()("Cancelled", {
   reason: Schema.String
 }) {
-  readonly [Runtime.errorExitCode] = 130
-  readonly [Runtime.errorReported] = false
+  override readonly [Runtime.errorExitCode] = 130
+  override readonly [Runtime.errorReported] = false
   override get message(): string {
     return `cancelled: ${this.reason}`
   }

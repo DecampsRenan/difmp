@@ -1,1 +1,1 @@
-{"version":3,"file":"Criteria.d.ts","sourceRoot":"","sources":["../../src/components/Criteria.tsx"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,mBAAmB,CAAA;AAoCtD,eAAO,MAAM,QAAQ,GAAI,OAAO;IAAE,QAAQ,CAAC,QAAQ,EAAE,aAAa,CAAC,aAAa,CAAC,CAAA;CAAE,gCAoFlF,CAAA"}
+{"version":3,"file":"Criteria.d.ts","sourceRoot":"","sources":["../../src/components/Criteria.tsx"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,mBAAmB,CAAA;AAoCtD,eAAO,MAAM,QAAQ,GAAI,OAAO;IAAE,QAAQ,CAAC,QAAQ,EAAE,aAAa,CAAC,aAAa,CAAC,CAAA;CAAE,gCAsFlF,CAAA"}

@@ -65,7 +65,7 @@ export const BlockingBudgets = (props: {
               label="Délai de tentative"
               used={Math.min(props.elapsedMs, budgets.attemptTimeoutMs)}
               limit={budgets.attemptTimeoutMs}
-              unit="ms"
+              format={durationOf}
               exhausted={exhausted("attemptTimeout")}
               testId="budget-attemptTimeout"
             />
