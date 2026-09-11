@@ -6,3 +6,4 @@ runs/
 .harness-tmp/
 coverage/
 .recon/
+examples/fixture-app/dist/

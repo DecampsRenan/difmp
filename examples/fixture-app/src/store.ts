@@ -2,7 +2,7 @@ import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypt
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-import type { Project, Session, User, Workspace } from "./types.ts";
+import type { Project, Session, User, Workspace } from "./types.js";
 
 interface Snapshot {
   workspaces: Workspace[];

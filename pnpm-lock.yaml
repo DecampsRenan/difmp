@@ -63,6 +63,8 @@ importers:
 
   apps/cli: {}
 
+  examples/fixture-app: {}
+
   packages/agent-runtime: {}
 
   packages/browser-playwright: {}
