@@ -26,11 +26,15 @@ harness --version
 }
 ```
 
+The distributed package is **`@harness/cli`** and its `bin` is **`harness`**. It is not published
+to any registry, so a consumer installs the local tarball produced by `pnpm pack` (below); replace
+the path with `@harness/cli` once it is published.
+
 | package manager | install | run |
 | --- | --- | --- |
-| npm | `npm i -D harness` | `npm run test:e2e` · `npm run test:e2e -- --tag smoke` · `npx --no-install harness run tests/e2e` |
-| pnpm | `pnpm add -D harness` | `pnpm test:e2e` · `pnpm exec harness run tests/e2e` |
-| Yarn | `yarn add -D harness` | `yarn test:e2e` · `yarn harness run tests/e2e` |
+| npm | `npm i -D ./harness-cli-0.1.0.tgz` | `npm run test:e2e` · `npm run test:e2e -- --tag smoke` · `npx --no-install harness run tests/e2e` |
+| pnpm | `pnpm add -D ./harness-cli-0.1.0.tgz` | `pnpm test:e2e` · `pnpm exec harness run tests/e2e` |
+| Yarn | `yarn add -D ./harness-cli-0.1.0.tgz` | `yarn test:e2e` · `yarn run harness run tests/e2e` |
 
 `npx --no-install` is deliberate: it refuses to fetch an unverified package of the same name from
 the public registry.
@@ -208,7 +212,7 @@ A project with no config file runs on the built-in defaults — a text-only scen
 registry at all.
 
 ```ts
-import { defineConfig } from "harness"
+import { defineConfig } from "@harness/cli"
 
 export default defineConfig({
   baseUrl: "http://127.0.0.1:3000",
@@ -269,11 +273,72 @@ bit. `effect`, `@effect/*`, `playwright`, `tsx`, `yaml` and `tinyglobby` stay **
 bundling `effect` would fight its module-instance-sensitive service identity and `playwright` cannot
 be bundled at all — while the private `@harness/*` workspace packages are bundled in.
 
-**Not publishable as it stands, on purpose.** `pnpm pack` rewrites `workspace:*` to `0.1.0`, so the
-tarball declares `@harness/core@0.1.0` and friends, which do not exist on any registry. The bundle
-does not import them at runtime (verified: the only bare imports left are `effect`,
-`effect/unstable/*`, `@effect/platform-node`, `@effect/ai-anthropic`, `playwright`, `yaml`,
-`tinyglobby` and `node:*`), so the one remaining step before a real publish is to move the four
-`@harness/*` entries to `devDependencies` and regenerate the lockfile. That change is deliberately
-left out here because it would desynchronise `pnpm-lock.yaml` for every other package in the
-workspace.
+The four `@harness/*` workspace packages sit in **`devDependencies`**, not `dependencies`. That is
+load-bearing rather than tidy: `pnpm pack` rewrites `workspace:*` to `0.1.0`, and a runtime
+dependency on `@harness/core@0.1.0` would send an installer looking for a version that exists on no
+registry. They are bundled in, so the tarball needs none of them at runtime. The bare imports left in
+the bundle are exactly `effect`, `effect/unstable/{ai,cli,http,encoding}`,
+`@effect/platform-node/{NodeRuntime,NodeServices,NodeHttpServer}`, `@effect/ai-anthropic`,
+`playwright`, `yaml`, `tinyglobby` and `node:*` — plus `tsx`, imported dynamically by the config
+loader.
+
+**The `@effect/platform-node` imports are deep subpaths, never the barrel.** The barrel re-exports
+`NodeRedis`, which eagerly imports `redis` — a *non-optional* peer dependency of that package. npm
+and pnpm auto-install peers so the barrel appears to work there; Yarn does not, and an installed CLI
+died with `ERR_MODULE_NOT_FOUND: Cannot find package 'redis'`.
+
+### The consumer matrix (spec §13, last bullet)
+
+`apps/cli/scripts/consumer-smoke/run.sh [workdir] [npm|pnpm|yarn...]` is the whole check, in one
+command. It runs `pnpm pack`, refuses a tarball whose `dependencies` contain a `@harness/*` entry,
+then for each package manager scaffolds a throwaway consumer **outside this workspace** — its own
+trivial static page, its own zero-dependency server, its own `harness.config.ts` and scenario — and
+installs only the tarball. Per consumer it asserts 24 things: `--version`, `--help`, `list`,
+`validate`, `list --tag`, the `"test:e2e": "harness run"` package.json script, a passing run
+(exit 0), a failing one (exit 1), an invalid spec named explicitly (exit 2), a selection that
+matches nothing (exit 2), a quoted glob, the eight files of the run directory, a `report.html` with
+no remote asset reference, `harness report <dir>` rebuilding it, the dashboard served from the
+installed package, and that nothing in the installed `dist` names the development workspace.
+
+Verified on this machine, Node 24.19.0, 24/24 in every cell:
+
+| consumer | npm 11.17.0 | pnpm 10.29.3 | Yarn 4.13.0 (corepack) | Yarn 1.22.22 |
+| --- | --- | --- | --- | --- |
+| `"type": "module"`, erasable config | 24/24 | 24/24 | 24/24 | 24/24 |
+| `"type": "commonjs"`, config with an `enum` | 24/24 | 24/24 | 24/24 | 24/24 |
+
+The CommonJS row matters twice over: a CJS-typed package cannot load an `import` statement and Node
+cannot strip an `enum`, so those cells pass only through the bundled `tsx` fallback. The pnpm and
+Yarn cells matter because both build a strict `node_modules` — a phantom dependency fails there and
+nowhere else. Yarn 4 was also run with `nodeLinker: pnp`: the CLI passed every command, including
+serving the 254 KB dashboard bundle out of a zip-backed virtual path. The `yarn1` lane exists
+because a Yarn 1 consumer is still common; it caches a local tarball by name and version, so the
+script copies the tarball under a fresh name before installing — otherwise a rebuild silently
+reinstalls the previous bytes.
+
+The package is still not published to any registry; the consumers install the tarball by path.
+
+### External system dependencies
+
+* **Chromium at the revision pinned by `playwright@1.63.0`**, plus its Linux shared libraries:
+  `pnpm exec playwright install --with-deps chromium` (apt, so root). Consumers install
+  `playwright` from the tarball's own dependencies and find the browsers in the shared
+  `~/.cache/ms-playwright`; they never download one.
+* **Corepack**, only for the Yarn cell of the matrix.
+* Nothing else. The scripted adapter makes no network call, and the demo app binds an ephemeral
+  loopback port.
+
+### CI
+
+`.github/workflows/ci.yml` runs, on every push and pull request: `pnpm install --frozen-lockfile`,
+`pnpm run typecheck`, `pnpm run test` (the Vitest suites of every package **and** of this one),
+Chromium with its Linux deps, the consumer matrix above, and finally the example scenarios executed
+through the **distributed** CLI — the binary from the tarball, installed outside the checkout —
+with the scripted adapter against the demo app
+(`apps/cli/scripts/ci/run-examples.sh [workdir] [variant...]`). Artifacts upload with
+`if: always()`. There are **no scenario retries**.
+
+The real-model smoke test is a separate job that runs only on a manual dispatch with
+`real_model: true`, reads `ANTHROPIC_API_KEY` from the repository secrets and is
+`continue-on-error` — its verdict is reported on its own and can never block a contributor who has
+no key.

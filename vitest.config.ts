@@ -10,7 +10,11 @@ export default defineConfig({
           include: ["packages/*/test/**/*.test.ts", ".recon/tooling/**/*.test.ts"],
           environment: "node"
         }
-      }
+      },
+      // The CLI suite keeps its own config (it launches a real Chromium, so it disables file
+      // parallelism and raises the timeouts). Referencing it here means `npx vitest run` — and the
+      // CI job that mirrors it — covers the harness's own tests in ONE command.
+      "apps/cli/vitest.config.ts"
     ],
     globals: false,
     passWithNoTests: true

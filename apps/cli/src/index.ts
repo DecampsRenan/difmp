@@ -1,8 +1,8 @@
 /**
- * Public API of the `harness` package. A consumer writes:
+ * Public API of the `@harness/cli` package, whose `bin` is `harness`. A consumer writes:
  *
  * ```ts
- * import { defineConfig } from "harness"
+ * import { defineConfig } from "@harness/cli"
  * export default defineConfig({ baseUrl: "http://127.0.0.1:3000" })
  * ```
  */

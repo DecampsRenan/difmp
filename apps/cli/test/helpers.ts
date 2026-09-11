@@ -1,4 +1,4 @@
-import { NodeServices } from "@effect/platform-node"
+import * as NodeServices from "@effect/platform-node/NodeServices"
 import { Console, Effect, Layer, Stdio } from "effect"
 import { CliOutput, Command } from "effect/unstable/cli"
 import { createServer, type Server } from "node:http"

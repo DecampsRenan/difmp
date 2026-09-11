@@ -9,3 +9,5 @@ coverage/
 examples/fixture-app/dist/
 apps/ui/dist-types/
 apps/cli/assets/ui/
+ci-artifacts/
+*.tgz

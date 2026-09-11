@@ -1,0 +1,218 @@
+# Demonstrator CI for the agent-driven E2E harness (spec §12).
+#
+# WHAT RUNS ON EVERY PUSH AND PULL REQUEST — and nothing else does:
+#   typecheck -> the harness's own Vitest suites -> the packaged CLI installed into consumer
+#   projects (npm / pnpm / Yarn, ESM and CommonJS) -> the example scenarios executed through that
+#   distributed CLI with the SCRIPTED adapter against the local demo app.
+#
+# No API key, no network service and no secret is required to contribute: everything above is
+# deterministic and offline. The real-model smoke test is a SEPARATE, opt-in job at the bottom.
+#
+# EXTERNAL SYSTEM DEPENDENCIES (all installed by the steps below, none of them hosted services):
+#   * Chromium at the revision pinned by the repository's Playwright version (1.63.0), plus the
+#     Linux shared libraries it needs — `playwright install --with-deps chromium`, which uses apt
+#     and therefore root. The browsers land in `~/.cache/ms-playwright` and are shared with the
+#     consumer projects, which install `playwright` from the tarball but never download a browser.
+#   * Corepack, for the Yarn consumer (`corepack enable`); pnpm comes from `pnpm/action-setup`.
+#   * The demo application under test is `examples/fixture-app`, started by the scripts on an
+#     ephemeral loopback port. Nothing listens on a public interface.
+#
+# NO AUTOMATIC SCENARIO RETRIES (spec §12): no step re-runs a scenario, and no retry action is
+# used. A flaky result must be seen, not papered over.
+#
+# WHAT WAS ACTUALLY VERIFIED, AND WHAT WAS NOT. This workflow has never been executed on a GitHub
+# runner — there is no Actions environment on the development machine and `act` is not installed.
+# Every `run:` step's command was executed locally, on Node 24.19.0 / pnpm 10.29.3, exactly as
+# written: `pnpm install --frozen-lockfile`, `pnpm run typecheck`, `pnpm run build`,
+# `pnpm --filter @harness/fixture-app build`, `pnpm run test`,
+# `apps/cli/scripts/consumer-smoke/run.sh` (8/8 cells, 24/24 assertions each, npm + pnpm + Yarn 4
+# via corepack + Yarn 1, ESM and CommonJS), `apps/cli/scripts/ci/run-examples.sh` (healthy and
+# alt-layout, 3 scenarios each, exit 0 through the tarball's binary), and both `rsync` collection
+# commands. UNVERIFIED, because they only exist on a runner: `corepack enable`, the four
+# marketplace actions (checkout, pnpm/action-setup, setup-node, cache, upload-artifact), the
+# `--with-deps` apt install (the libraries were already present here), the cache hit/miss branches,
+# and the `secrets.ANTHROPIC_API_KEY` path of the optional job — no Anthropic call was made.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      real_model:
+        description: "Also run the optional real-model smoke test (needs the ANTHROPIC_API_KEY secret)"
+        type: boolean
+        default: false
+      model:
+        description: "Model id for the real-model smoke test"
+        type: string
+        default: claude-sonnet-5
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned to the versions every step of this workflow was verified against locally. The product
+  # itself supports Node >= 22.12 (`engines` in package.json); this is the CI pin, not the floor.
+  NODE_VERSION: "24.19.0"
+
+jobs:
+  harness:
+    name: typecheck, tests, packaging, example scenarios
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm BEFORE setup-node: `cache: pnpm` needs pnpm already on PATH. With no `version` input,
+      # pnpm/action-setup reads `"packageManager": "pnpm@10.29.3"` from package.json, so the pin
+      # lives in one place.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Enable corepack (the Yarn consumer in the packaging matrix)
+        run: corepack enable
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      # The cache key includes the lockfile hash, so a Playwright bump invalidates it — restoring
+      # browsers for the wrong revision is silent and confusing.
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Chromium and its Linux dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      # apt libraries are not part of the cached directory, so they are installed even on a hit.
+      - name: Install Chromium's Linux dependencies (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
+      - name: Build every package (and the live UI the CLI serves)
+        run: pnpm run build
+
+      # `pnpm build` filters ./packages/* and ./apps/* — examples/* is not in that scope. The
+      # project-references typecheck above already emits `examples/fixture-app/dist`, but the demo
+      # app is what the scenarios drive, so build it explicitly rather than by side effect.
+      - name: Build the demo application the scenarios drive
+        run: pnpm --filter @harness/fixture-app build
+
+      - name: Harness test suites (Vitest)
+        run: pnpm run test
+
+      # Spec §13, last bullet. Packs the tarball, installs it into consumer projects OUTSIDE the
+      # workspace with npm, pnpm and Yarn, in ESM-typed and CommonJS-typed variants, and checks
+      # discovery, the TypeScript config, the package.json scripts, the bin, the report assets and
+      # every exit code — with no development dependency of the harness present.
+      - name: Packaging — consumer matrix (npm / pnpm / Yarn, ESM and CJS)
+        run: bash apps/cli/scripts/consumer-smoke/run.sh "$RUNNER_TEMP/consumer-smoke" npm pnpm yarn
+
+      # Spec §12. The example scenarios, scripted adapter, real Playwright, real demo app — driven
+      # by the binary from the packed tarball, not by `apps/cli/dist`.
+      - name: Example scenarios through the distributed CLI (scripted adapter)
+        run: bash apps/cli/scripts/ci/run-examples.sh "$RUNNER_TEMP/dist-cli" healthy alt-layout
+
+      # Artifacts are collected even when a step above failed — an infrastructure failure that
+      # reports nothing is indistinguishable, in CI, from a suite that never ran.
+      - name: Collect run directories and logs
+        if: always()
+        run: |
+          mkdir -p ci-artifacts
+          rsync -a --exclude node_modules --exclude '*.tgz' \
+            "$RUNNER_TEMP/dist-cli/runs/" ci-artifacts/example-runs/ 2>/dev/null || true
+          rsync -a --include '*/' --include '*.log' --include '*.out' --exclude '*' --prune-empty-dirs \
+            "$RUNNER_TEMP/consumer-smoke/" ci-artifacts/consumer-smoke/ 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: harness-ci-${{ github.run_id }}
+          path: ci-artifacts/**
+          retention-days: 14
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------------------------
+  # OPTIONAL, EXPLICITLY ENABLED, NOT REQUIRED TO CONTRIBUTE (spec §12 and §13).
+  #
+  # It never runs on push or pull_request: only a manual dispatch with `real_model: true`, and it
+  # is `continue-on-error`, so its verdict is reported SEPARATELY and can never block a merge or a
+  # contributor without an API key. A scripted run is evidence about the harness; this job is the
+  # only thing that says anything about a model's ability to navigate, and it says it on its own.
+  # ---------------------------------------------------------------------------------------------
+  real-model-smoke:
+    name: real-model smoke test (optional, opt-in)
+    if: github.event_name == 'workflow_dispatch' && inputs.real_model
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      HARNESS_PROVIDER: anthropic
+      HARNESS_MODEL: ${{ inputs.model }}
+    steps:
+      - name: Require the API key secret
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::ANTHROPIC_API_KEY is not configured for this repository — the optional"
+            echo "::error::real-model smoke test cannot run. Everything else in CI runs without it."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
+      - run: pnpm run build
+      - run: pnpm --filter @harness/fixture-app build
+
+      # `alt-layout` is the variant worth pointing a real model at: same functional affordances,
+      # a different arrangement, so it measures navigation rather than memorised coordinates.
+      # No retry: one attempt, and the result is whatever it is.
+      - name: Example scenarios through the distributed CLI (real model)
+        run: bash apps/cli/scripts/ci/run-examples.sh "$RUNNER_TEMP/real-model" alt-layout
+
+      - name: Collect run directories
+        if: always()
+        run: |
+          mkdir -p ci-artifacts
+          rsync -a --exclude node_modules "$RUNNER_TEMP/real-model/runs/" ci-artifacts/real-model-runs/ 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-model-smoke-${{ github.run_id }}
+          path: ci-artifacts/**
+          retention-days: 14
+          if-no-files-found: ignore
