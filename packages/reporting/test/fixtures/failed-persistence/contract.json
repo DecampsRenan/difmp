@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "specPath": "tests/e2e/creation-projet.e2e.md",
+  "id": "creation-projet",
+  "tags": ["smoke", "projets"],
+  "fixtureName": "authenticated-workspace",
+  "body": "Variante « persistance cassée » : le formulaire affiche le projet créé mais le serveur ne l'enregistre pas.",
+  "criteria": [
+    {
+      "id": "c1",
+      "text": "Le projet « Projet r_p7q3znm5tk2ab » apparaît dans la liste des projets après sa création.",
+      "sourceText": "Le projet « {{ projectName }} » apparaît dans la liste des projets après sa création.",
+      "line": 14,
+      "column": 3,
+      "method": "model"
+    },
+    {
+      "id": "c2",
+      "text": "Le projet « Projet r_p7q3znm5tk2ab » est persisté côté serveur et survit à un rechargement.",
+      "sourceText": "Le projet « {{ projectName }} » est persisté côté serveur et survit à un rechargement.",
+      "line": 15,
+      "column": 3,
+      "method": "code",
+      "checkName": "project-unique-in-storage"
+    }
+  ],
+  "inputs": { "projectName": "Projet r_p7q3znm5tk2ab" },
+  "maxActions": 25,
+  "budgets": {
+    "attemptTimeoutMs": 120000,
+    "operationTimeoutMs": 15000,
+    "maxModelCalls": 40,
+    "maxTokens": 200000,
+    "verifierReserveTokens": 20000,
+    "fixtureCleanupTimeoutMs": 15000
+  },
+  "hashes": {
+    "spec": "9f2b1c4d7e8a0b6f3c5d2e1a4b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c",
+    "contract": "2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
+    "criteria": {
+      "c1": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+      "c2": "bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66ee77"
+    },
+    "prompts": { "browser-system": "cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66ee77ff88" }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runId": "r_p7q3znm5tk2ab",
+  "createdAt": "2026-03-04T10:02:11.500Z",
+  "specPath": "tests/e2e/creation-projet.e2e.md",
+  "scenarioId": "creation-projet",
+  "harnessVersion": "0.1.0",
+  "nodeVersion": "v22.14.0",
+  "dependencies": { "playwright": "1.63.0", "effect": "4.0.0-rc.113" },
+  "model": { "provider": "scripted", "modelId": "scripted-happy-path", "adapterId": "scripted" },
+  "config": {
+    "baseUrl": "http://127.0.0.1:3001",
+    "allowedOrigins": ["http://127.0.0.1:3001"],
+    "provider": "scripted",
+    "maxActions": 25,
+    "reporters": ["json", "junit", "html"]
+  },
+  "hashes": {
+    "spec": "9f2b1c4d7e8a0b6f3c5d2e1a4b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c",
+    "contract": "2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
+    "criteria": {
+      "c1": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+      "c2": "bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66ee77"
+    },
+    "prompts": { "browser-system": "cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66ee77ff88" }
+  }
+}

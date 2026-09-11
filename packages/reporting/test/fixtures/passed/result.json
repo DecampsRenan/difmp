@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "runId": "r_k4m2xq7ab3cdz",
+  "specPath": "tests/e2e/creation-projet.e2e.md",
+  "scenarioId": "creation-projet",
+  "contractHash": "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+  "startedAt": "2026-03-04T09:12:44.108Z",
+  "finishedAt": "2026-03-04T09:13:07.941Z",
+  "durationMs": 23833,
+  "finalized": true,
+  "status": "passed",
+  "attempts": [
+    {
+      "attemptId": "a1",
+      "startedAt": "2026-03-04T09:12:44.512Z",
+      "finishedAt": "2026-03-04T09:13:07.780Z",
+      "durationMs": 23268,
+      "status": "passed",
+      "actions": { "used": 9, "guidance": 25, "guidanceExceeded": false },
+      "model": { "calls": 7, "inputTokens": 18422, "outputTokens": 1633, "verifierTokens": 4120 },
+      "artifacts": ["art_1", "art_2", "art_3", "art_4"],
+      "criteria": [
+        {
+          "criterionId": "c1",
+          "criterionHash": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+          "status": "passed",
+          "method": "model",
+          "evaluator": { "kind": "model", "provider": "anthropic", "model": "claude-sonnet-5" },
+          "expected": "La liste des projets contient une entrée intitulée « Projet r_k4m2xq7ab3cdz ».",
+          "observed": "Après la soumission du formulaire, l'instantané aria de /projects liste un lien « Projet r_k4m2xq7ab3cdz » en première position, et la capture art_3 montre la même entrée.",
+          "evidence": ["art_2", "art_3"],
+          "evaluatedAtSeq": 24
+        },
+        {
+          "criterionId": "c2",
+          "criterionHash": "bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66ee77",
+          "status": "passed",
+          "method": "code",
+          "evaluator": { "kind": "code", "checkName": "project-unique-in-storage" },
+          "expected": "GET /__probe/projects renvoie exactement une entrée nommée « Projet r_k4m2xq7ab3cdz ».",
+          "observed": "1 entrée trouvée, id srv_7741, createdAt 2026-03-04T09:13:01.220Z.",
+          "evidence": ["art_4"],
+          "evaluatedAtSeq": 27
+        }
+      ]
+    }
+  ]
+}

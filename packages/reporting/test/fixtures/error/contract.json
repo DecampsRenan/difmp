@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "specPath": "tests/e2e/creation-projet-hostile.e2e.md",
+  "id": "creation-projet-hostile",
+  "tags": ["securite"],
+  "body": "Créer un projet dont le nom est une charge utile HTML : <img src=x onerror=\"document.title='PWNED-BODY'\"> et vérifier que l'application l'affiche littéralement.",
+  "criteria": [
+    {
+      "id": "c1",
+      "text": "Le projet « <img src=x onerror=\"document.title='PWNED-NAME'\"> » s'affiche littéralement dans la liste, sans exécution de script.",
+      "sourceText": "Le projet « {{ projectName }} » s'affiche littéralement dans la liste, sans exécution de script.",
+      "line": 9,
+      "column": 3,
+      "method": "model"
+    },
+    {
+      "id": "c2",
+      "text": "Le nom du projet est stocké tel quel côté serveur.",
+      "sourceText": "Le nom du projet est stocké tel quel côté serveur.",
+      "line": 10,
+      "column": 3,
+      "method": "code",
+      "checkName": "project-unique-in-storage"
+    }
+  ],
+  "inputs": {
+    "projectName": "<img src=x onerror=\"document.title='PWNED-NAME'\">"
+  },
+  "maxActions": 25,
+  "budgets": {
+    "attemptTimeoutMs": 120000,
+    "operationTimeoutMs": 15000,
+    "maxModelCalls": 40,
+    "maxTokens": 200000,
+    "verifierReserveTokens": 20000,
+    "fixtureCleanupTimeoutMs": 15000
+  },
+  "hashes": {
+    "spec": "5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f",
+    "contract": "6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a",
+    "criteria": {
+      "c1": "ff11aa22bb33cc44dd55ee66ff77aa88bb99cc00dd11ee22ff33aa44bb55cc66",
+      "c2": "aa22bb33cc44dd55ee66ff77aa88bb99cc00dd11ee22ff33aa44bb55cc66dd77"
+    },
+    "prompts": { "browser-system": "bb33cc44dd55ee66ff77aa88bb99cc00dd11ee22ff33aa44bb55cc66dd77ee88" }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runId": "r_x3v7bqs2mnk5d",
+  "createdAt": "2026-03-04T13:05:00.000Z",
+  "specPath": "tests/e2e/creation-projet-hostile.e2e.md",
+  "scenarioId": "creation-projet-hostile",
+  "harnessVersion": "0.1.0",
+  "nodeVersion": "v22.14.0",
+  "dependencies": { "playwright": "1.63.0", "effect": "4.0.0-rc.113" },
+  "model": { "provider": "anthropic", "modelId": "claude-sonnet-5", "adapterId": "anthropic-messages" },
+  "config": {
+    "baseUrl": "http://127.0.0.1:3000",
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "maxActions": 25
+  },
+  "hashes": {
+    "spec": "5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f",
+    "contract": "6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a",
+    "criteria": {
+      "c1": "ff11aa22bb33cc44dd55ee66ff77aa88bb99cc00dd11ee22ff33aa44bb55cc66",
+      "c2": "aa22bb33cc44dd55ee66ff77aa88bb99cc00dd11ee22ff33aa44bb55cc66dd77"
+    },
+    "prompts": { "browser-system": "bb33cc44dd55ee66ff77aa88bb99cc00dd11ee22ff33aa44bb55cc66dd77ee88" }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "specPath": "tests/e2e/creation-projet.e2e.md",
+  "id": "creation-projet",
+  "tags": ["smoke", "projets"],
+  "fixtureName": "authenticated-workspace",
+  "body": "Depuis le tableau de bord, créer un projet nommé « Projet r_k4m2xq7ab3cdz » puis vérifier qu'il apparaît dans la liste des projets de l'espace de travail.",
+  "criteria": [
+    {
+      "id": "c1",
+      "text": "Le projet « Projet r_k4m2xq7ab3cdz » apparaît dans la liste des projets après sa création.",
+      "sourceText": "Le projet « {{ projectName }} » apparaît dans la liste des projets après sa création.",
+      "line": 14,
+      "column": 3,
+      "method": "model"
+    },
+    {
+      "id": "c2",
+      "text": "Le projet « Projet r_k4m2xq7ab3cdz » est persisté côté serveur et survit à un rechargement.",
+      "sourceText": "Le projet « {{ projectName }} » est persisté côté serveur et survit à un rechargement.",
+      "line": 15,
+      "column": 3,
+      "method": "code",
+      "checkName": "project-unique-in-storage"
+    }
+  ],
+  "inputs": {
+    "projectName": "Projet r_k4m2xq7ab3cdz"
+  },
+  "maxActions": 25,
+  "budgets": {
+    "attemptTimeoutMs": 120000,
+    "operationTimeoutMs": 15000,
+    "maxModelCalls": 40,
+    "maxTokens": 200000,
+    "verifierReserveTokens": 20000,
+    "fixtureCleanupTimeoutMs": 15000
+  },
+  "hashes": {
+    "spec": "9f2b1c4d7e8a0b6f3c5d2e1a4b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c",
+    "contract": "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+    "criteria": {
+      "c1": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+      "c2": "bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66ee77"
+    },
+    "prompts": {
+      "browser-system": "cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66ee77ff88",
+      "verifier-system": "dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66ee77ff88aa99"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "runId": "r_k4m2xq7ab3cdz",
+  "artifacts": [
+    {
+      "artifactId": "art_1",
+      "attemptId": "a1",
+      "kind": "trace",
+      "label": "trace de la tentative",
+      "path": "attempts/a1/trace.zip",
+      "state": "present",
+      "bytes": 482113,
+      "ts": "2026-03-04T09:13:07.640Z"
+    },
+    {
+      "artifactId": "art_2",
+      "attemptId": "a1",
+      "kind": "aria-snapshot",
+      "label": "liste des projets",
+      "path": "attempts/a1/screenshots/obs_5.aria.txt",
+      "state": "present",
+      "bytes": 3184,
+      "ts": "2026-03-04T09:13:02.004Z",
+      "sourceSeq": 21
+    },
+    {
+      "artifactId": "art_3",
+      "attemptId": "a1",
+      "kind": "screenshot",
+      "label": "checkpoint-liste-projets",
+      "path": "attempts/a1/screenshots/checkpoint-liste-projets.png",
+      "state": "present",
+      "bytes": 118902,
+      "ts": "2026-03-04T09:13:02.310Z",
+      "sourceSeq": 22
+    },
+    {
+      "artifactId": "art_4",
+      "attemptId": "a1",
+      "kind": "probe-result",
+      "label": "project-unique-in-storage",
+      "path": "attempts/a1/checks/c2-probe.json",
+      "state": "present",
+      "bytes": 214,
+      "ts": "2026-03-04T09:13:06.118Z",
+      "sourceSeq": 26
+    },
+    {
+      "artifactId": "art_5",
+      "attemptId": "a1",
+      "kind": "video",
+      "state": "missing",
+      "reason": "capture vidéo désactivée par la configuration (capture.video = \"off\")",
+      "ts": "2026-03-04T09:13:07.700Z"
+    }
+  ]
+}

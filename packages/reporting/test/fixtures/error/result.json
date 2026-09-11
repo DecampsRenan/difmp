@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "runId": "r_x3v7bqs2mnk5d",
+  "specPath": "tests/e2e/creation-projet-hostile.e2e.md",
+  "scenarioId": "creation-projet-hostile",
+  "contractHash": "6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a",
+  "startedAt": "2026-03-04T13:05:00.000Z",
+  "finishedAt": "2026-03-04T13:05:38.702Z",
+  "durationMs": 38702,
+  "finalized": false,
+  "status": "error",
+  "stage": "browser",
+  "reason": "le contexte navigateur s'est fermé pendant la capture : Target page, context or browser has been closed </script><script>document.title='PWNED-ERROR'</script>",
+  "attempts": [
+    {
+      "attemptId": "a1",
+      "startedAt": "2026-03-04T13:05:00.400Z",
+      "finishedAt": "2026-03-04T13:05:38.510Z",
+      "durationMs": 38110,
+      "status": "error",
+      "stage": "browser",
+      "reason": "le contexte navigateur s'est fermé pendant la capture",
+      "actions": { "used": 31, "guidance": 25, "guidanceExceeded": true },
+      "model": { "calls": 14, "inputTokens": 41220, "outputTokens": 3980, "verifierTokens": 7400 },
+      "artifacts": ["art_1", "art_2"],
+      "criteria": [
+        {
+          "criterionId": "c1",
+          "criterionHash": "ff11aa22bb33cc44dd55ee66ff77aa88bb99cc00dd11ee22ff33aa44bb55cc66",
+          "status": "failed",
+          "method": "model",
+          "evaluator": { "kind": "model", "provider": "anthropic", "model": "claude-sonnet-5" },
+          "expected": "Le nom du projet apparaît comme texte littéral, balises comprises.",
+          "observed": "L'instantané aria montre une image cassée et aucun texte : le nom a été interprété comme du HTML. Extrait rendu par la page : </script><script>document.title='PWNED-MODEL'</script><svg onload=\"document.title='PWNED-MODEL2'\">",
+          "evidence": ["art_2", "art_9"],
+          "absence": "established-at-checkpoint",
+          "evaluatedAtSeq": 11
+        },
+        {
+          "criterionId": "c2",
+          "criterionHash": "aa22bb33cc44dd55ee66ff77aa88bb99cc00dd11ee22ff33aa44bb55cc66dd77",
+          "status": "pending",
+          "method": "code",
+          "evaluator": { "kind": "code", "checkName": "project-unique-in-storage" },
+          "expected": "Le nom du projet est stocké tel quel côté serveur.",
+          "observed": "",
+          "evidence": [],
+          "limitations": "Le navigateur s'est fermé avant que la sonde puisse être exécutée.",
+          "evaluatedAtSeq": 0
+        }
+      ]
+    }
+  ]
+}

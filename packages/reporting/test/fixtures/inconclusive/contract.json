@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "specPath": "tests/e2e/recherche-projet.e2e.md",
+  "id": "recherche-projet",
+  "tags": ["recherche"],
+  "body": "Rechercher « Atlas » dans la barre de recherche et vérifier que seuls les projets correspondants restent affichés.",
+  "criteria": [
+    {
+      "id": "c1",
+      "text": "Après la recherche, seuls les projets dont le nom contient « Atlas » restent affichés.",
+      "sourceText": "Après la recherche, seuls les projets dont le nom contient « {{ query }} » restent affichés.",
+      "line": 11,
+      "column": 3,
+      "method": "model"
+    },
+    {
+      "id": "c2",
+      "text": "Le compteur de résultats affiche le nombre exact de projets correspondants.",
+      "sourceText": "Le compteur de résultats affiche le nombre exact de projets correspondants.",
+      "line": 12,
+      "column": 3,
+      "method": "model"
+    }
+  ],
+  "inputs": { "query": "Atlas" },
+  "maxActions": 12,
+  "budgets": {
+    "attemptTimeoutMs": 60000,
+    "operationTimeoutMs": 15000,
+    "maxModelCalls": 6,
+    "maxTokens": 40000,
+    "verifierReserveTokens": 8000,
+    "fixtureCleanupTimeoutMs": 15000
+  },
+  "hashes": {
+    "spec": "3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d",
+    "contract": "4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
+    "criteria": {
+      "c1": "cc11dd22ee33ff44aa55bb66cc77dd88ee99ff00aa11bb22cc33dd44ee55ff66",
+      "c2": "dd22ee33ff44aa55bb66cc77dd88ee99ff00aa11bb22cc33dd44ee55ff66aa77"
+    },
+    "prompts": { "browser-system": "ee33ff44aa55bb66cc77dd88ee99ff00aa11bb22cc33dd44ee55ff66aa77bb88" }
+  }
+}

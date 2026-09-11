@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "runId": "r_p7q3znm5tk2ab",
+  "specPath": "tests/e2e/creation-projet.e2e.md",
+  "scenarioId": "creation-projet",
+  "contractHash": "2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
+  "startedAt": "2026-03-04T10:02:11.500Z",
+  "finishedAt": "2026-03-04T10:02:44.120Z",
+  "durationMs": 32620,
+  "finalized": true,
+  "status": "failed",
+  "failedCriteria": ["c2"],
+  "attempts": [
+    {
+      "attemptId": "a1",
+      "startedAt": "2026-03-04T10:02:11.900Z",
+      "finishedAt": "2026-03-04T10:02:43.980Z",
+      "durationMs": 32080,
+      "status": "failed",
+      "failedCriteria": ["c2"],
+      "actions": { "used": 28, "guidance": 25, "guidanceExceeded": true },
+      "model": { "calls": 21, "inputTokens": 61204, "outputTokens": 5140, "verifierTokens": 6880 },
+      "artifacts": ["art_1", "art_2", "art_3"],
+      "criteria": [
+        {
+          "criterionId": "c1",
+          "criterionHash": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+          "status": "passed",
+          "method": "model",
+          "evaluator": { "kind": "scripted-model" },
+          "expected": "La liste des projets contient une entrée intitulée « Projet r_p7q3znm5tk2ab ».",
+          "observed": "L'instantané art_2 montre l'entrée juste après la soumission, avant tout rechargement.",
+          "evidence": ["art_2"],
+          "limitations": "Observation prise avant rechargement : elle ne dit rien de la persistance serveur.",
+          "evaluatedAtSeq": 14
+        },
+        {
+          "criterionId": "c2",
+          "criterionHash": "bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66ee77",
+          "status": "failed",
+          "method": "code",
+          "evaluator": { "kind": "code", "checkName": "project-unique-in-storage" },
+          "expected": "GET /__probe/projects renvoie exactement une entrée nommée « Projet r_p7q3znm5tk2ab ».",
+          "observed": "0 entrée trouvée. Après rechargement de /projects la liste est vide : le serveur n'a jamais enregistré le projet.",
+          "evidence": ["art_3"],
+          "absence": "established-at-checkpoint",
+          "evaluatedAtSeq": 18
+        }
+      ]
+    }
+  ]
+}

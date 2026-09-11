@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "runId": "r_z5wn6ch2rqt4a",
+  "specPath": "tests/e2e/recherche-projet.e2e.md",
+  "scenarioId": "recherche-projet",
+  "contractHash": "4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
+  "startedAt": "2026-03-04T11:40:02.000Z",
+  "finishedAt": "2026-03-04T11:40:51.310Z",
+  "durationMs": 49310,
+  "finalized": true,
+  "status": "inconclusive",
+  "reason": "budget-exhausted",
+  "detail": "budget bloquant maxModelCalls épuisé (6/6) avant que c2 puisse être évalué",
+  "attempts": [
+    {
+      "attemptId": "a1",
+      "startedAt": "2026-03-04T11:40:02.300Z",
+      "finishedAt": "2026-03-04T11:40:51.120Z",
+      "durationMs": 48820,
+      "status": "inconclusive",
+      "reason": "budget-exhausted",
+      "detail": "maxModelCalls 6/6",
+      "actions": { "used": 11, "guidance": 12, "guidanceExceeded": false },
+      "model": { "calls": 6, "inputTokens": 29880, "outputTokens": 2410, "verifierTokens": 5210 },
+      "artifacts": ["art_1", "art_2"],
+      "criteria": [
+        {
+          "criterionId": "c1",
+          "criterionHash": "cc11dd22ee33ff44aa55bb66cc77dd88ee99ff00aa11bb22cc33dd44ee55ff66",
+          "status": "inconclusive",
+          "method": "model",
+          "evaluator": { "kind": "model", "provider": "anthropic", "model": "claude-sonnet-5" },
+          "expected": "Seuls des projets dont le nom contient « Atlas » sont listés après la recherche.",
+          "observed": "La navigation vers /projects?q=Atlas n'a pas abouti de façon certaine : l'observation obs_4 montre un indicateur de chargement et aucune liste rendue. L'absence d'entrées n'est donc pas établie au checkpoint prévu par le critère.",
+          "evidence": ["art_2"],
+          "limitations": "Aucune capture stable de la liste rendue ; l'absence observée relève de la navigation incertaine, pas d'un constat au checkpoint.",
+          "absence": "uncertain-navigation",
+          "evaluatedAtSeq": 12
+        },
+        {
+          "criterionId": "c2",
+          "criterionHash": "dd22ee33ff44aa55bb66cc77dd88ee99ff00aa11bb22cc33dd44ee55ff66aa77",
+          "status": "pending",
+          "method": "model",
+          "evaluator": { "kind": "model", "provider": "anthropic", "model": "claude-sonnet-5" },
+          "expected": "Le compteur de résultats affiche le nombre exact de projets correspondants.",
+          "observed": "",
+          "evidence": [],
+          "limitations": "Jamais évalué : le budget maxModelCalls a été épuisé avant l'appel au vérificateur.",
+          "evaluatedAtSeq": 0
+        }
+      ]
+    }
+  ]
+}
