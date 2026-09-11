@@ -307,3 +307,57 @@ Escape everything that reaches HTML (spec text, model text, page text, logs). Re
 values from textual logs and prompts. Do not claim traces/videos/DOM are anonymised — document the
 limitation and use synthetic fixture data. The origin allow-list is a tool-level check, not network
 isolation — document that too.
+
+---
+
+## 14. Open decisions surfaced by the critic pass (decide these in step 1, not step 6)
+
+These are contract-shaped questions the cheat-sheets can now answer *technically* but that this file
+does not yet settle. Pick one and edit the relevant section above.
+
+1. **Is `ModelProvider` (§10) a real abstraction, or just a swapped `LanguageModel` layer?**
+   `effect/unstable/ai` is part of `effect` itself, not a vendor SDK, so putting
+   `LanguageModel.LanguageModel` in `@harness/core` does **not** violate "core must not depend on a
+   model SDK". `LanguageModel.make({ generateText, streamText })` gives a fully deterministic
+   scripted provider in ~20 lines (api-effect-ai.md §B2, compiled + executed) and lets the scripted
+   and real adapters share the entire loop, prompt plumbing, usage accounting and tool typing.
+   Hand-rolling the §10 `ModelProvider` interface duplicates all of that. **Recommendation: drop
+   §10's custom interface; make `provider` a choice of `Layer<LanguageModel>`.** If §10 is kept,
+   say explicitly what it buys.
+
+2. **`observationId` + element `ref` lifetime.** api-playwright.md §2 proves a ref is valid only
+   against the *most recent ai-mode snapshot in that frame*, and that **any** default-mode
+   `ariaSnapshot` anywhere disarms every ref. §5 above must state: one `observationId` is live at a
+   time per attempt; a ref from an older `observationId` is rejected **without** touching the page;
+   `observe` is the only caller of `ariaSnapshot`.
+
+3. **`timeout: 90s` has no parser.** Effect rejects `"90s"` (api-effect-core.md §A1). Either
+   change the contract to the spaced form (`90 seconds`) — which contradicts the spec's own
+   example — or adopt the abbreviation normaliser. **Recommendation: normaliser, accept both.**
+   Record the decision in §4.
+
+4. **`artifactId` / `observationId` / `actionId` counters vs UUIDv7.** §2 specifies `art_<seq>`.
+   A per-attempt counter must be single-writer and shared with the `events.jsonl` `seq` writer.
+   `Crypto.randomUUIDv7` (api-effect-core.md §A2) is monotonic and needs no shared state. Keep
+   `art_<seq>` only if the event writer already owns the counter.
+
+5. **Does the aggregate `passed` require every criterion, or only "mandatory" ones?** §8's
+   aggregation says "critère obligatoire", but nothing in §4's `ScenarioContract.criteria` marks a
+   criterion optional, and the spec never introduces optional criteria. **Either add a field or
+   drop the word "obligatoire"** — otherwise two implementers will read it differently.
+
+6. **Where does `maxActions` counting live?** §7 says accepted browser tool calls including failed
+   ones. A rejected *stale ref* produces a typed tool error (§5) — the text says the action "still
+   counts". Make sure the counter increments in the tool dispatcher, before policy validation, and
+   that a **policy-rejected** `navigate` (disallowed origin) is stated one way or the other.
+
+7. **`report` (§12) must render without a model call and without the run's original config.**
+   `report <run-directory>` reads `result.json` + `contract.json` + `artifacts.json` only. State
+   that `manifest.json` is the sole source of "which adapter was used" so the reporter never has to
+   re-resolve config.
+
+Supporting facts now verified and available: run ids + sha256 via `Crypto.Crypto`
+(api-effect-core.md §A2), cancellation with finalizer-ordering guarantees (api-effect-core.md §A3 /
+api-effect-http-node.md §C2), frontmatter field→line mapping (api-tooling.md §A-L),
+`--inputs-file` typed decoding (api-tooling.md §A-I), tool JSON-Schema emission
+(api-effect-ai.md §B1).

@@ -691,3 +691,70 @@ client hangs up                  -> "sse client gone" finalizer fires within ~3 
 * `Layer.launch(layer): Effect<never, E, RIn>`, `Layer.build(layer): Effect<Context<ROut>, E, RIn | Scope>`.
 * UNVERIFIED: `HttpPlatform.compression` / `HttpMiddleware.compression`, `Multipart`, cookie helpers,
   `HttpApi*` (the schema-first stack) — read but not compiled or run here.
+
+---
+
+# APPENDIX (critic pass) — gaps no lane answered
+
+Re-verified live (`.recon/http_run.ts`): `GET /events` with `Last-Event-ID: 2` replayed from `id: 3`
+onward then streamed live frames; `GET /health` 204; `POST /cancel {"nope":1}` → **400**.
+All of §3/§9 stands.
+
+## C1. `Layer.provide` after `HttpRouter.serve` HIDES the service from your own program
+
+§1's rule ("provide after `serve`") is right, but `Layer.provide` also **hides** the dependency from
+everything else. The CLI needs the run service too (to start it, to await it), so use
+`provideMerge`:
+
+```ts
+export const MainLayer = HttpRouter.serve(Routes).pipe(
+  Layer.provideMerge(Runner.layer),        // provide -> routes can't see it AND neither can you
+  Layer.provideMerge(NodeHttpServer.layer(createServer, { host: "127.0.0.1", port, gracefulShutdownTimeout: 0 }))
+)
+export const program = Effect.gen(function*() {
+  const runner = yield* Runner                 // only works with provideMerge
+  yield* runner.start
+  yield* Deferred.await(runner.done)
+}).pipe(Effect.provide(MainLayer))
+```
+
+With plain `Layer.provide(Runner.layer)` the program fails to typecheck with
+`Type 'Effect<void, ServeError, Runner>' is not assignable to ... 'never'` at `NodeRuntime.runMain`.
+
+## C2. Working cancellation endpoint — compiled AND run (`.recon/critic-cancel.ts`)
+
+Spec §11 requires "une commande d'annulation fonctionnelle" and §13 requires "annulation avec
+fermeture des ressources et conservation des preuves disponibles". Full recipe in
+**api-effect-core.md §A3** (`Effect.scope` + `Effect.forkIn` inside the layer, `Fiber.interrupt` in
+the route). The load-bearing fact:
+
+> `Fiber.interrupt(fiber)` **awaits the interrupted fiber's finalizers** before returning.
+
+Measured timeline from the executed run:
+
+```
+17:06:41.977  run interrupted -> finalizers running      (Effect.onInterrupt fired)
+17:06:41.979  Sent HTTP response POST /cancel 202
+```
+
+So a `202` from `/cancel` is a real guarantee that browser context close, trace finalisation and
+fixture cleanup already ran — **no late actions or requests can land afterwards**, which is exactly
+the spec's requirement. Put every teardown in `Effect.acquireRelease` / `Effect.addFinalizer`
+(bounded with `Effect.timeoutOption`, see api-effect-core.md §6) and this holds for free.
+
+`GET /status` companion, and the `Deferred.poll` double-unwrap gotcha:
+
+```ts
+const maybe = yield* Deferred.poll(runner.done)     // Option<Effect<Exit<A,E>>>, NOT Option<Exit>
+if (Option.isNone(maybe)) return HttpServerResponse.text("running")
+const exit: Exit.Exit<string> = yield* maybe.value  // second yield*
+return HttpServerResponse.text(Exit.isSuccess(exit) ? `done:${exit.value}` : "cancelled-or-failed")
+```
+
+## C3. `effect/unstable/encoding` also ships `Ndjson`, `Yaml`, `Toml`, `Ini`
+
+Beyond `Sse`. `Ndjson` is **Channel-based** (`encodeSchemaString`, `decodeSchemaString`, `duplex*`)
+and aimed at sockets/streams — for `events.jsonl` a plain `fs.open({ flag: "a" })` handle plus
+`JSON.stringify(e) + "\n"` (api-effect-http-node.md §7) is simpler and gives you the serialised
+single-writer ordering the spec demands. `Yaml` is covered in **api-tooling.md §A-Y** — read that
+before choosing it over the `yaml` package.

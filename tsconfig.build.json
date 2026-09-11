@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/browser-playwright" },
+    { "path": "packages/agent-runtime" },
+    { "path": "packages/reporting" },
+    { "path": "apps/cli" },
+    { "path": "examples/fixture-app" },
+    { "path": "examples/support" }
+  ]
+}

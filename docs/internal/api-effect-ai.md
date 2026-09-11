@@ -15,12 +15,11 @@ against a fake LanguageModel — no network).
 
 ---
 
-## 0. Repo gotcha (fix already applied)
+## 0. Repo gotcha — STALE, corrected by the critic pass
 
-`node_modules/@effect/{ai-anthropic,platform-node,platform-node-shared,vitest}` were **broken symlinks**
-(`../../.pnpm/...` instead of `../.pnpm/...`, and a stale `vite@7` vitest hash). They were relinked by hand.
-If a `pnpm install` ever re-breaks them, `@effect/ai-anthropic` will fail to resolve with `TS2307`.
-Nothing in any `package.json` declares `effect` or `@effect/ai-anthropic` — they exist only in the store.
+The broken-symlink situation is **fixed**: the root `package.json` now declares `effect`,
+`@effect/platform-node` and `@effect/ai-anthropic`, and all of them resolve normally. Nothing needs
+relinking. (If `pnpm install` ever produces two `vitest` copies again, see api-tooling.md §1.5.)
 
 ## 1. Imports
 
@@ -448,3 +447,157 @@ loop we fully control, a plain `let prompt: Prompt.Prompt` (as in §5) is simple
 - `ExecutionPlan.make({ provide: Model, attempts }, …)` + `Effect.withExecutionPlan` gives multi-provider
   fallback; `plan.captureRequirements` lifts client requirements into a Layer. UNVERIFIED: not compiled here
   (single-provider setup), but it is the pattern in `ai-docs/src/71_ai/10_language-model.ts`.
+
+---
+
+# APPENDIX (critic pass) — gaps no lane answered
+
+Compiled: `.recon/critic-ai.ts`, `.recon/critic-scripted.ts`, `.recon/critic-tooljson.ts`,
+`.recon/critic-emptyparams.ts`. The last three were **executed**; output below is real.
+
+Re-verified from §3/§5: with `disableToolCallResolution: true` the effect's type is exactly
+`Effect<…, AiError.AiError, LanguageModel.LanguageModel>` — **no handler layer, no `Tool.Handler`
+in `R`** — and `call.params` is the *encoded* shape (`c.params.selector` is `string`).
+
+## B1. `Tool.getJsonSchema(tool)` — how to get a tool definition for a custom `ModelProvider`
+
+`design-contracts.md` §10 declares `tools?: ToolDefinition[]` "JSON-Schema derived from Effect
+Schema". You do **not** need to re-derive it — every `Tool` exposes its parts:
+
+```ts
+import { Tool, Toolkit } from "effect/unstable/ai"
+
+tool.name              // literal union member, e.g. "browser_click"
+tool.description       // string | undefined
+tool.parametersSchema  // the Schema you passed (or Tool.EmptyParams)
+tool.successSchema     // Schema.Void by default
+tool.failureSchema     // Schema.Never by default
+Tool.getJsonSchema(tool)                    // JsonSchema.JsonSchema  <- feed this to a provider
+Tool.getJsonSchemaFromSchema(anySchema)     // same for a bare Schema (e.g. the verifier's response)
+Object.entries(kit.tools)                   // Toolkit -> Record<name, Tool.Any>
+```
+
+**GOTCHA 1 — `getJsonSchema` emits `additionalProperties: true`.** It calls
+`Schema.toJsonSchemaDocument` with *default* options (`onExcessProperty: "ignore"`). Executed:
+
+```
+Tool.make("browser_click", { parameters: Schema.Struct({observationId, ref, intent?}) })
+ -> {"type":"object","properties":{…},"required":["observationId","ref"],"additionalProperties":true}
+```
+
+Anthropic strict tools / `strictJsonSchema` want `false`. Emit it yourself when you need closed
+objects: `Schema.toJsonSchemaDocument(tool.parametersSchema, { onExcessProperty: "error",
+referencePolicy: () => undefined }).schema`.
+
+**GOTCHA 2 — it can emit `$ref` + a nested `$defs`.** Any field schema carrying an `identifier`
+annotation is hoisted:
+
+```
+parameters: Schema.Struct({ criterionId: Schema.String.annotate({ identifier: "CriterionId" }) })
+ -> {"type":"object","properties":{"criterionId":{"$ref":"#/$defs/CriterionId"}},…,
+     "$defs":{"CriterionId":{"type":"string"}}}
+```
+Not every provider follows `$defs` in a tool's `input_schema`. Pass
+`referencePolicy: () => undefined` to force everything inline, or simply do not put `identifier`
+annotations on tool-parameter field schemas.
+
+**GOTCHA 3 — inconsistent `additionalProperties` for a no-params tool.** `Tool.make("observe", {})`
+(i.e. `Tool.EmptyParams`) emits `{"type":"object","additionalProperties":false}` — `false`, not
+`true`. Don't assume uniformity; normalise in your own emitter.
+
+`Tool.dynamic(...)` also exists: it takes a **raw JSON Schema** instead of an Effect Schema
+(`tool.jsonSchema` is then populated and `getJsonSchema` returns it verbatim). Useful if you ever
+need a tool shape Effect Schema cannot express — not needed for the eight MVP tools.
+
+## B2. The SCRIPTED adapter — a deterministic `LanguageModel` layer (MVP-critical, was undocumented)
+
+Spec §3 requires "un adaptateur scripté déterministe pour tester le harness sans appel externe",
+and §13 requires scripted **verifier** responses too. The right seam is `LanguageModel.make` —
+then the *same* agent loop, the same `Toolkit`, the same `Prompt` plumbing run against it, and only
+the layer changes. Exact signature from `src/unstable/ai/LanguageModel.ts:790`:
+
+```ts
+LanguageModel.make(params: {
+  readonly generateText: (options: ProviderOptions) =>
+    Effect.Effect<Array<Response.PartEncoded>, AiError.AiError, IdGenerator>
+  readonly streamText: (options: ProviderOptions) =>
+    Stream.Stream<Response.StreamPartEncoded, AiError.AiError, IdGenerator>
+  readonly codecTransformer?: CodecTransformer | undefined
+}): Effect.Effect<LanguageModel>
+
+interface ProviderOptions {       // what your fake RECEIVES — assert on it in tests
+  readonly prompt: Prompt.Prompt
+  readonly tools: ReadonlyArray<Tool.Any>
+  readonly responseFormat: { type: "text" } | { type: "json"; objectName: string; schema: Schema.Top }
+  readonly toolChoice: …; readonly span: …; readonly previousResponseId: …; readonly incrementalPrompt: …
+}
+```
+
+You return **encoded** parts; the framework decodes them and applies the toolkit typing.
+
+```ts
+import { Effect, Layer, Ref, Stream } from "effect"
+import { LanguageModel, Response } from "effect/unstable/ai"
+
+type Turn = ReadonlyArray<Response.PartEncoded>
+
+const finishPart = (reason: "stop" | "tool-calls"): Response.PartEncoded => ({
+  type: "finish",
+  reason,
+  usage: { inputTokens: { total: 10 }, outputTokens: { total: 5 } }
+})
+
+export const scriptedLayer = (
+  script: ReadonlyArray<Turn>,
+  seen?: Array<LanguageModel.ProviderOptions>        // optional spy for assertions
+): Layer.Layer<LanguageModel.LanguageModel> =>
+  Layer.effect(LanguageModel.LanguageModel, Effect.gen(function*() {
+    const cursor = yield* Ref.make(0)
+    return yield* LanguageModel.make({
+      generateText: (options) => Effect.gen(function*() {
+        seen?.push(options)
+        const i = yield* Ref.getAndUpdate(cursor, (n) => n + 1)
+        return [...(script[i] ?? [finishPart("stop")])]
+      }),
+      streamText: (options) => Stream.unwrap(Effect.gen(function*() {
+        seen?.push(options)
+        const i = yield* Ref.getAndUpdate(cursor, (n) => n + 1)
+        return Stream.fromIterable(
+          (script[i] ?? [finishPart("stop")]) as ReadonlyArray<Response.StreamPartEncoded>
+        )
+      }))
+    })
+  }))
+```
+
+Encoded part shapes you need (from `src/unstable/ai/Response.ts`):
+
+```ts
+{ type: "text",      text: string }
+{ type: "tool-call", id: string, name: string, params: unknown, providerExecuted?: boolean }
+{ type: "finish",    reason: FinishReason, usage: { inputTokens: {...}, outputTokens: {...} } }
+```
+
+Executed against the §5 loop with `disableToolCallResolution: true`:
+
+```
+step 0: finish=tool-calls text="clicking the button" in=10 out=5
+   call call_1 browser_click {"observationId":"obs_1","ref":"e7"}
+step 1: finish=tool-calls text="" in=10 out=5
+   call call_2 finish {"summary":"done"}
+tools the provider actually received: [['browser_click','finish'], ['browser_click','finish']]
+responseFormat: {"type":"text"}
+roles in final prompt: user,assistant,tool,assistant,tool
+```
+
+Notes:
+* `usage` flows straight through — a scripted run can therefore exercise the **token budget**
+  and `verifierReserveTokens` logic without any network.
+* For the **scripted verifier**, reuse the same layer and script a single
+  `{ type: "text", text: JSON.stringify(verdict) }` turn; `generateObject` sets
+  `responseFormat: { type: "json", objectName, schema }`, which your fake can read from
+  `options.responseFormat` to pick the right canned verdict. Mark the result
+  `evaluator.kind === "scripted-model"` per design-contracts §8.
+* `Layer.fresh(scriptedLayer(...))` per attempt if you don't want the cursor shared.
+* `options.tools` / `options.prompt` are the assertion surface for "secrets never reach the model"
+  and "the contract text is never re-sent from the page".

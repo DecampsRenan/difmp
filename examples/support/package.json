@@ -1,0 +1,14 @@
+{
+  "name": "@harness/example-support",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -b tsconfig.json"
+  },
+  "dependencies": {
+    "@harness/core": "workspace:*",
+    "@harness/fixture-app": "workspace:*",
+    "effect": "4.0.0-rc.113"
+  }
+}

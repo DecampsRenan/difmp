@@ -1,12 +1,43 @@
 {
   "name": "@harness/cli",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "description": "Agent-driven E2E test harness CLI",
+  "bin": {
+    "harness": "./dist/bin/harness.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "scripts": { "build": "tsc -b tsconfig.json" },
-  "dependencies": {},
-  "devDependencies": {}
+  "files": [
+    "dist",
+    "assets",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "effect": "4.0.0-rc.113",
+    "@effect/platform-node": "4.0.0-rc.113",
+    "@effect/ai-anthropic": "4.0.0-rc.113",
+    "playwright": "1.63.0",
+    "tsx": "^4.23.13",
+    "yaml": "^2.9.0",
+    "tinyglobby": "^0.2.17",
+    "@harness/core": "workspace:*",
+    "@harness/browser-playwright": "workspace:*",
+    "@harness/agent-runtime": "workspace:*",
+    "@harness/reporting": "workspace:*"
+  }
 }

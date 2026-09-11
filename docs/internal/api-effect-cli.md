@@ -6,10 +6,11 @@ Every ```ts block below was compiled with
 `npx tsc --noEmit --strict --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck`
 (files kept in `.recon/`). Runtime behaviour was additionally exercised with `tsx`.
 
-> pnpm note: `effect` is not a root dependency in this workspace. To typecheck `.recon/*.ts` the
-> recon agent symlinked `node_modules/effect`, `node_modules/@effect/platform-node`,
-> `node_modules/@effect/platform-node-shared` into the pnpm store. Real packages must declare
+> pnpm note (corrected by the critic pass): `effect` **is** a root dependency now and resolves
+> normally — the old hand-symlink workaround is obsolete. Real packages must still declare
 > `effect` + `@effect/platform-node` in their own `package.json`.
+> Re-verified: `.recon/cli-harness.ts` compiles clean and every exit code in §9 reproduces
+> (`--help` 0, `--version` 0, `list` 0, `--nope` 2, missing arg 2, `--concurrency 0` 2, `rnu` **0**).
 
 ## 0. Imports
 

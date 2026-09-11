@@ -9,11 +9,9 @@ and most of it was also **executed** with `tsx`; the printed outputs shown are r
 
 ## 0. Environment gotcha (do this first)
 
-At the time of recon, `effect` was **not resolvable from the workspace root** — root
-`package.json` lists only `@effect/vitest`, and pnpm's isolated store left
-`node_modules/effect` missing. I created the symlinks
-(`node_modules/effect`, `node_modules/@effect/ai-anthropic`, `node_modules/@effect/platform-node`).
-**Implementation agents must add `"effect": "4.0.0-rc.113"` as an explicit dependency of each
+**STALE — corrected by the critic pass:** `effect` **is** now resolvable from the workspace root
+(root `package.json` declares it; no hand-made symlinks are involved). Ignore the hand-symlink advice.
+What remains true: **implementation agents must add `"effect": "4.0.0-rc.113"` as an explicit dependency of each
 package that imports it** or resolution breaks again after any `pnpm install`.
 
 Everything in this lane comes from the top-level module `"effect"`. There is **no**
@@ -634,3 +632,29 @@ export const Node: Schema.Codec<Node> = Schema.Struct({
 UNVERIFIED items are flagged inline; the only ones are the `yaml` dependency note (§11) and the
 `Rpc.make` replacement for `TaggedRequest` (§1) — I confirmed `TaggedRequest` is **absent**, but did
 not build an `Rpc.make` example (out of lane).
+
+---
+
+# APPENDIX (critic pass) — §9 re-verified by execution
+
+`.recon/critic-schema.ts` compiles; `.recon/critic-schema-run.ts` was executed. Real output:
+
+```
+toJsonSchemaDocument(S, { onExcessProperty: "error", referencePolicy: () => undefined }).schema
+ -> {"type":"object","properties":{...},"required":["observationId","ref"],
+     "additionalProperties":false,"description":"Click an element by ref"}       definitions: {}
+
+toJsonSchemaDocument(S, { onExcessProperty: "error" }).schema      // identifier annotation present
+ -> {"$ref":"#/$defs/ClickParams"}   definitions: { ClickParams: {...} }
+
+TaggedUnion -> {"anyOf":[{"type":"object","properties":{"_tag":{"type":"string","enum":["Navigate"]},
+                "url":{"type":"string"}},"required":["_tag","url"],"additionalProperties":false}, …]}
+```
+
+Both §9 behaviours are exactly as documented: the `identifier` annotation forces a `$ref`, and
+`referencePolicy: () => undefined` inlines it. **For LLM tool parameters always pass both
+`onExcessProperty: "error"` and `referencePolicy: () => undefined`.**
+
+Related, and easy to miss: `effect/unstable/ai` has its own wrapper, `Tool.getJsonSchema(tool)`,
+which calls `toJsonSchemaDocument` with **default** options — so it emits `additionalProperties: true`
+and may leave a `$ref`/`$defs` in place. See api-effect-ai.md §B1 before using it.

@@ -879,3 +879,38 @@ that owns the video muxer.
   (`typeof === "function"`), semantics not probed.
 - UNVERIFIED: exact `depth` truncation semantics for `ariaSnapshot` — `depth: 3` did not visibly
   truncate the probe tree.
+
+---
+
+# APPENDIX (critic pass) — independently re-verified
+
+Re-ran the headline claims on a fresh page (`.recon/critic-pw.mjs`, real output):
+
+```
+page.ariaSnapshot({ mode: "ai" })  -> refs e1..e9, [cursor=pointer] on the link
+aria-ref=e1                        -> count 1
+after a DEFAULT-mode ariaSnapshot()-> count 0          (GOTCHA B confirmed)
+after a fresh ai-mode snapshot     -> count 1          (re-arming works)
+after page.goto (2nd document)     -> f1e1..f1e9       (GOTCHA A confirmed)
+stale pre-navigation ref           -> count 0
+typeof page.accessibility          -> undefined        (removed, confirmed)
+typeof page.pageErrors             -> function         (new pull API, confirmed)
+```
+
+Everything in §1 and §2 stands as written. Two consequences the implementation must encode:
+
+1. **`BrowserDriver.observe` must be the ONLY thing that ever calls `ariaSnapshot`, and always with
+   `{ mode: "ai" }`.** A single stray default-mode call anywhere (an evidence collector, a
+   verifier probe, a debug helper) silently disarms every outstanding `[ref=…]` and the next action
+   fails as a bare `TimeoutError` with no hint. Make that a lint-level rule in the driver package.
+2. The ref regex is `/\[ref=([a-z0-9]+)\]/g` — **never** `/\[ref=(e\d+)\]/`. Confirmed again: after
+   one navigation every ref is `f1e…` and the `e\d+` form matches zero.
+
+Design-contracts §5 says stale refs must produce a typed tool error, not a wrong click. The only
+reliable detection is the pre-flight count (GOTCHA E):
+
+```ts
+if (await page.locator(`aria-ref=${ref}`).count() === 0) return staleRefError(observationId, ref)
+```
+Do this **before** every ref-targeted action; a dead ref otherwise burns the whole action timeout
+and arrives as an indistinguishable `TimeoutError`.

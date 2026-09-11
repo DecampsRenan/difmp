@@ -10,18 +10,21 @@ npx tsc -p .recon/tsconfig.core.json     # files: .recon/core.ts, .recon/core2.t
 #   verbatimModuleSyntax, ES2023 + DOM, nodenext)
 ```
 
-## 0. BLOCKER: `effect` is not installed at the repo root
+## 0. Install state — RESOLVED (re-verified by the critic pass)
 
-`pnpm-lock.yaml` declares `effect`, `@effect/platform-node`, `@effect/ai-anthropic` as root
-dependencies, but the current root `package.json` does **not** list them, and
-`node_modules/` has only `@effect/vitest`. `import { Effect } from "effect"` fails with TS2307.
+`effect@4.0.0-rc.113`, `@effect/platform-node`, `@effect/platform-node-shared`,
+`@effect/ai-anthropic` and `@effect/vitest` **are now all present and resolvable from the repo root**
+(root `package.json` declares them; `node_modules/effect -> .pnpm/effect@4.0.0-rc.113/...`).
+The earlier "BLOCKER / symlink by hand" note is obsolete — ignore it.
 
-Fix before implementing (pick one):
-```bash
-pnpm add effect@4.0.0-rc.113 @effect/platform-node@4.0.0-rc.113 @effect/ai-anthropic@4.0.0-rc.113 -w
-# or temporary recon workaround (what this doc used):
-ln -sfn ../node_modules/.pnpm/effect@4.0.0-rc.113/node_modules/effect node_modules/effect
-```
+Still true, and still the thing to do: **each workspace package that imports `effect` must declare it
+in its own `package.json`**, or pnpm's isolated store will fail to resolve it from that package.
+
+Also still missing in the repo (will break the advertised scripts):
+* **no `tsconfig.json` and no `tsconfig.build.json` at the root**, yet `package.json` runs
+  `"typecheck": "tsc -b tsconfig.build.json"`. Create the solution file (see api-tooling.md §2.1).
+* `vite-plugin-singlefile` and `tsdown` are **not installed** — add them before relying on
+  api-tooling.md §4 / §8.
 
 ## 1. v3 -> v4 renames / removals (observed in the shipped source)
 
@@ -486,8 +489,9 @@ rt.memoMap; rt.contextEffect; await rt.context()
 ```
 Process entrypoints: `NodeRuntime.runMain(effect)` from `@effect/platform-node`, or
 `Layer.launch(appLayer).pipe(NodeRuntime.runMain)`.
-UNVERIFIED: `@effect/platform-node` imports — the package is not linked into `node_modules` in this
-checkout (see §0), so `NodeRuntime`/`NodeStream` snippets are copied from `ai-docs` and not compiled here.
+VERIFIED by the critic pass: `@effect/platform-node` resolves and
+`NodeRuntime.runMain(program)` / `Effect.provide(NodeServices.layer)` compile **and run**
+(see `.recon/critic-cancel.ts`, `.recon/critic-crypto.ts`, `.recon/cli-harness.ts`).
 
 ## 15. Config & Redacted
 
@@ -531,3 +535,165 @@ const dbHost = Config.nested(Config.String("HOST"), "DB")          // DB_HOST
 - `/home/ubuntu/apps/difmp/.recon/core.ts` — §2–§14, §15 (clean)
 - `/home/ubuntu/apps/difmp/.recon/core2.ts` — §5 scoped layers, §7 errors, §12 SSE/ReadableStream, §6 bounded cleanup (clean)
 - `/home/ubuntu/apps/difmp/.recon/tsconfig.core.json` — compiles both under `tsconfig.base.json` settings
+
+---
+
+# APPENDIX (critic pass) — gaps no lane answered
+
+Compiled + executed: `.recon/critic-core.ts`, `.recon/critic-dur.ts`, `.recon/critic-dur2.ts`,
+`.recon/critic-crypto.ts`, `.recon/critic-cancel.ts`.
+
+## A1. `timeout: 90s` from the spec CANNOT be parsed by Effect — write your own normaliser
+
+The spec's reference scenario uses `timeout: 90s`. **Nothing in Effect accepts that.** Executed:
+
+```
+Duration.fromInput("90s")        -> None          Duration.fromInput("90 seconds") -> 90000ms
+Duration.fromInput("1m")         -> None          Duration.fromInput("1 minute")   -> 60000ms
+Duration.fromInput("90000")      -> None          Duration.fromInputUnsafe(90000)  -> 90000ms  (number, not string)
+Schema.decodeUnknownResult(Schema.DurationFromString)("90s") -> FAIL "Expected a valid Duration string"
+```
+
+`Duration.Input`'s string form is `` `${number} ${Unit}` `` and the parser is
+`/^(-?\d+(?:\.\d+)?)\s+(nanos?|micros?|millis?|seconds?|minutes?|hours?|days?|weeks?)$/` —
+a **space is mandatory** and the unit must be a full word. Also:
+
+* **`Schema.Duration` is an opaque `declare`** — Type === Encoded === `Duration`. It cannot decode
+  a string or a number. Do **not** reach for it when decoding frontmatter.
+* `Schema.DurationFromString` decodes only the spaced form; `Schema.DurationFromMillis` decodes a
+  `number`; `Schema.DurationFromNanos` decodes a `bigint`.
+
+Normalise `90s` / `2m` / `1h` yourself before handing anything to Effect (compiled shape):
+
+```ts
+import { Duration } from "effect"
+
+const ABBREV = /^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)$/
+const UNIT = { ms: "millis", s: "seconds", m: "minutes", h: "hours", d: "days" } as const
+
+/** "90s" | "2 m" | "1500ms" | 90000 -> Duration.Input, else undefined */
+export const toDurationInput = (raw: string | number): Duration.Input | undefined => {
+  if (typeof raw === "number") return Number.isFinite(raw) && raw > 0 ? raw : undefined
+  const m = ABBREV.exec(raw.trim())
+  if (m) return `${Number(m[1])} ${UNIT[m[2] as keyof typeof UNIT]}` as Duration.Input
+  return Duration.fromInput(raw.trim() as Duration.Input)._tag === "Some"
+    ? (raw.trim() as Duration.Input) : undefined
+}
+```
+
+Then `Duration.fromInputUnsafe(toDurationInput(v)!)`, or wrap it in a `Schema.check` so the error
+names the field. `timeout` must be a **positive** duration per the spec — check that separately;
+`Duration.fromInput("0 seconds")` succeeds.
+
+## A2. Run ids and sha256 hashes — use `Crypto.Crypto` (NOT `node:crypto`, NOT `Math.random`)
+
+`design-contracts.md` §2 needs `runId = r_<base32 of 8 random bytes>` and §4 needs sha256 hex hashes
+of spec / contract / criteria / prompts. Effect ships this; **executed output is real**:
+
+```
+runId: r_trpt27ridhwxw
+sha256('abc'): ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+uuidv4: 2edffc00-d0f9-4bfb-8285-ad26139e53d5   uuidv7: 01a0916d-7a4c-7a4f-be12-18ca1e551097
+```
+
+```ts
+import { NodeServices } from "@effect/platform-node"
+import { Crypto, Effect } from "effect"
+
+const toHex = (b: Uint8Array): string => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("")
+const B32 = "abcdefghijklmnopqrstuvwxyz234567"          // RFC4648 lowercase, url-safe, no padding
+const toBase32 = (b: Uint8Array): string => {
+  let bits = 0, acc = 0, out = ""
+  for (const byte of b) {
+    acc = (acc << 8) | byte; bits += 8
+    while (bits >= 5) { out += B32[(acc >>> (bits - 5)) & 31]; bits -= 5 }
+  }
+  if (bits > 0) out += B32[(acc << (5 - bits)) & 31]
+  return out
+}
+
+export const makeRunId = Effect.gen(function*() {
+  const crypto = yield* Crypto.Crypto
+  return `r_${toBase32(yield* crypto.randomBytes(8))}`          // 13 chars, stable length
+})
+
+export const sha256Hex = (s: string) => Effect.gen(function*() {
+  const crypto = yield* Crypto.Crypto
+  return toHex(yield* crypto.digest("SHA-256", new TextEncoder().encode(s)))
+})
+```
+
+* Service key: `Crypto.Crypto` (`Context.Service`), **provided by `NodeServices.layer`** — the same
+  layer the CLI already needs for `Command.Environment`. Also standalone as `NodeCrypto.layer`.
+* `DigestAlgorithm = "SHA-1" | "SHA-256" | "SHA-384" | "SHA-512"`. Both `randomBytes` and `digest`
+  fail with `PlatformError.PlatformError` — that belongs in your `E`, do not `orDie` it silently.
+* Other members: `randomUUIDv4`, `randomUUIDv7` (monotonic — good for `artifactId` if you drop the
+  `art_<seq>` scheme), `randomInt`, `randomIntBetween`, `randomShuffle`, `nextDoubleUnsafe`.
+* `Crypto` is a *service*, so tests can swap a deterministic one — which is exactly what
+  "paramètres figés améliorent la traçabilité" in spec §8 needs.
+
+## A3. Forking a long-lived run from inside a Layer — `Effect.scope` + `forkIn`, not `forkScoped`
+
+`Effect.forkScoped` leaves `Scope` in `R`, so a service **method** that forks will not typecheck
+against a `Effect<void>` field. Capture the layer's own scope at build time instead (compiled + run):
+
+```ts
+import { Context, Deferred, Effect, Exit, Fiber, Layer, Scope } from "effect"
+
+class Runner extends Context.Service<Runner, {
+  readonly start: Effect.Effect<void>
+  readonly cancel: Effect.Effect<boolean>
+  readonly done: Deferred.Deferred<Exit.Exit<string>>
+}>()("harness/Runner") {
+  static readonly layer: Layer.Layer<Runner> = Layer.effect(Runner, Effect.gen(function*() {
+    const scope: Scope.Scope = yield* Effect.scope     // <- the LAYER's scope
+    let slot: Fiber.Fiber<string> | undefined
+    const done = yield* Deferred.make<Exit.Exit<string>>()
+    const work = runAttempt.pipe(
+      Effect.onInterrupt(() => Effect.log("run interrupted -> finalizers running")),
+      Effect.onExit((exit) => Deferred.succeed(done, exit).pipe(Effect.asVoid))
+    )
+    return Runner.of({
+      start: Effect.gen(function*() { slot = yield* Effect.forkIn(work, scope) }),   // R = never
+      cancel: Effect.gen(function*() {
+        if (slot === undefined) return false
+        yield* Fiber.interrupt(slot)        // AWAITS the fiber's finalizers before returning
+        return true
+      }),
+      done
+    })
+  }))
+}
+```
+
+**`Fiber.interrupt` waits for the interrupted fiber's finalizers to complete before it returns.**
+Measured in `.recon/critic-cancel.ts`: `"run interrupted -> finalizers running"` is logged at
+`41.977` and the `POST /cancel` 202 response leaves at `41.979`. That is precisely the
+"annulation avec fermeture des ressources, sans actions tardives" guarantee — you get it for free,
+as long as browser/provider teardown lives in finalizers (`Effect.acquireRelease` / `addFinalizer`).
+
+## A4. `Deferred.poll` returns `Option<Effect<Exit<…>>>`, not `Option<Exit<…>>`
+
+Bit me while writing A3. Two unwraps:
+
+```ts
+const maybe = yield* Deferred.poll(runner.done)         // Option<Effect<Exit<string>>>
+if (Option.isNone(maybe)) return "running"
+const exit: Exit.Exit<string> = yield* maybe.value      // second yield*
+```
+
+## A5. `Layer.effect` accepts BOTH shapes (the two cheat-sheets disagreed — both are right)
+
+```ts
+Layer.effect(Browser, effect)   // 2-arg (api-effect-core.md §3)   -- compiles
+Layer.effect(Browser)(effect)   // curried (api-effect-http-node.md §9) -- also compiles
+```
+Verified in `.recon/critic-core.ts`. Pick one and be consistent; the 2-arg form is what AGENTS.md uses.
+
+## A6. No markdown parser is installed
+
+`marked` / `remark` / `unified` / `micromark` are **not** in the store. The spec body parsing
+(`## Résultats attendus` section, top-level list items, per-criterion line/column) must be a
+hand-rolled line scanner — which is the right call anyway, because you need **source line numbers**
+per criterion (`ScenarioContract.criteria[].line/column`) and a generic AST would make you rebuild
+that. Do not add a markdown dependency for this.

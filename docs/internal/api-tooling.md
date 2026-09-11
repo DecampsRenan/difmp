@@ -794,3 +794,143 @@ Notes:
 15. tinyglobby's `expandDirectories` defaults to **true** and results are **unsorted**.
 16. `base:'./'` still leaves `crossorigin` on the script tag -> CORS failure under `file://`; only
     full inlining fixes the standalone report.
+
+---
+
+# APPENDIX (critic pass) — gaps no lane answered
+
+Compiled + executed: `.recon/critic-yaml.ts`, `.recon/critic-yaml2.ts`, `.recon/critic-yamlpos.ts`,
+`.recon/critic-inputsfile.ts`. Output below is real.
+
+## §A-Y. `effect/unstable/encoding/Yaml` exists — and you should NOT use it for specs
+
+Effect ships its own YAML parser (`Yaml.parse(input: string): unknown`, "based on `yaml` 2.9.0").
+It is tempting (zero extra dependency) but it is a **configuration** parser, not a hardened one.
+Executed comparison:
+
+| input | `Yaml.parse` (effect) | `yaml` pkg with the §7 `SAFE` options |
+|---|---|---|
+| `a: 1` / `a: 2` duplicate key | **throws `Duplicate key 'a' at line 2`** ✅ | throws `Map keys must be unique` ✅ |
+| `!!timestamp …` | returns the **string** `"!!timestamp 2001-…"` — silently wrong data ⚠ | rejected (`TAG_RESOLVE_FAILED`) ✅ |
+| `!Foo {a: 1}` | returns the **string** `"!Foo {a: 1}"` ⚠ | rejected ✅ |
+| `a: 1\n---\nb: 2` (multi-doc) | silently **merges** → `{"a":1,"b":2}` ⚠ | rejected (`MULTIPLE_DOCS`) ✅ |
+| alias bomb (9⁵) | **PARSED in 8 ms → 2.5 MB** — no alias limit at all ❌ | rejected `Excessive alias count…` ✅ |
+| `a: yes` / `b: 012` | `"yes"` / `"012"` (both strings) | `"yes"` / `12` — **they disagree on `012`** |
+| malformed | `SyntaxError: Unexpected indentation of 1 spaces at line 3` | structured `doc.errors[]` |
+
+**Verdict: keep the `yaml` package** with the §7 `SAFE` options — the spec explicitly demands
+"des limites de taille et d'alias" and "sans tags exécutables", and `Yaml.parse` gives neither.
+`Yaml.parse` is fine for a trusted internal file. Either way, **cap `src.length` yourself**; neither
+has a size limit.
+
+## §A-L. Frontmatter field → source LINE (the spec requires it, nothing documented it)
+
+Spec §4: *"Les erreurs doivent désigner le fichier, le champ et, lorsque possible, la ligne
+concernée."* `yaml`'s `LineCounter` + node ranges give this, but you must **re-base** the offset
+because the frontmatter starts partway into the `.e2e.md` file. Compiled + executed:
+
+```ts
+import { LineCounter, isMap, isScalar, parseDocument } from "yaml"
+
+const m = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(file)
+if (!m) throw new Error("no frontmatter")
+const fmText = m[1]!
+const fmStartLine = file.slice(0, m.index).split("\n").length + 1   // 1-based line of fmText line 1
+
+const lc = new LineCounter()
+const doc = parseDocument(fmText, { lineCounter: lc, ...SAFE })     // SAFE from §7
+if (doc.errors.length > 0 || doc.warnings.length > 0) { /* reject, see §7 */ }
+
+/** absolute (1-based) line/col in the .e2e.md file for a frontmatter KEY */
+const keyPos = (key: string): { line: number; col: number } | undefined => {
+  const c = doc.contents
+  if (!isMap(c)) return undefined
+  for (const pair of c.items) {
+    if (isScalar(pair.key) && pair.key.value === key && pair.key.range) {
+      const p = lc.linePos(pair.key.range[0])
+      return { line: p.line + fmStartLine - 1, col: p.col }
+    }
+  }
+  return undefined
+}
+
+/** …and for its VALUE, for "bad value at line N" */
+const valuePos = (key: string) => {
+  const c = doc.contents
+  if (!isMap(c)) return undefined
+  for (const pair of c.items) {
+    if (isScalar(pair.key) && pair.key.value === key) {
+      const v = pair.value as { range?: [number, number, number] } | null
+      if (v?.range) { const p = lc.linePos(v.range[0]); return { line: p.line + fmStartLine - 1, col: p.col } }
+    }
+  }
+  return undefined
+}
+```
+
+Executed against a real `.e2e.md`:
+
+```
+version        {"line":2,"col":1}       id  {"line":3,"col":1}
+timeout        {"line":5,"col":1}       verification {"line":6,"col":1}
+nope           undefined                value of timeout at: {"line":5,"col":10}
+data: {"version":1,"id":"project-create","tags":["smoke","projects"],
+       "timeout":"90s","verification":"- a\n- b\n"}
+```
+
+Notes:
+* `lineCounter.linePos(offset)` returns **1-based** `{ line, col }`; `node.range` is
+  `[start, valueEnd, nodeEnd]` character offsets into the string you parsed.
+* `parseDocument` must receive the `lineCounter` **in its options**; calling `lc.addNewLine` yourself
+  is not needed.
+* Schema decode errors give you a **path** (`retry.max`, `steps.0.url` — api-effect-schema.md §11),
+  not a line. Join the two: take the first path segment, look it up with `keyPos`, and you get
+  `file:line:col` + the full path + the message, which is what the spec asks for.
+* `timeout: 90s` parses to the **string** `"90s"` — see api-effect-core.md §A1: Effect cannot turn
+  that into a `Duration`. Normalise it yourself.
+* Regex note: the frontmatter split above requires the file to *start* with `---`. Reject a spec
+  whose first line is not `---` with a clear error rather than treating the whole file as body.
+
+## §A-I. `--inputs-file <json>` with preserved JSON types — `Flag.FileSchema`
+
+Spec §4 wants `--input key=value` (always string) *and* `--inputs-file <json>` (typed).
+Compiled **and run**:
+
+```ts
+import { Schema } from "effect"
+import { Flag } from "effect/unstable/cli"
+
+const InputValue = Schema.Union([Schema.String, Schema.Number, Schema.Boolean])
+const InputsFile = Schema.Record(Schema.String, InputValue)
+
+const inputsFile = Flag.FileSchema("inputs-file", InputsFile, { format: "json" }).pipe(
+  Flag.withDescription("JSON file of scenario inputs (types preserved)"),
+  Flag.optional                               // -> Flag<Option<Record<string, string|number|boolean>>>
+)
+const inputKV = Flag.KeyValuePair("input").pipe(Flag.withDefault({} as Record<string, string>))
+```
+
+```
+$ h --inputs-file /tmp/inputs.json --input a=1
+{"file":{"_id":"Option","_tag":"Some","value":{"projectName":"P1","count":3,"flag":true}},"cli":{"a":"1"}}
+```
+
+* `{ format: "json" }` is required; the flag reads **and decodes** the file itself — no `fs` call
+  and no second decode step in your handler.
+* A schema violation (`{"x":{"nested":1}}`) and a missing file both surface as a CLI error →
+  help is printed, exit `1` by default / `2` with the api-effect-cli.md §6 teardown. Good: the spec
+  wants "configuration invalide" to be exit 2.
+* This enforces "reject non-scalar inputs" at the CLI boundary for free. You still have to reject
+  keys **not declared** in config-or-spec yourself (design-contracts §4).
+
+## §A-T. Repo state re-checked
+
+* `tsconfig.build.json` and `tsconfig.json` **still do not exist** at the root, so
+  `pnpm typecheck` (`tsc -b tsconfig.build.json`) fails today. §2.1 tells you what to create.
+* `vite-plugin-singlefile` and `tsdown` are **not installed**. §4 and §8.2 both depend on them —
+  add them as devDeps (or fall back to `tsc`-only builds per §4).
+* All package directories from design-contracts §1 exist but are empty:
+  `packages/{core,browser-playwright,agent-runtime,reporting}`, `apps/{cli,ui}`,
+  `examples/{fixture-app,scenarios,support}`.
+* No markdown parser (`marked`/`remark`/`unified`/`micromark`) is installed — see
+  api-effect-core.md §A6; hand-roll the body scanner so you keep per-criterion line numbers.
