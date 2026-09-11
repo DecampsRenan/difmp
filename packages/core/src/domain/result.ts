@@ -22,6 +22,45 @@ export type Evaluator = typeof Evaluator["Type"]
 export const AbsenceBranch = Schema.Literals(["uncertain-navigation", "established-at-checkpoint"])
 export type AbsenceBranch = typeof AbsenceBranch["Type"]
 
+/**
+ * Why the harness refused to keep the status the evaluator proposed. A downgrade is always
+ * recorded so a report can say WHY the harness would not conclude, instead of showing a bare
+ * `inconclusive`.
+ */
+export const DowngradeReason = Schema.Literals([
+  "rejected-evidence",
+  "absence-uncertain-navigation",
+  "evidence-persistence-failed",
+  "verdict-already-decided"
+])
+export type DowngradeReason = typeof DowngradeReason["Type"]
+
+export const CriterionDowngrade = Schema.Struct({
+  reason: DowngradeReason,
+  /** The status the evaluator proposed. */
+  from: CriterionStatus,
+  /** The status the harness recorded instead. */
+  to: CriterionStatus,
+  detail: Schema.String
+}).annotate({ identifier: "CriterionDowngrade" })
+export type CriterionDowngrade = typeof CriterionDowngrade["Type"]
+
+/**
+ * A later evaluation of a criterion that had already reached a terminal verdict. It is kept as an
+ * observation — spec §9 forbids losing it — and `applied` says whether it replaced the recorded
+ * status. A verdict is only ever replaced toward a WORSE status: asking again never upgrades.
+ */
+export const CriterionReCheck = Schema.Struct({
+  status: CriterionStatus,
+  observed: Schema.String,
+  evidence: Schema.Array(ArtifactId),
+  requestedBy: Schema.Literals(["agent", "runner"]),
+  evaluatedAtSeq: Schema.Int,
+  applied: Schema.Boolean,
+  note: Schema.String
+}).annotate({ identifier: "CriterionReCheck" })
+export type CriterionReCheck = typeof CriterionReCheck["Type"]
+
 export const CriterionResult = Schema.Struct({
   criterionId: CriterionId,
   criterionHash: Schema.String,
@@ -34,6 +73,10 @@ export const CriterionResult = Schema.Struct({
   evidence: Schema.Array(ArtifactId),
   limitations: Schema.optionalKey(Schema.String),
   absence: Schema.optionalKey(AbsenceBranch),
+  /** Every status change the harness imposed on the evaluator's answer, in order. */
+  downgrades: Schema.optionalKey(Schema.Array(CriterionDowngrade)),
+  /** Later evaluations of an already decided criterion, kept as observations. */
+  reChecks: Schema.optionalKey(Schema.Array(CriterionReCheck)),
   evaluatedAtSeq: Schema.Int
 }).annotate({ identifier: "CriterionResult" })
 export type CriterionResult = typeof CriterionResult["Type"]
@@ -137,9 +180,22 @@ export const ModelIdentity = Schema.Struct({
 }).annotate({ identifier: "ModelIdentity" })
 export type ModelIdentity = typeof ModelIdentity["Type"]
 
+/**
+ * Which of the two writes of `manifest.json` produced this file.
+ *
+ * `initial` is written at spec §6 step 2, right after the ids are minted and BEFORE fixture setup
+ * and the contract freeze — so a run that dies during infrastructure setup still has a record of
+ * which adapter and which configuration were in play. `final` replaces it once the contract is
+ * frozen and adds `hashes`.
+ */
+export const ManifestStage = Schema.Literals(["initial", "final"])
+export type ManifestStage = typeof ManifestStage["Type"]
+
 /** `manifest.json` — the sole source of "which adapter was used" for the reporter. */
 export const Manifest = Schema.Struct({
   schemaVersion: Schema.Literal(1),
+  /** `initial` = written before the contract existed; `final` = enriched after the freeze. */
+  stage: ManifestStage,
   runId: RunId,
   createdAt: Schema.String,
   specPath: Schema.String,
@@ -150,7 +206,8 @@ export const Manifest = Schema.Struct({
   model: ModelIdentity,
   /** Resolved, non-sensitive configuration. */
   config: ResolvedConfig,
-  hashes: ContractHashes
+  /** Absent on an `initial` manifest: nothing has been frozen yet, so there is nothing to hash. */
+  hashes: Schema.optionalKey(ContractHashes)
 }).annotate({ identifier: "Manifest" })
 export type Manifest = typeof Manifest["Type"]
 

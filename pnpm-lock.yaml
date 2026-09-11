@@ -75,18 +75,6 @@ importers:
       '@effect/platform-node':
         specifier: 4.0.0-rc.113
         version: 4.0.0-rc.113(effect@4.0.0-rc.113)(redis@6.2.1)
-      '@harness/agent-runtime':
-        specifier: workspace:*
-        version: link:../../packages/agent-runtime
-      '@harness/browser-playwright':
-        specifier: workspace:*
-        version: link:../../packages/browser-playwright
-      '@harness/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@harness/reporting':
-        specifier: workspace:*
-        version: link:../../packages/reporting
       effect:
         specifier: 4.0.0-rc.113
         version: 4.0.0-rc.113
@@ -102,6 +90,25 @@ importers:
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
+    devDependencies:
+      '@harness/agent-runtime':
+        specifier: workspace:*
+        version: link:../../packages/agent-runtime
+      '@harness/browser-playwright':
+        specifier: workspace:*
+        version: link:../../packages/browser-playwright
+      '@harness/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@harness/reporting':
+        specifier: workspace:*
+        version: link:../../packages/reporting
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0(tsx@4.23.13)(typescript@5.9.3)
+      vitest:
+        specifier: ^5.0.0
+        version: 5.0.0(@types/node@24.13.4)(vite@7.3.6(@types/node@24.13.4)(lightningcss@1.33.0)(tsx@4.23.13)(yaml@2.9.0))
 
   apps/ui:
     dependencies:
@@ -132,6 +139,9 @@ importers:
 
   examples/support:
     dependencies:
+      '@harness/agent-runtime':
+        specifier: workspace:*
+        version: link:../../packages/agent-runtime
       '@harness/core':
         specifier: workspace:*
         version: link:../../packages/core

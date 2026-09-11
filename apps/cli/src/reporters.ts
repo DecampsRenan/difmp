@@ -53,8 +53,9 @@ const truncate = (text: string, max = 160): string => {
  * One block per scenario: name, status, duration, the indicative-threshold crossing when there is
  * one, and — when the verdict is not `passed` — the criteria that explain it.
  *
- * `report` is absent when the run died before freezing its contract; the block then carries the
- * verdict and the reason, and says plainly that no report was produced.
+ * A run that died before freezing its contract still gets a report (from the initial manifest of
+ * spec §6 step 2); the block says so, so a JUnit file with no criteria is never mistaken for a
+ * scenario that had none. `report` itself is absent only when not even the manifest was written.
  */
 export const renderRunLines = (outcome: RunOutcome): ReadonlyArray<string> => {
   const { report, result } = outcome
@@ -97,11 +98,14 @@ export const renderRunLines = (outcome: RunOutcome): ReadonlyArray<string> => {
     if (!report.finalized) {
       lines.push("      ! the journal was not finalised — the run was interrupted while writing")
     }
+    if (report.contract === undefined) {
+      lines.push("      ! the contract was never frozen — the report describes an infrastructure failure only")
+    }
     lines.push(
-      `      criteria: ${report.contract.criteria.length} · run ${result.runId} · report ${report.layout.report}`
+      `      criteria: ${report.contract?.criteria.length ?? 0} · run ${result.runId} · report ${report.layout.report}`
     )
   } else {
-    lines.push(`      run ${result.runId} · no report: the contract was never frozen`)
+    lines.push(`      run ${result.runId} · no report: the run directory has no manifest`)
   }
   return lines
 }

@@ -9,7 +9,10 @@ export const defaultBudgets = {
   maxModelCalls: 40,
   maxTokens: 200_000,
   verifierReserveTokens: 20_000,
-  fixtureCleanupTimeoutMs: 15_000
+  fixtureSetupTimeoutMs: 60_000,
+  fixtureCleanupTimeoutMs: 15_000,
+  maxIdleTurns: 3,
+  maxEvidenceRequests: 1
 } as const
 
 /**
@@ -21,11 +24,42 @@ export const Budgets = Schema.Struct({
   operationTimeoutMs: positiveInt(defaultBudgets.operationTimeoutMs),
   maxModelCalls: positiveInt(defaultBudgets.maxModelCalls),
   maxTokens: positiveInt(defaultBudgets.maxTokens),
-  /** Withheld from the browser loop so the final verification can always run. */
+  /**
+   * A pool of `maxTokens` set aside for the final verification.
+   *
+   * Two rules, and they are not the same one: the browsing loop is refused a new model call once
+   * the run has consumed `maxTokens - verifierReserveTokens`, AND the verifier may always spend up
+   * to `verifierReserveTokens` of its own, whatever the browsing loop ended up consuming. The
+   * second rule is what makes the reserve real: a budget is checked BEFORE a call and a turn's
+   * cost is only known after it, so one oversized browsing turn can cross the first ceiling — it
+   * still cannot take the final evaluation's tokens away. Consequence to know: when that happens
+   * the run's total spend can exceed `maxTokens` by that overshoot plus the reserve.
+   */
   verifierReserveTokens: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed(defaultBudgets.verifierReserveTokens))
   ),
-  fixtureCleanupTimeoutMs: positiveInt(defaultBudgets.fixtureCleanupTimeoutMs)
+  /**
+   * Bounds EVERYTHING the fixture does before the browser opens. `attemptTimeoutMs` only wraps the
+   * attempt body, so without this a fixture that never returns hangs the run with nothing to stop
+   * it. Exhausting it ends the run as `inconclusive`, like any other blocking budget.
+   */
+  fixtureSetupTimeoutMs: positiveInt(defaultBudgets.fixtureSetupTimeoutMs),
+  fixtureCleanupTimeoutMs: positiveInt(defaultBudgets.fixtureCleanupTimeoutMs),
+  /**
+   * How many consecutive model turns WITHOUT a tool call end the browsing loop. A model that keeps
+   * narrating instead of acting is making no progress, and `progressStalled` alone would let it
+   * spend the whole token budget saying so. Ending the loop yields `inconclusive` — never `failed`:
+   * nothing about the product was established.
+   */
+  maxIdleTurns: positiveInt(defaultBudgets.maxIdleTurns),
+  /**
+   * How many times ONE criterion may come back as "needs more evidence" before the verifier stops
+   * asking and settles for `inconclusive`. Without it a stubborn evaluator spends the whole budget
+   * on a single criterion.
+   */
+  maxEvidenceRequests: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(defaultBudgets.maxEvidenceRequests))
+  )
 }).check(
   Schema.makeFilter((b) =>
     b.verifierReserveTokens < b.maxTokens

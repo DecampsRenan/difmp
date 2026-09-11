@@ -39,6 +39,12 @@ export interface VerificationRequest {
   readonly baseUrl: string
   /** Journal seq at which this evaluation was requested. */
   readonly seq: number
+  /**
+   * Aborted when the run is cancelled or the evaluation exceeds `budgets.operationTimeoutMs`.
+   * An implementation that calls a model MUST pass it on as `GenerateRequest.signal`, so the
+   * in-flight HTTP request is aborted instead of being left to finish unobserved.
+   */
+  readonly signal?: AbortSignal
 }
 
 /**

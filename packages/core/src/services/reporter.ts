@@ -21,7 +21,12 @@ export class ReporterError extends Schema.TaggedError<ReporterError>()("Reporter
 export interface ReportInput {
   readonly layout: RunLayout
   readonly manifest: Manifest
-  readonly contract: ScenarioContract
+  /**
+   * Absent when the run died before the contract was frozen (a fixture-setup or input-resolution
+   * failure). The reporters still produce `result.json`, `junit.xml` and `report.html` from the
+   * initial manifest alone: an infrastructure failure must be reportable, or CI sees nothing.
+   */
+  readonly contract?: ScenarioContract
   readonly result: RunResult
   readonly inventory: ArtifactInventory
   readonly events: ReadonlyArray<HarnessEvent>

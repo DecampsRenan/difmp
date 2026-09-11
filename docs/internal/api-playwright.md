@@ -359,6 +359,17 @@ executablePath, firefoxUserPrefs, handleSIGHUP, handleSIGINT, handleSIGTERM, hea
 ignoreDefaultArgs, logger, proxy, slowMo, timeout, tracesDir`.
 There is **no `headless: "new"|"old"` string** — boolean only.
 
+**Gotcha, verified end to end: `handleSIGINT`/`handleSIGTERM`/`handleSIGHUP` default to `true`, and
+Playwright's handler calls `process.exit()` itself.** In a harness that is fatal: Ctrl-C killed the
+CLI ~130 ms in, so the run's finalize tail never ran — no trace artifact, no `runFinished`, no
+`result.json`, and `design-contracts` §9/§12 could not be honoured. Observed with
+`.recon/sigint-slice.sh` (SIGINT 6 s into a real run): before, the journal stopped at the last
+`actionFinished`; with `handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false` the same
+SIGINT yields `… artifactAvailable ×3, cancellationRequested, fixtureCleaned, runFinished`,
+`result.json` `status: "cancelled"` and exit 130. Pass all three as `false` whenever the process
+already owns signal handling (`NodeRuntime.runMain` interrupts the fiber; the scope finalizers are
+what close the browser).
+
 ```ts
 export async function makeContext(browser: Browser): Promise<BrowserContext> {
   const ctx = await browser.newContext({

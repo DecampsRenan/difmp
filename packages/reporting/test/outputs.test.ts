@@ -181,3 +181,44 @@ describe("cancellation", () => {
     expect(xml).toContain('failures="0"')
   })
 })
+
+/**
+ * A run that died before the contract was frozen (spec §6 step 3) has only the INITIAL manifest of
+ * step 2. It must still produce a valid JUnit file and an HTML report: an infrastructure failure
+ * that reports nothing is indistinguishable, in CI, from a suite that never ran.
+ */
+describe("run that failed before the contract was frozen", () => {
+  const input = loadFixture("setup-failure")
+
+  it("has no contract and an initial manifest", () => {
+    expect(input.contract).toBeUndefined()
+    expect(input.manifest.stage).toBe("initial")
+    expect(input.manifest.hashes).toBeUndefined()
+  })
+
+  it("still emits a valid JUnit file carrying exactly one run-level error", () => {
+    const xml = renderJUnitReport(input)
+    expect(xml).toContain('tests="1"')
+    expect(xml).toContain('errors="1"')
+    expect(xml).toContain('failures="0"')
+    expect(xml).not.toContain("<skipped")
+    expect(xml).toMatch(/<error type="run-error"/)
+    expect(xml).toContain("seed API refused the request")
+    // The adapter is still attributed, from the initial manifest alone.
+    expect(xml).toContain('<property name="harness.adapter" value="anthropic-messages"/>')
+  })
+
+  it("still renders an HTML report, and says the contract was never frozen", () => {
+    const html = renderHtmlReport(input)
+    expect(html.startsWith("<!doctype html>")).toBe(true)
+    expect(html).toContain("jamais été gelé")
+  })
+
+  it("falls back to the manifest for the budgets it can no longer read from a contract", () => {
+    const view = buildReportView(input)
+    expect(view.criteria).toEqual([])
+    expect(view.scenarioBody).toBe("")
+    expect(view.attempts[0]!.budgets.find((b) => b.key === "maxTokens")!.limit).toBe(200_000)
+    expect(view.diagnostics.some((d) => d.source === "contrat")).toBe(true)
+  })
+})

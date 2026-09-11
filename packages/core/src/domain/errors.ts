@@ -75,8 +75,10 @@ export class PolicyError extends Schema.TaggedError<PolicyError>()("PolicyError"
 export const BudgetKind = Schema.Literals([
   "attemptTimeout",
   "operationTimeout",
+  "fixtureSetupTimeout",
   "maxModelCalls",
-  "maxTokens"
+  "maxTokens",
+  "maxIdleTurns"
 ])
 export type BudgetKind = typeof BudgetKind["Type"]
 

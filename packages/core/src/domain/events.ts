@@ -104,7 +104,12 @@ export const EvidenceRequestedEvent = event("evidenceRequested", {
 
 export const VerificationFinishedEvent = event("verificationFinished", {
   criterionId: CriterionId,
-  result: CriterionResult
+  result: CriterionResult,
+  /**
+   * Present when the evaluation that just ran is NOT what got recorded — a later `check` on a
+   * criterion that had already reached a terminal verdict. It names the rule that was applied.
+   */
+  note: Schema.optionalKey(Schema.String)
 })
 
 export const ArtifactAvailableEvent = event("artifactAvailable", {

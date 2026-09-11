@@ -1,0 +1,4 @@
+{"schemaVersion":1,"seq":1,"runId":"r_qq7m3t7vzx4b2","attemptId":"a1","ts":"2026-03-04T14:10:00.000Z","type":"runStarted","specPath":"tests/e2e/creation-projet.e2e.md","scenarioId":"creation-projet","harnessVersion":"0.1.0"}
+{"schemaVersion":1,"seq":2,"runId":"r_qq7m3t7vzx4b2","ts":"2026-03-04T14:10:00.020Z","type":"configResolved","config":{"baseUrl":"http://127.0.0.1:3000","provider":"anthropic","model":"claude-sonnet-5","maxActions":25,"budgets":{"maxModelCalls":40,"maxTokens":200000,"verifierReserveTokens":20000}},"configPath":"harness.config.ts"}
+{"schemaVersion":1,"seq":3,"runId":"r_qq7m3t7vzx4b2","attemptId":"a1","ts":"2026-03-04T14:10:04.100Z","type":"error","stage":"fixture-setup","reason":"fixture \"authenticated-workspace\": seed API refused the request (HTTP 503)","fatal":true}
+{"schemaVersion":1,"seq":4,"runId":"r_qq7m3t7vzx4b2","attemptId":"a1","ts":"2026-03-04T14:10:04.120Z","type":"runFinished","status":"error","criteriaCount":0,"failedCriteria":[]}

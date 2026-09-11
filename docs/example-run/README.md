@@ -33,3 +33,9 @@ snapshots it links are the relative paths under `attempts/a1/`.
 
 `manifest.json` names the adapter: `scripted`. A scripted run exercises the harness's decisions and
 real Playwright against the demo app; it is never evidence that a model can navigate.
+
+It also carries `"stage": "final"`. The harness writes `manifest.json` twice (design-contracts §9):
+an `initial` one at spec §6 step 2, before the fixture and the freeze, and this `final` one with the
+contract hashes once the freeze succeeded. A run that dies in infrastructure setup keeps only the
+`initial` one — and is still reported, with a `junit.xml` carrying one run-level `<error>` and no
+`contract.json` at all.

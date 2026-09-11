@@ -18,6 +18,11 @@ export interface FixtureSetupRequest {
   readonly attemptId: string
   readonly inputs: InputsRecord
   readonly baseUrl: string
+  /**
+   * `budgets.fixtureCleanupTimeoutMs`. A setup that fails or is cancelled halfway tears down what
+   * it acquired under this deadline, so the manager needs it before the session exists.
+   */
+  readonly cleanupTimeoutMs: number
 }
 
 export interface FixtureCleanupReport {
@@ -34,6 +39,12 @@ export interface FixtureSession {
   /** PRIVATE — browser only. */
   readonly storageState?: StorageStateLike
   /**
+   * Every secret VALUE the fixture actually read through `ctx.secrets`. design-contracts §13 can
+   * only redact what the harness was told about, so an implementation that hands out secrets must
+   * report them here; the runner strips these strings from prompts, journal and reports.
+   */
+  readonly secretValues?: ReadonlyArray<string>
+  /**
    * Runs after success, failure AND cancellation, bounded by `budgets.fixtureCleanupTimeoutMs`.
    * Never fails: problems come back in the report so they can be journalled.
    */
@@ -41,6 +52,10 @@ export interface FixtureSession {
 }
 
 export class FixtureManager extends Context.Service<FixtureManager, {
-  /** Cleanups are registered at ACQUISITION time, so a partially failed setup is still torn down. */
+  /**
+   * Cleanups are registered at ACQUISITION time, so a partially failed setup is still torn down.
+   * Setup must tear down on failure AND on interruption, and must hand the fixture an
+   * `AbortSignal` so a cancelled setup is aborted rather than abandoned.
+   */
   readonly setup: (request: FixtureSetupRequest) => Effect.Effect<FixtureSession, FixtureError>
 }>()("@harness/core/services/FixtureManager") {}

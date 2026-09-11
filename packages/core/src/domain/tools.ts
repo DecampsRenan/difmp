@@ -154,6 +154,26 @@ export const ToolErrorResult = Schema.Struct({
 }).annotate({ identifier: "ToolErrorResult" })
 export type ToolErrorResult = typeof ToolErrorResult["Type"]
 
+/**
+ * Schema-per-tool for what the harness hands BACK to the model. spec §7 requires arguments *and*
+ * results to be Schema-validated: the driver lives in another package, so its return value is an
+ * unchecked trust boundary until it is decoded here. A result that does not match is never
+ * forwarded to the model — it comes back as a typed tool error instead.
+ */
+export const toolResultSchemas = {
+  observe: ObserveResult,
+  navigate: NavigateResult,
+  click: InteractionResult,
+  fill: InteractionResult,
+  press: InteractionResult,
+  scroll: InteractionResult,
+  screenshot: ScreenshotResult,
+  check: CheckAccepted,
+  finish: FinishAccepted
+} as const
+
+export type ToolResultFor<N extends ToolName> = typeof toolResultSchemas[N]["Type"]
+
 export type ToolOkResult =
   | ObserveResult
   | NavigateResult

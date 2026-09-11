@@ -10,7 +10,7 @@ import {
 } from "@harness/core"
 import * as BrowserPlaywright from "@harness/browser-playwright"
 import { makeVerifier } from "@harness/agent-runtime"
-import { Crypto, Effect, FileSystem, Layer, Path, Stream } from "effect"
+import { Crypto, Effect, FiberSet, FileSystem, Layer, Path, Stream } from "effect"
 import { ExecutionError } from "./errors.js"
 import { modelProviderFor } from "./providers.js"
 import { fixtureManagerLayer } from "./fixtures.js"
@@ -39,8 +39,9 @@ export interface RunOneOptions {
 export interface RunOutcome {
   readonly result: RunResult
   /**
-   * Absent when the run failed before it could freeze the contract and write the manifest — there
-   * is nothing to report from, and inventing a report would hide that.
+   * Absent only when even the initial manifest could not be written — the run directory then holds
+   * nothing a reporter could attribute. A run that failed AFTER step 2 (fixture setup, contract
+   * freeze) still has a report; `report.contract` is what is absent there.
    */
   readonly report?: ReportInput
 }
@@ -110,11 +111,18 @@ export const runOne = (
       Verifier,
       Effect.gen(function*() {
         const store = yield* RunStore
+        // Writes run on fibers owned by the LAYER's scope, not on detached root fibers: when the
+        // run's scope closes, an outstanding write is interrupted instead of landing in
+        // `artifacts.json` after `result.json` has been written.
+        const runEvidence = yield* FiberSet.makeRuntimePromise<never, string>()
         return yield* makeVerifier({
           checks: registries.checks,
           runId,
+          // A blocking budget like any other: declared in `harness.config.ts`, printed with the
+          // resolved configuration, recorded in `manifest.json`.
+          maxEvidenceRequests: config.budgets.maxEvidenceRequests,
           recordEvidence: (entry) =>
-            Effect.runPromise(
+            runEvidence(
               Effect.gen(function*() {
                 const artifactId = yield* store.mintArtifactId(attemptId)
                 const relative = `attempts/${attemptId}/evidence/${artifactId}.json`
@@ -132,7 +140,7 @@ export const runOne = (
                   ts: new Date().toISOString()
                 })
                 return artifactId
-              })
+              }).pipe(Effect.orDie)
             )
         })
       })
@@ -171,13 +179,11 @@ export const runOne = (
       Effect.mapError((error) => new ExecutionError({ message: error.message }))
     )
 
-    // `report <run-directory>` reads exactly these files, so if they are not both there the run
-    // never reached the point where a report is meaningful.
+    // The initial manifest is written at spec §6 step 2, before the fixture and the freeze, so a
+    // run that failed in infrastructure setup is still reportable: CI gets a JUnit file naming the
+    // failure instead of an empty directory. `contract.json` may legitimately be absent.
     const fs = yield* FileSystem.FileSystem
-    const reportable = yield* Effect.all([
-      fs.exists(`${runDirectory}/manifest.json`),
-      fs.exists(`${runDirectory}/contract.json`)
-    ]).pipe(Effect.map(([a, b]) => a && b), Effect.orElseSucceed(() => false))
+    const reportable = yield* fs.exists(`${runDirectory}/manifest.json`).pipe(Effect.orElseSucceed(() => false))
     if (!reportable) return { result }
     const report = yield* loadReportInput(runDirectory)
     return { result, report }

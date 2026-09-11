@@ -111,3 +111,20 @@ describe("spec discovery", () => {
     expect(glob.stdout.join("\n")).not.toContain("alpha")
   })
 })
+
+/**
+ * spec §4: duplicate scenario ids are rejected. The check lives in `SpecLoader.loadAll`, and every
+ * command reaches it through `selectSpecs` — this asserts that path end to end rather than the
+ * loader in isolation.
+ */
+describe("duplicate scenario ids", () => {
+  const duplicates = fixture("duplicate-ids")
+
+  it("is an explicit error with exit 2 for list, validate and run alike", async () => {
+    for (const command of ["list", "validate", "run"]) {
+      const result = await exec([command], { cwd: duplicates })
+      expect(result.code, `${command}: ${[...result.stdout, ...result.stderr].join("\n")}`).toBe(2)
+      expect([...result.stdout, ...result.stderr].join("\n")).toContain("duplicate scenario id")
+    }
+  })
+})

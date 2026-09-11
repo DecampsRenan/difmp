@@ -1,6 +1,6 @@
-{"ts":"2026-09-11T19:36:26.299Z","phase":"request","method":"GET","url":"http://127.0.0.1:41161/","resourceType":"document","isNavigation":true}
-{"ts":"2026-09-11T19:36:26.306Z","phase":"response","method":"GET","url":"http://127.0.0.1:41161/","resourceType":"document","status":200,"ok":true}
-{"ts":"2026-09-11T19:36:27.279Z","phase":"request","method":"POST","url":"http://127.0.0.1:41161/api/projects","resourceType":"fetch","isNavigation":false}
-{"ts":"2026-09-11T19:36:27.283Z","phase":"response","method":"POST","url":"http://127.0.0.1:41161/api/projects","resourceType":"fetch","status":201,"ok":true}
-{"ts":"2026-09-11T19:36:28.616Z","phase":"request","method":"GET","url":"http://127.0.0.1:41161/","resourceType":"document","isNavigation":true}
-{"ts":"2026-09-11T19:36:28.620Z","phase":"response","method":"GET","url":"http://127.0.0.1:41161/","resourceType":"document","status":200,"ok":true}
+{"ts":"2026-09-11T20:10:49.266Z","phase":"request","method":"GET","url":"http://127.0.0.1:41835/","resourceType":"document","isNavigation":true}
+{"ts":"2026-09-11T20:10:49.277Z","phase":"response","method":"GET","url":"http://127.0.0.1:41835/","resourceType":"document","status":200,"ok":true}
+{"ts":"2026-09-11T20:10:50.521Z","phase":"request","method":"POST","url":"http://127.0.0.1:41835/api/projects","resourceType":"fetch","isNavigation":false}
+{"ts":"2026-09-11T20:10:50.523Z","phase":"response","method":"POST","url":"http://127.0.0.1:41835/api/projects","resourceType":"fetch","status":201,"ok":true}
+{"ts":"2026-09-11T20:10:51.986Z","phase":"request","method":"GET","url":"http://127.0.0.1:41835/","resourceType":"document","isNavigation":true}
+{"ts":"2026-09-11T20:10:51.992Z","phase":"response","method":"GET","url":"http://127.0.0.1:41835/","resourceType":"document","status":200,"ok":true}

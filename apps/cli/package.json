@@ -38,13 +38,13 @@
     "playwright": "1.63.0",
     "tsx": "^4.23.13",
     "yaml": "^2.9.0",
-    "tinyglobby": "^0.2.17",
-    "@harness/core": "workspace:*",
-    "@harness/browser-playwright": "workspace:*",
-    "@harness/agent-runtime": "workspace:*",
-    "@harness/reporting": "workspace:*"
+    "tinyglobby": "^0.2.17"
   },
   "devDependencies": {
+    "@harness/agent-runtime": "workspace:*",
+    "@harness/browser-playwright": "workspace:*",
+    "@harness/core": "workspace:*",
+    "@harness/reporting": "workspace:*",
     "tsdown": "^0.23.0",
     "vitest": "^5.0.0"
   }

@@ -2,7 +2,7 @@ import type { ReportInput } from "@harness/core"
 import { artifactHref, embedJson, escapeHtml as h } from "./escape.js"
 import { reportStyles } from "./styles.js"
 import type { ArtifactView, AttemptView, CriterionView, Diagnostic, ReportView, TimelineEntry } from "./view.js"
-import { buildReportView, criterionStatusLabel } from "./view.js"
+import { buildReportView, criterionStatusLabel, downgradeLabel } from "./view.js"
 
 /**
  * The statement spec §9 demands whenever a verdict came from a textual evaluation. It is rendered
@@ -69,6 +69,41 @@ const expectationItem = (criterion: CriterionView): string => {
 </article>`
 }
 
+/**
+ * The harness refusing to conclude is INFORMATION. A criterion that reads `inconclusive` because a
+ * rule downgraded it must say which rule, what the evaluator had answered, and why — otherwise the
+ * reader cannot tell "the evaluator was unsure" from "the harness would not take its word".
+ */
+const downgradeBlock = (criterion: CriterionView): string => {
+  if (criterion.downgrades.length === 0) return ""
+  const rows = criterion.downgrades.map((downgrade) =>
+    `<li><b>${h(downgradeLabel(downgrade.reason))}</b> — statut ramené de « ${
+      h(criterionStatusLabel(downgrade.from))
+    } » à « ${h(criterionStatusLabel(downgrade.to))} » : ${h(downgrade.detail)}</li>`
+  ).join("")
+  return `<div class="note d-warning"><b>Statut imposé par le harness</b>
+  <ul>${rows}</ul>
+  <p>Le verdict affiché n'est pas celui proposé par l'évaluateur : une règle du harness l'a refusé.</p></div>`
+}
+
+/** spec §9 forbids losing an earlier verdict when the agent asks again. */
+const reCheckBlock = (criterion: CriterionView): string => {
+  if (criterion.reChecks.length === 0) return ""
+  const rows = criterion.reChecks.map((reCheck) =>
+    `<tr><td class="mono">seq ${h(String(reCheck.evaluatedAtSeq))}</td><td>${
+      h(criterionStatusLabel(reCheck.status))
+    }</td><td>${h(reCheck.requestedBy)}</td><td>${
+      reCheck.applied ? badge("failed", "a remplacé le verdict") : badge("inconclusive", "observation seulement")
+    }</td><td class="wrap">${h(reCheck.observed)}</td></tr>`
+  ).join("")
+  return `<div class="note d-warning"><b>Évaluations ultérieures de ce critère</b>
+  <div class="scroll"><table>
+    <thead><tr><th>Événement</th><th>Statut rendu</th><th>Demandé par</th><th>Effet</th><th>Observé</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>
+  <p>${h(criterion.reChecks[criterion.reChecks.length - 1]!.note)}</p></div>`
+}
+
 const evaluationItem = (criterion: CriterionView): string => {
   const note = criterion.evaluatorKind === "scripted-model"
     ? `<p class="note">${h(SCRIPTED_NOTE)} ${h(PROBABILISTIC_NOTE)}</p>`
@@ -105,6 +140,8 @@ const evaluationItem = (criterion: CriterionView): string => {
   </header>
   ${note}
   ${mismatch}
+  ${downgradeBlock(criterion)}
+  ${reCheckBlock(criterion)}
   <dl class="kv">
     <dt>Attente évaluée (texte gelé)</dt><dd><pre>${h(criterion.expectation)}</pre></dd>
     <dt>Attendu (évaluateur)</dt><dd><pre>${h(criterion.expected ?? "—")}</pre></dd>
@@ -252,6 +289,12 @@ export const renderHtmlFromView = (view: ReportView): string => {
   <p class="lede">Le texte gelé du contrat, verbatim. Rien ici n'est un résultat : c'est ce qui était demandé,
   tel que figé avant toute navigation. L'agent navigateur ne peut pas le modifier.</p>
   ${view.criteria.map(expectationItem).join("\n")}
+  ${
+  view.criteria.length === 0
+    ? `<p class="note">Aucune attente n'a été gelée : le run s'est arrêté avant l'étape 3 de §6 (contrat jamais gelé).
+  Ce rapport décrit un échec d'infrastructure, pas un verdict sur le produit.</p>`
+    : ""
+}
   <h3>Corps du scénario (interpolé)</h3>
   <pre>${h(view.scenarioBody)}</pre>
 </section>
@@ -262,6 +305,7 @@ export const renderHtmlFromView = (view: ReportView): string => {
   textuel probabiliste ; une évaluation par code est une assertion déterministe. Les deux sont distinguées
   explicitement ci-dessous.</p>
   ${view.criteria.map(evaluationItem).join("\n")}
+  ${view.criteria.length === 0 ? `<p class="note">Aucun critère n'a pu être évalué.</p>` : ""}
 </section>
 
 <section class="panel" id="faits">

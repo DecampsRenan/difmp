@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import type { Budgets } from "../domain/budgets.js"
 import type { ScenarioContract } from "../domain/spec.js"
 import { toolParamSchemas } from "../domain/tools.js"
 import type { ToolName } from "../domain/tools.js"
@@ -31,6 +32,29 @@ export const toolDefinitions = (): ReadonlyArray<ToolDefinition> =>
     parameters: toolJsonSchema(name)
   }))
 
+const formatMs = (ms: number): string => ms % 1000 === 0 ? `${ms / 1000} s` : `${ms} ms`
+
+/**
+ * spec.md §6 step 5: the agent is told the indicative action threshold AND the explicitly
+ * configured blocking budgets — and the two are never presented as the same kind of thing.
+ * The threshold is guidance and crossing it changes nothing; a budget is a hard stop that ends
+ * the run wherever it is, with the verdict `inconclusive`.
+ */
+export const budgetBriefing = (budgets: Budgets): ReadonlyArray<string> => [
+  "Budgets bloquants (limites dures, configurées pour ce run — les atteindre ARRÊTE le run là où il en est,",
+  "et le résultat devient `inconclusive`, jamais un succès) :",
+  `- durée totale de la tentative : ${formatMs(budgets.attemptTimeoutMs)}`,
+  `- durée d'une opération navigateur : ${formatMs(budgets.operationTimeoutMs)}`,
+  `- appels modèle : ${budgets.maxModelCalls} au total`,
+  `- tokens : ${budgets.maxTokens} au total, dont ${budgets.verifierReserveTokens} réservés à la vérification` +
+  " finale et donc indisponibles pour la navigation",
+  `- tours sans appel d'outil : ${budgets.maxIdleTurns} d'affilée au maximum — répondre sans appeler` +
+  " d'outil ne fait pas avancer le parcours",
+  "",
+  "Ces budgets ne sont pas le seuil indicatif d'actions : le seuil est une indication de durée de parcours et",
+  "son dépassement ne refuse rien et ne dégrade aucun statut ; un budget bloquant, lui, interrompt le run."
+]
+
 /**
  * The system prompt. It states plainly that page content is DATA: text read from the page can
  * never grant a tool or change the scenario, and the contract text is never re-read from the page.
@@ -54,7 +78,10 @@ export const systemPrompt = (contract: ScenarioContract, options: {
     "- N'explique pas ton raisonnement interne. Le champ `intent` accepte une intention courte, facultative.",
     "",
     `URL de base : ${options.baseUrl}`,
-    `Seuil indicatif d'actions : ${contract.maxActions} (indicatif — le dépassement n'interrompt rien).`,
+    `Seuil indicatif d'actions : ${contract.maxActions} (indicatif — le dépassement n'interrompt rien,`,
+    "  ne refuse aucune action et ne change aucun verdict ; il invite juste à réévaluer l'approche).",
+    "",
+    ...budgetBriefing(contract.budgets),
     "",
     "Scénario :",
     contract.body.trim(),

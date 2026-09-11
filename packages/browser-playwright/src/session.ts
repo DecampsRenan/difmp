@@ -61,7 +61,18 @@ const outcome = (
  * that arrives after a cancellation is refused instead of racing a half-closed context.
  */
 export interface ContextState {
+  /** "No further action may touch this context." Set at the START of `finalize`. */
   closed: boolean
+  /**
+   * "`context.close()` has actually completed." Set only AFTER the close settles.
+   *
+   * These are two different questions and one flag could not answer both: if `finalize` is cut
+   * short between stopping the trace and closing the context — a large trace against the driver's
+   * bounded finalizer, for instance — a single flag would already say "closed" and the context
+   * release would SKIP `context.close()`, which is what finalises the video. The release guards on
+   * this one, so the close still happens and the video is muxed.
+   */
+  contextClosed: boolean
 }
 
 export const makeSession = (
@@ -375,6 +386,7 @@ export const makeSession = (
 
           // 2. Closing the CONTEXT is what finalises the video; browser.close() alone leaves 0 bytes.
           const contextClosed = yield* attempt("context-close", () => context.close()).pipe(Effect.result)
+          if (contextClosed._tag === "Success") state.contextClosed = true
 
           captures.push(
             yield* writeLog("console-log", join(options.attemptDir, "console.jsonl"), recorders.console)

@@ -103,7 +103,11 @@ What it sets, and why:
   a run that passes in 40 actions is `passed`.
 - **`budgets`** — the BLOCKING limits, and a different thing entirely. Exhausting one ends the loop
   with `inconclusive` (never `failed`) and lets no late action or request through.
-  `verifierReserveTokens` is withheld from the browsing loop so the final evaluation can always run.
+  `verifierReserveTokens` is a pool for the final evaluation: it is withheld from the browsing loop
+  (which is refused a new call at `maxTokens - verifierReserveTokens`) AND guaranteed to the
+  verifier whatever the browsing loop consumed, so an oversized browsing turn cannot take the final
+  evaluation's tokens away. When that happens, total spend can exceed `maxTokens` by the overshoot
+  plus the reserve — that is the price of the guarantee, and it is deliberate.
 - **`provider: "scripted"`** — the deterministic, network-free double, so the repository's tests need
   no API key. A scripted run tests the *harness*; it is never evidence that a model can navigate,
   and the report names the adapter that ran.

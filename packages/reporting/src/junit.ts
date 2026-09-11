@@ -82,10 +82,22 @@ const caseBody = (criterion: CriterionView): string =>
       : `preuves référencées introuvables: ${criterion.danglingEvidence.join(", ")}`
   ].filter((line): line is string => line !== undefined).join("\n")
 
+/**
+ * A run-level `<testcase>`. Emitted for an error or a cancellation, and ALSO whenever there is no
+ * criterion at all — a run that died before the contract was frozen has nothing else to report,
+ * and an empty `<testsuite>` would tell CI that nothing went wrong.
+ */
 const runLevelCase = (view: ReportView): string | undefined => {
-  if (view.status !== "error" && view.status !== "cancelled") return undefined
-  const type = view.status === "cancelled" ? "run-cancelled" : "run-error"
-  const message = `status=${view.status} — ${oneLine(view.statusDetail ?? "aucun détail enregistré")}`
+  const noCriteria = view.criteria.length === 0
+  if (view.status !== "error" && view.status !== "cancelled" && !noCriteria) return undefined
+  const type = view.status === "cancelled"
+    ? "run-cancelled"
+    : view.status === "error"
+    ? "run-error"
+    : "run-no-criteria"
+  const message = `status=${view.status} — ${
+    oneLine(view.statusDetail ?? (noCriteria ? "aucun critère n'a été évalué" : "aucun détail enregistré"))
+  }`
   return [
     `    <testcase ${attr("name", `run:${view.runId}`)} ${attr("classname", view.scenarioId)} ${
       attr("time", seconds(view.durationMs))

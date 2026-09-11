@@ -45,6 +45,10 @@ const decoded = <A>(
  * no model call, no replay, no config re-resolution. `manifest.json` is the sole source of
  * "which adapter was used" (design-contracts §14.7). `harness report` and the post-run reporting
  * pass go through this same function, so the two can never drift.
+ *
+ * `manifest.json` is the only mandatory file: it is written at spec §6 step 2, before anything can
+ * fail. `contract.json` is optional — its absence IS the information that the run never reached
+ * the freeze.
  */
 export const loadReportInput = (
   runDirectory: string
@@ -62,8 +66,14 @@ export const loadReportInput = (
     const layout = makeRunLayout(path, path.dirname(root), path.basename(root))
 
     const manifest = yield* decoded(layout.manifest, decodeManifest)
-    const contract = yield* decoded(layout.contract, decodeContract)
     const result = yield* decoded(layout.result, decodeResult)
+
+    // `contract.json` only exists once the freeze succeeded. A run that died in fixture setup has
+    // an `initial` manifest and no contract; it is still reportable, and saying so is the point.
+    const contractExists = yield* fs.exists(layout.contract).pipe(
+      Effect.mapError((cause) => new ExecutionError({ message: `${layout.contract}: ${cause.message}` }))
+    )
+    const contract = contractExists ? yield* decoded(layout.contract, decodeContract) : undefined
 
     const inventoryExists = yield* fs.exists(layout.artifacts).pipe(
       Effect.mapError((cause) => new ExecutionError({ message: `${layout.artifacts}: ${cause.message}` }))
@@ -79,7 +89,7 @@ export const loadReportInput = (
     return {
       layout,
       manifest,
-      contract,
+      ...(contract === undefined ? {} : { contract }),
       result,
       inventory,
       events: journal.events,

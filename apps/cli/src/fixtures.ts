@@ -1,6 +1,6 @@
 import type { FixtureCleanupReport, FixtureSession, Registries, StorageStateLike } from "@harness/core"
 import { FixtureError, FixtureManager } from "@harness/core"
-import { Duration, Effect, Layer, Option } from "effect"
+import { Duration, Effect, Exit, Layer, Option } from "effect"
 
 type Cleanup = () => Promise<void> | void
 
@@ -34,7 +34,10 @@ export const fixtureManagerLayer = (registries: Registries): Layer.Layer<Fixture
           )
           const cleanups: Array<Cleanup> = []
           const result = yield* Effect.tryPromise({
-            try: () =>
+            // `signal` is aborted when the setup is cancelled or exceeds
+            // `budgets.fixtureSetupTimeoutMs`. A fixture that ignores it is merely ABANDONED: a row
+            // it creates after the interrupt has no cleanup registered for it any more.
+            try: (signal) =>
               fixture({
                 runId: request.runId,
                 attemptId: request.attemptId,
@@ -44,7 +47,8 @@ export const fixtureManagerLayer = (registries: Registries): Layer.Layer<Fixture
                 addCleanup: (fn: Cleanup) => {
                   cleanups.push(fn)
                 },
-                baseUrl: request.baseUrl
+                baseUrl: request.baseUrl,
+                signal
               }),
             catch: (cause) =>
               new FixtureError({
@@ -53,8 +57,14 @@ export const fixtureManagerLayer = (registries: Registries): Layer.Layer<Fixture
                 reason: cause instanceof Error ? cause.message : String(cause)
               })
           }).pipe(
-            // A failed setup must still run whatever it managed to acquire.
-            Effect.tapError(() => runCleanups(cleanups, 15_000))
+            // A setup that did not SUCCEED must still run whatever it managed to acquire.
+            // `Effect.tapError` fired on a typed failure only, so interrupting a run during fixture
+            // setup ran ZERO cleanups (.recon/critic-fixture-real.ts, case F1) — and the doc comment
+            // above claimed the opposite. `onExit` covers failure AND interruption; finalizers are
+            // uninterruptible, so the teardown completes.
+            Effect.onExit((exit) =>
+              Exit.isSuccess(exit) ? Effect.void : runCleanups(cleanups, request.cleanupTimeoutMs).pipe(Effect.asVoid)
+            )
           )
 
           const storageState = mergeStorageState(result.storageState, result.cookies, result.origins)

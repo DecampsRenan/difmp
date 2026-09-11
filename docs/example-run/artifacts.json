@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "runId": "r_fttvannvtzn4m",
+  "runId": "r_334qewxw37sjy",
   "artifacts": [
     {
       "artifactId": "art_1",
@@ -9,7 +9,7 @@
       "label": "obs_1",
       "path": "attempts/a1/observations/art_1.txt",
       "state": "present",
-      "ts": "2026-09-11T19:36:26.507Z",
+      "ts": "2026-09-11T20:10:49.486Z",
       "sourceSeq": 9
     },
     {
@@ -19,7 +19,7 @@
       "label": "obs_2",
       "path": "attempts/a1/observations/art_2.txt",
       "state": "present",
-      "ts": "2026-09-11T19:36:28.038Z",
+      "ts": "2026-09-11T20:10:51.336Z",
       "sourceSeq": 23
     },
     {
@@ -29,8 +29,9 @@
       "label": "apres-creation",
       "path": "attempts/a1/screenshots/art_3.png",
       "state": "present",
-      "bytes": 32149,
-      "ts": "2026-09-11T19:36:28.245Z"
+      "bytes": 35607,
+      "ts": "2026-09-11T20:10:51.610Z",
+      "sourceSeq": 28
     },
     {
       "artifactId": "art_4",
@@ -39,8 +40,9 @@
       "label": "checkpoint-c1",
       "path": "attempts/a1/screenshots/art_4.png",
       "state": "present",
-      "bytes": 32149,
-      "ts": "2026-09-11T19:36:28.510Z"
+      "bytes": 35607,
+      "ts": "2026-09-11T20:10:51.863Z",
+      "sourceSeq": 34
     },
     {
       "artifactId": "art_5",
@@ -49,7 +51,7 @@
       "label": "obs_3",
       "path": "attempts/a1/observations/art_5.txt",
       "state": "present",
-      "ts": "2026-09-11T19:36:28.805Z",
+      "ts": "2026-09-11T20:10:52.116Z",
       "sourceSeq": 45
     },
     {
@@ -59,8 +61,9 @@
       "label": "apres-rechargement",
       "path": "attempts/a1/screenshots/art_6.png",
       "state": "present",
-      "bytes": 30438,
-      "ts": "2026-09-11T19:36:29.045Z"
+      "bytes": 32946,
+      "ts": "2026-09-11T20:10:52.435Z",
+      "sourceSeq": 50
     },
     {
       "artifactId": "art_7",
@@ -69,8 +72,9 @@
       "label": "checkpoint-c2",
       "path": "attempts/a1/screenshots/art_7.png",
       "state": "present",
-      "bytes": 30438,
-      "ts": "2026-09-11T19:36:29.334Z"
+      "bytes": 32946,
+      "ts": "2026-09-11T20:10:52.749Z",
+      "sourceSeq": 56
     },
     {
       "artifactId": "art_8",
@@ -79,8 +83,9 @@
       "label": "checkpoint-c3",
       "path": "attempts/a1/screenshots/art_8.png",
       "state": "present",
-      "bytes": 30438,
-      "ts": "2026-09-11T19:36:29.545Z"
+      "bytes": 32946,
+      "ts": "2026-09-11T20:10:53.039Z",
+      "sourceSeq": 61
     },
     {
       "artifactId": "art_9",
@@ -88,8 +93,8 @@
       "kind": "trace",
       "path": "attempts/a1/trace.zip",
       "state": "present",
-      "bytes": 1400316,
-      "ts": "2026-09-11T19:36:29.780Z"
+      "bytes": 1398918,
+      "ts": "2026-09-11T20:10:53.307Z"
     },
     {
       "artifactId": "art_10",
@@ -98,7 +103,7 @@
       "path": "attempts/a1/console.jsonl",
       "state": "present",
       "bytes": 0,
-      "ts": "2026-09-11T19:36:29.781Z"
+      "ts": "2026-09-11T20:10:53.309Z"
     },
     {
       "artifactId": "art_11",
@@ -107,7 +112,7 @@
       "path": "attempts/a1/network.jsonl",
       "state": "present",
       "bytes": 903,
-      "ts": "2026-09-11T19:36:29.783Z"
+      "ts": "2026-09-11T20:10:53.311Z"
     }
   ]
 }

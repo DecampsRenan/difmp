@@ -34,6 +34,12 @@ export interface FixtureContext {
   /** Register cleanup AT ACQUISITION time so a partially failed setup is still torn down. */
   readonly addCleanup: (fn: () => Promise<void> | void) => void
   readonly baseUrl: string
+  /**
+   * Aborted when setup is cancelled or exceeds `budgets.fixtureSetupTimeoutMs`. A fixture that
+   * ignores it is abandoned rather than stopped: whatever it creates afterwards has no registered
+   * cleanup left to run, so pass it to every `fetch`/driver call you make.
+   */
+  readonly signal: AbortSignal
 }
 
 export interface FixtureResult {
@@ -61,8 +67,18 @@ export interface CheckContext {
   readonly inputs: InputsRecord
   readonly fixture: { readonly public: InputsRecord }
   readonly baseUrl: string
-  /** Journalled as a harness operation; returns the minted artifactId. */
+  /**
+   * Journalled as a harness operation; returns the minted artifactId. The write is owned by the
+   * check's scope: once the check has returned or its per-operation timeout has fired, an
+   * outstanding call is interrupted and its promise rejects — a check can never land evidence
+   * after the run has been aggregated.
+   */
   readonly recordEvidence: (e: { readonly label: string; readonly data: unknown }) => Promise<string>
+  /**
+   * Aborted when the check exceeds `budgets.operationTimeoutMs` or the run is cancelled. Pass it
+   * to every `fetch`/query the check makes, otherwise the work keeps running unobserved.
+   */
+  readonly signal: AbortSignal
 }
 
 export interface CheckResult {
@@ -133,6 +149,40 @@ export interface Registries {
    */
   readonly scripts?: Registry<ScriptFactory>
 }
+
+/**
+ * spec.md §6 step 1: the registries are validated BEFORE anything runs. A spec naming a fixture or
+ * a TS check the project never registered is refused while the browser is still closed — not
+ * discovered at verification time, once the whole walkthrough has already been paid for.
+ *
+ * Only names are resolved; a name is never a path and never code.
+ */
+export const validateSpecRegistries = (options: {
+  readonly spec: {
+    readonly frontmatter: { readonly fixture?: string }
+    readonly criteria: ReadonlyArray<{ readonly id: string; readonly checkName?: string }>
+  }
+  readonly registries: Registries
+}): Effect.Effect<void, RegistryError> =>
+  Effect.gen(function*() {
+    const { registries, spec } = options
+    const fixtureName = spec.frontmatter.fixture
+    if (fixtureName !== undefined && !registries.fixtures.has(fixtureName)) {
+      return yield* registries.fixtures.lookup(fixtureName).pipe(Effect.asVoid)
+    }
+    for (const criterion of spec.criteria) {
+      const checkName = criterion.checkName
+      if (checkName === undefined || registries.checks.has(checkName)) continue
+      return yield* Effect.fail(
+        new RegistryError({
+          kind: "check",
+          name: checkName,
+          reason: `is mapped to criterion ${criterion.id} but is not registered in harness.config.ts`,
+          registered: registries.checks.names
+        })
+      )
+    }
+  })
 
 /** Reject a registry value that is not a function before a spec ever references it. */
 export const validateRegistryShape = (

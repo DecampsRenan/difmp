@@ -67,6 +67,15 @@ export const make = (
               headless: driverOptions.headless ?? true,
               // The typed equivalent of --no-sandbox; required in most CI containers.
               chromiumSandbox: false,
+              // Playwright's default SIGINT/SIGTERM/SIGHUP handlers close the browser and then
+              // call process.exit() themselves. In a harness that is fatal: Ctrl-C killed the
+              // process ~130 ms in, so the run's uninterruptible finalize tail never ran — no
+              // trace artifact, no `runFinished`, no `result.json` — and design-contracts §9/§12
+              // could not be honoured. Signals belong to the runtime (NodeRuntime.runMain), which
+              // interrupts the fiber; our own scope finalizers are what close the browser.
+              handleSIGINT: false,
+              handleSIGTERM: false,
+              handleSIGHUP: false,
               args: [...(driverOptions.args ?? defaultArgs)],
               ...(driverOptions.executablePath === undefined
                 ? {}
@@ -78,7 +87,7 @@ export const make = (
         (instance) => Effect.promise(() => instance.close().catch(() => undefined))
       )
 
-      const state: ContextState = { closed: false }
+      const state: ContextState = { closed: false, contextClosed: false }
       const context: BrowserContext = yield* Effect.acquireRelease(
         Effect.tryPromise({
           try: () =>
@@ -99,11 +108,16 @@ export const make = (
         }),
         (instance) =>
           Effect.promise(async () => {
-            // Flip the flag BEFORE closing: a cancellation must not let a late action reach a
-            // half-closed context.
-            const alreadyClosed = state.closed
+            // `closed` is flipped first so a cancellation cannot let a late action reach a
+            // half-closed context. The guard on the close itself is `contextClosed`, which is only
+            // set once `context.close()` has actually completed: a `finalize` that was cut short
+            // after flipping `closed` still needs us to close the context here, or the video is
+            // never muxed.
             state.closed = true
-            if (!alreadyClosed) await instance.close().catch(() => undefined)
+            if (!state.contextClosed) {
+              await instance.close().catch(() => undefined)
+              state.contextClosed = true
+            }
           })
       )
 

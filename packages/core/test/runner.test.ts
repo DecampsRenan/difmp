@@ -1,6 +1,8 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, FileSystem, Layer } from "effect"
 import {
+  FixtureError,
+  FixtureManager,
   makeRegistry,
   parseSpec,
   readRunJournal,
@@ -25,6 +27,8 @@ interface RunOptions {
   readonly configOverrides?: Record<string, unknown>
   readonly fixtures?: Record<string, Fixture>
   readonly checks?: Record<string, Check>
+  /** Makes `FixtureManager.setup` fail, to exercise a run that dies during infrastructure setup. */
+  readonly fixtureSetupError?: string
 }
 
 interface RunOutput {
@@ -45,6 +49,21 @@ const execute = (options: RunOptions) =>
     }))
     const browser = fakeBrowser()
     const fixtures = fakeFixtures()
+    const fixtureLayer = options.fixtureSetupError === undefined
+      ? fixtures.layer
+      : Layer.succeed(
+        FixtureManager,
+        FixtureManager.of({
+          setup: (request) =>
+            Effect.fail(
+              new FixtureError({
+                fixtureName: request.fixtureName,
+                phase: "setup",
+                reason: options.fixtureSetupError!
+              })
+            )
+        })
+      )
 
     const result = yield* runScenario({
       spec: options.spec,
@@ -64,7 +83,7 @@ const execute = (options: RunOptions) =>
         browser.layer,
         scriptedProvider(options.turns),
         scriptedVerifier(options.verdicts ?? {}, options.fallbackVerdict ?? { status: "passed" }),
-        fixtures.layer
+        fixtureLayer
       )),
       Effect.orDie
     )
@@ -226,8 +245,69 @@ describe("runner", () => {
       expect(out.result.status).toBe("error")
       expect(out.events.some((e) => e.type === "browserContextOpened")).toBe(false)
       if (out.result.status === "error") {
-        expect(out.result.stage).toBe("fixture-setup")
+        // spec §6 step 1 validates the REGISTRIES, so an unregistered name never reaches setup.
+        expect(out.result.stage).toBe("validate")
         expect(out.result.reason).toContain("is not registered")
       }
+    }).pipe(Effect.provide(platform)))
+
+  it.effect("refuses a check name that is not registered, before the browser opens", () =>
+    Effect.gen(function*() {
+      const loaded = yield* expectSuccess(spec("coded-check.e2e.md"))
+      const out = yield* execute({ spec: loaded, turns: [{ toolCalls: [finish] }] })
+      expect(out.result.status).toBe("error")
+      expect(out.events.some((e) => e.type === "browserContextOpened")).toBe(false)
+      expect(out.events.some((e) => e.type === "contractFrozen")).toBe(false)
+      if (out.result.status === "error") {
+        expect(out.result.stage).toBe("validate")
+        expect(out.result.reason).toContain("project-unique-in-storage")
+        expect(out.result.reason).toContain("c2")
+      }
+    }).pipe(Effect.provide(platform)))
+
+  it.effect("writes the initial manifest at step 2, before the fixture can fail", () =>
+    Effect.gen(function*() {
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"))
+      const out = yield* execute({
+        spec: loaded,
+        turns: [{ toolCalls: [finish] }],
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) },
+        fixtureSetupError: "seed API refused the request (HTTP 503)"
+      })
+      expect(out.result.status).toBe("error")
+      if (out.result.status === "error") expect(out.result.stage).toBe("fixture-setup")
+
+      const fs = yield* FileSystem.FileSystem
+      // The reporter can attribute the run even though nothing was ever frozen.
+      expect(yield* fs.exists(`${out.runRoot}/contract.json`).pipe(Effect.orDie)).toBe(false)
+      const manifest = JSON.parse(yield* fs.readFileString(`${out.runRoot}/manifest.json`).pipe(Effect.orDie)) as {
+        stage: string
+        scenarioId: string
+        hashes?: unknown
+        model: { adapterId: string }
+      }
+      expect(manifest.stage).toBe("initial")
+      expect(manifest.hashes).toBeUndefined()
+      expect(manifest.scenarioId).toBe("project-create")
+      expect(manifest.model.adapterId).toBe("scripted")
+      // The failure is journalled as an `error` event, not only folded into result.json.
+      expect(out.events.some((e) => e.type === "error" && e.stage === "fixture-setup" && e.fatal)).toBe(true)
+    }).pipe(Effect.provide(platform)))
+
+  it.effect("enriches the manifest with the contract hashes once the freeze succeeded", () =>
+    Effect.gen(function*() {
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"))
+      const out = yield* execute({
+        spec: loaded,
+        turns: [{ toolCalls: [observe] }, { toolCalls: [finish] }],
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) }
+      })
+      const fs = yield* FileSystem.FileSystem
+      const manifest = JSON.parse(yield* fs.readFileString(`${out.runRoot}/manifest.json`).pipe(Effect.orDie)) as {
+        stage: string
+        hashes?: { contract: string }
+      }
+      expect(manifest.stage).toBe("final")
+      expect(manifest.hashes?.contract).toBe(out.result.contractHash)
     }).pipe(Effect.provide(platform)))
 })

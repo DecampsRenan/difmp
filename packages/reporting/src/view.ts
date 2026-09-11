@@ -3,6 +3,8 @@ import type {
   ArtifactRecord,
   AttemptResult,
   Criterion,
+  CriterionDowngrade,
+  CriterionReCheck,
   CriterionResult,
   CriterionStatus,
   HarnessEvent,
@@ -90,6 +92,13 @@ export interface CriterionView {
   readonly observed?: string
   readonly limitations?: string
   readonly absence?: AbsenceBranch
+  /**
+   * Every status the harness imposed on the evaluator's answer. A criterion showing `inconclusive`
+   * because a rule refused to conclude must say WHICH rule — a bare `inconclusive` hides it.
+   */
+  readonly downgrades: ReadonlyArray<CriterionDowngrade>
+  /** Later evaluations of an already decided criterion, kept as observations (spec §9). */
+  readonly reChecks: ReadonlyArray<CriterionReCheck>
   readonly evidence: ReadonlyArray<ArtifactView>
   /** Referenced ids with no matching inventory entry — surfaced, never silently dropped. */
   readonly danglingEvidence: ReadonlyArray<string>
@@ -166,6 +175,16 @@ const criterionStatusLabels: Record<CriterionStatus, string> = {
 }
 
 export const criterionStatusLabel = (status: CriterionStatus): string => criterionStatusLabels[status]
+
+/** Why the harness refused the evaluator's status — shown verbatim next to the criterion. */
+const downgradeLabels: Record<CriterionDowngrade["reason"], string> = {
+  "rejected-evidence": "preuves rejetées",
+  "absence-uncertain-navigation": "absence après navigation incertaine",
+  "evidence-persistence-failed": "preuve obligatoire non enregistrée",
+  "verdict-already-decided": "verdict déjà rendu"
+}
+
+export const downgradeLabel = (reason: CriterionDowngrade["reason"]): string => downgradeLabels[reason]
 
 const inconclusiveReasonLabels: Record<string, string> = {
   "unresolved-criteria": "critères non résolus",
@@ -339,7 +358,10 @@ const evaluatorLabel = (evaluator: CriterionResult["evaluator"]): string => {
   }
 }
 
-const budgetLines = (attempt: AttemptResult, budgets: ReportInput["contract"]["budgets"]): ReadonlyArray<BudgetLine> => {
+const budgetLines = (
+  attempt: AttemptResult,
+  budgets: ReportInput["manifest"]["config"]["budgets"]
+): ReadonlyArray<BudgetLine> => {
   const tokens = attempt.model.inputTokens + attempt.model.outputTokens
   return [
     {
@@ -357,8 +379,9 @@ const budgetLines = (attempt: AttemptResult, budgets: ReportInput["contract"]["b
       limit: budgets.maxTokens,
       remaining: budgets.maxTokens - tokens,
       unit: "tokens",
-      note: `dont ${attempt.model.verifierTokens} pour le vérificateur ; ` +
-        `réserve vérificateur retenue : ${budgets.verifierReserveTokens}`
+      note: `dont ${attempt.model.verifierTokens} pour le vérificateur ; réserve vérificateur ` +
+        `(${budgets.verifierReserveTokens}) : retenue à la boucle de navigation, et garantie au ` +
+        `vérificateur même si un tour de navigation a dépassé le plafond`
     },
     {
       key: "attemptTimeoutMs",
@@ -375,6 +398,15 @@ const collectDiagnostics = (input: ReportInput, criteria: ReadonlyArray<Criterio
   const out: Array<Diagnostic> = []
   const { events, inventory, result } = input
 
+  if (input.contract === undefined) {
+    out.push({
+      severity: "error",
+      source: "contrat",
+      message: "Le contrat n'a jamais été gelé : le run s'est arrêté avant l'étape 3 de §6 " +
+        "(résolution des inputs, registres ou préparation de la fixture). Aucun critère n'a donc " +
+        "pu être évalué, et ce rapport ne décrit qu'un échec d'infrastructure."
+    })
+  }
   if (!input.finalized) {
     out.push({
       severity: "warning",
@@ -421,6 +453,22 @@ const collectDiagnostics = (input: ReportInput, criteria: ReadonlyArray<Criterio
     }
   }
   for (const criterion of criteria) {
+    for (const downgrade of criterion.downgrades) {
+      out.push({
+        severity: "warning",
+        source: `${downgradeLabels[downgrade.reason]} ${criterion.id}`,
+        message: `Statut ramené de « ${criterionStatusLabel(downgrade.from)} » à « ${
+          criterionStatusLabel(downgrade.to)
+        } » : ${downgrade.detail}`
+      })
+    }
+    for (const reCheck of criterion.reChecks) {
+      out.push({
+        severity: reCheck.applied ? "warning" : "info",
+        source: `re-vérification ${criterion.id}`,
+        message: reCheck.note
+      })
+    }
     if (criterion.limitations !== undefined) {
       out.push({ severity: "info", source: `limite ${criterion.id}`, message: criterion.limitations })
     }
@@ -455,6 +503,11 @@ const collectDiagnostics = (input: ReportInput, criteria: ReadonlyArray<Criterio
 export const buildReportView = (input: ReportInput): ReportView => {
   const { contract, inventory, manifest, result } = input
 
+  // A run that died before the freeze has no contract — only the initial manifest of spec §6
+  // step 2. Everything below then falls back to what the manifest recorded, so an infrastructure
+  // failure still produces a JUnit file and an HTML report instead of nothing at all.
+  const budgets = contract?.budgets ?? manifest.config.budgets
+
   const artifacts = inventory.artifacts.map(toArtifactView)
   const artifactsById = new Map(artifacts.map((a) => [a.artifactId, a]))
 
@@ -465,9 +518,9 @@ export const buildReportView = (input: ReportInput): ReportView => {
     }
   }
 
-  const criteria = contract.criteria.map((criterion: Criterion): CriterionView => {
+  const criteria = (contract?.criteria ?? []).map((criterion: Criterion): CriterionView => {
     const found = criterionResults.get(criterion.id)
-    const contractHash = contract.hashes.criteria[criterion.id] ?? ""
+    const contractHash = contract?.hashes.criteria[criterion.id] ?? ""
     const evidence: Array<ArtifactView> = []
     const dangling: Array<string> = []
     for (const id of found?.result.evidence ?? []) {
@@ -480,7 +533,7 @@ export const buildReportView = (input: ReportInput): ReportView => {
       id: criterion.id,
       expectation: criterion.text,
       sourceText: criterion.sourceText,
-      location: `${contract.specPath}:${criterion.line}:${criterion.column}`,
+      location: `${contract?.specPath ?? manifest.specPath}:${criterion.line}:${criterion.column}`,
       contractHash,
       hashMismatch: found !== undefined && contractHash !== "" && found.result.criterionHash !== contractHash,
       method: criterion.method,
@@ -488,6 +541,8 @@ export const buildReportView = (input: ReportInput): ReportView => {
       evaluatorKind: evaluator?.kind ?? (criterion.method === "code" ? "code" : "model"),
       evaluatorLabel: evaluator === undefined ? "non évalué" : evaluatorLabel(evaluator),
       probabilistic: criterion.method === "model",
+      downgrades: found?.result.downgrades ?? [],
+      reChecks: found?.result.reChecks ?? [],
       evidence,
       danglingEvidence: dangling,
       ...(found === undefined ? {} : {
@@ -523,7 +578,7 @@ export const buildReportView = (input: ReportInput): ReportView => {
       exceeded: attempt.actions.guidanceExceeded,
       rendering: renderActionGuidance(attempt.actions.used, attempt.actions.guidance)
     },
-    budgets: budgetLines(attempt, contract.budgets)
+    budgets: budgetLines(attempt, budgets)
   }))
 
   const timeline = input.events.map((event): TimelineEntry => {
@@ -567,7 +622,7 @@ export const buildReportView = (input: ReportInput): ReportView => {
     harnessVersion: manifest.harnessVersion,
     nodeVersion: manifest.nodeVersion,
     baseUrl: manifest.config.baseUrl,
-    scenarioBody: contract.body,
+    scenarioBody: contract?.body ?? "",
     attempts,
     criteria,
     timeline,

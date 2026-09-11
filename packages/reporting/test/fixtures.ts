@@ -11,14 +11,21 @@ import {
 } from "@harness/core"
 import { NodePath } from "@effect/platform-node"
 import { Effect, Path } from "effect"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const here = dirname(fileURLToPath(import.meta.url))
 
 /** Fixture names, one directory each, all hand-written JSON decoded through core's schemas. */
-export const fixtureNames = ["passed", "failed-persistence", "inconclusive", "error"] as const
+export const fixtureNames = [
+  "passed",
+  "failed-persistence",
+  "inconclusive",
+  "error",
+  /** Died in fixture setup: an `initial` manifest, no `contract.json`, and still reportable. */
+  "setup-failure"
+] as const
 export type FixtureName = typeof fixtureNames[number]
 
 const nodePath: Path.Path = Effect.runSync(
@@ -41,7 +48,11 @@ const decodeEvent = decodeStrictSync(HarnessEvent)
  */
 export const loadFixture = (name: FixtureName, outputDir = join(here, "fixtures")): ReportInput => {
   const manifest = decodeManifest(JSON.parse(read(name, "manifest.json")))
-  const contract = decodeContract(JSON.parse(read(name, "contract.json")))
+  // `contract.json` only exists once the freeze succeeded; its absence is itself information.
+  const contractSource = existsSync(join(here, "fixtures", name, "contract.json"))
+    ? read(name, "contract.json")
+    : undefined
+  const contract = contractSource === undefined ? undefined : decodeContract(JSON.parse(contractSource))
   const result = decodeResult(JSON.parse(read(name, "result.json")))
   const inventory = decodeInventory(JSON.parse(read(name, "artifacts.json")))
   const scan = scanJsonl(read(name, "events.jsonl"))
@@ -50,7 +61,7 @@ export const loadFixture = (name: FixtureName, outputDir = join(here, "fixtures"
   return {
     layout: makeRunLayout(nodePath, outputDir, manifest.runId),
     manifest,
-    contract,
+    ...(contract === undefined ? {} : { contract }),
     result,
     inventory,
     events,

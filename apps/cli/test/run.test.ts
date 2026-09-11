@@ -273,3 +273,59 @@ describe("live dashboard (--ui)", () => {
     expect(allOutput(result)).toContain("PASS  alpha")
   })
 })
+
+/**
+ * spec §6 step 2 + integration.md §5: the initial manifest is persisted before the fixture runs,
+ * so a run that dies in infrastructure setup is still reportable. CI must get a JUnit file naming
+ * the failure rather than an empty run directory.
+ */
+describe("a run that fails before the contract is frozen is still reported", () => {
+  const failing = fixture("setup-failure")
+
+  it("writes manifest.json, junit.xml and report.html, and exits 2", async () => {
+    const dir = join(output, "setup-failure")
+    const result = await exec(["run", "--base-url", page.url, "--output", dir], { cwd: failing })
+    expect(result.code, allOutput(result)).toBe(2)
+
+    const runDir = latestRunDir(dir)
+    const files = readdirSync(runDir)
+    expect(files).toContain("manifest.json")
+    expect(files).toContain("junit.xml")
+    expect(files).toContain("report.html")
+    // Nothing was frozen, so there is no contract — and that absence is the information.
+    expect(files).not.toContain("contract.json")
+
+    const manifest = JSON.parse(readFileSync(join(runDir, "manifest.json"), "utf8")) as {
+      stage: string
+      scenarioId: string
+      hashes?: unknown
+      model: { adapterId: string }
+    }
+    expect(manifest.stage).toBe("initial")
+    expect(manifest.hashes).toBeUndefined()
+    expect(manifest.scenarioId).toBe("setup-failure")
+    expect(manifest.model.adapterId).toBe("scripted")
+
+    const junit = readFileSync(join(runDir, "junit.xml"), "utf8")
+    expect(junit).toContain('tests="1"')
+    expect(junit).toContain('errors="1"')
+    expect(junit).not.toContain("<skipped")
+    expect(junit).toContain("HTTP 503")
+    expect(junit).toContain('<property name="harness.adapter" value="scripted"/>')
+
+    const html = readFileSync(join(runDir, "report.html"), "utf8")
+    expect(html.startsWith("<!doctype html>")).toBe(true)
+    expect(html).toContain("jamais été gelé")
+  })
+
+  it("replays the same outputs through `harness report <run-directory>`", async () => {
+    const dir = join(output, "setup-failure-replay")
+    expect((await exec(["run", "--base-url", page.url, "--output", dir], { cwd: failing })).code).toBe(2)
+    const runDir = latestRunDir(dir)
+    rmSync(join(runDir, "junit.xml"))
+    rmSync(join(runDir, "report.html"))
+    const replay = await exec(["report", runDir], { cwd: failing })
+    expect(replay.code, allOutput(replay)).toBe(0)
+    expect(readdirSync(runDir)).toEqual(expect.arrayContaining(["junit.xml", "report.html"]))
+  })
+})

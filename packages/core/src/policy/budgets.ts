@@ -21,9 +21,22 @@ export const makeBudgetState = (startedAtMs: number): BudgetState => ({
 
 export const tokensUsed = (state: BudgetState): number => state.inputTokens + state.outputTokens
 
-/** The browser loop may not spend the verifier reserve; the verifier may spend everything. */
+/**
+ * The browsing loop may not spend the verifier reserve; the verifier may spend everything.
+ *
+ * This is the SHARED ceiling. It is not the whole story for the verifier: see
+ * `canStartModelCall`, where `verifierReserveTokens` is a pool of its own so that an oversized
+ * browsing turn cannot take the final verification's tokens away from it.
+ */
 export const tokenCeiling = (budgets: Budgets, role: ModelRole): number =>
   role === "verifier" ? budgets.maxTokens : budgets.maxTokens - budgets.verifierReserveTokens
+
+/** Tokens the verifier may still spend: its own untouched reserve, or what is left of the shared pool. */
+export const verifierTokensLeft = (budgets: Budgets, state: BudgetState): number =>
+  Math.max(
+    budgets.verifierReserveTokens - state.verifierTokens,
+    budgets.maxTokens - tokensUsed(state)
+  )
 
 export type BudgetDecision =
   | { readonly _tag: "allow" }
@@ -51,17 +64,35 @@ export const canStartModelCall = (options: {
       new BudgetExhaustedError({ budget: "maxModelCalls", limit: budgets.maxModelCalls, used: state.modelCalls })
     )
   }
-  const ceiling = tokenCeiling(budgets, role)
   const used = tokensUsed(state)
-  if (used >= ceiling) {
+  if (role === "browser") {
+    const ceiling = tokenCeiling(budgets, "browser")
+    if (used >= ceiling) {
+      return deny(
+        new BudgetExhaustedError({
+          budget: "maxTokens",
+          limit: ceiling,
+          used,
+          detail:
+            `${budgets.verifierReserveTokens} tokens are reserved for the final verification and are ` +
+            `not available to the browsing loop`
+        })
+      )
+    }
+    return allow
+  }
+  // The reserve is a POOL, not a subtraction. A browsing turn's cost is only known once it has
+  // run, so the loop can cross its ceiling by one oversized turn; if the reserve were merely
+  // `maxTokens - used` the final verification would then be denied and the reserve would have
+  // reserved nothing. The verifier therefore keeps `verifierReserveTokens` of its own whatever the
+  // browsing loop consumed, which is what makes "the final evaluation can always run" true.
+  if (verifierTokensLeft(budgets, state) <= 0) {
     return deny(
       new BudgetExhaustedError({
         budget: "maxTokens",
-        limit: ceiling,
+        limit: budgets.maxTokens,
         used,
-        detail: role === "browser"
-          ? `${budgets.verifierReserveTokens} tokens are withheld so the final verification can always run`
-          : "token budget exhausted"
+        detail: `the verifier reserve (${budgets.verifierReserveTokens}) and the shared token budget are both exhausted`
       })
     )
   }
@@ -93,6 +124,8 @@ export interface BudgetRemaining {
   readonly tokens: number
   /** What the BROWSER loop may still spend (reserve withheld). */
   readonly browserTokens: number
+  /** What the VERIFIER may still spend: its own reserve survives a browsing overshoot. */
+  readonly verifierTokens: number
   readonly timeMs: number
 }
 
@@ -100,6 +133,7 @@ export const remaining = (budgets: Budgets, state: BudgetState, nowMs: number): 
   modelCalls: Math.max(0, budgets.maxModelCalls - state.modelCalls),
   tokens: Math.max(0, budgets.maxTokens - tokensUsed(state)),
   browserTokens: Math.max(0, tokenCeiling(budgets, "browser") - tokensUsed(state)),
+  verifierTokens: Math.max(0, verifierTokensLeft(budgets, state)),
   timeMs: Math.max(0, budgets.attemptTimeoutMs - (nowMs - state.startedAtMs))
 })
 

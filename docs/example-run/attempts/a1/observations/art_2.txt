@@ -1,18 +1,18 @@
-url: http://127.0.0.1:41161/
-title: Espace r_fttvannvtzn4m-a1 · Projects
+url: http://127.0.0.1:41835/
+title: Espace r_334qewxw37sjy-a1 · Projects
 
 - generic [active] [ref=e1]:
   - generic [ref=e2]:
     - generic [ref=e3]: Projects
     - generic [ref=e4]:
-      - text: Signed in as agent-r_fttvannvtzn4m-a1@example.test ·
+      - text: Signed in as agent-r_334qewxw37sjy-a1@example.test ·
       - link "Sign out" [ref=e5] [cursor=pointer]:
         - /url: /logout
   - main [ref=e6]:
     - heading "Projects" [level=1] [ref=e7]
     - paragraph [ref=e8]:
       - text: "Workspace:"
-      - strong [ref=e9]: Espace r_fttvannvtzn4m-a1
+      - strong [ref=e9]: Espace r_334qewxw37sjy-a1
     - region [ref=e10]:
       - heading "New project" [level=2] [ref=e11]
       - generic [ref=e12]:
@@ -24,5 +24,5 @@ title: Espace r_fttvannvtzn4m-a1 · Projects
       - heading "Your projects" [level=2] [ref=e18]
       - list "Projects" [ref=e20]:
         - listitem [ref=e21]:
-          - generic [ref=e22]: Projet r_fttvannvtzn4m
+          - generic [ref=e22]: Projet r_334qewxw37sjy
           - generic [ref=e23]: 2026-09-11

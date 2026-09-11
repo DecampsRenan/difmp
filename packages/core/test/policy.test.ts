@@ -14,6 +14,8 @@ import {
   recordAction,
   recordModelCall,
   tokenCeiling,
+  tokensUsed,
+  verifierTokensLeft,
   verifyCriterionBinding
 } from "../src/index.js"
 import type { Budgets, CriterionResult } from "../src/index.js"
@@ -83,6 +85,29 @@ describe("blocking budgets are separate and end the loop as inconclusive", () =>
     const verifier = canStartModelCall({ budgets, state, role: "verifier", nowMs: 0 })
     expect(browser._tag).toBe("deny")
     expect(verifier._tag).toBe("allow")
+  })
+
+  it("keeps the verifier reserve available after an oversized browsing turn overshot it", () => {
+    // The gate runs BEFORE a call and a turn's cost is only known after it, so the browsing loop
+    // can cross `maxTokens - verifierReserveTokens` by one turn. The reserve must survive that,
+    // otherwise the final verification is denied and the reserve reserved nothing.
+    const overshot = chargeTokens(makeBudgetState(0), "browser", { inputTokens: 1200, outputTokens: 0 })
+    expect(tokensUsed(overshot)).toBeGreaterThan(budgets.maxTokens)
+    expect(canStartModelCall({ budgets, state: overshot, role: "browser", nowMs: 0 })._tag).toBe("deny")
+    expect(canStartModelCall({ budgets, state: overshot, role: "verifier", nowMs: 0 })._tag).toBe("allow")
+    expect(verifierTokensLeft(budgets, overshot)).toBe(budgets.verifierReserveTokens)
+  })
+
+  it("denies the verifier once it has spent its own reserve and the shared budget too", () => {
+    const spent = chargeTokens(
+      chargeTokens(makeBudgetState(0), "browser", { inputTokens: 1200, outputTokens: 0 }),
+      "verifier",
+      { inputTokens: 200, outputTokens: 0 }
+    )
+    expect(verifierTokensLeft(budgets, spent)).toBe(0)
+    const decision = canStartModelCall({ budgets, state: spent, role: "verifier", nowMs: 0 })
+    expect(decision._tag).toBe("deny")
+    if (decision._tag === "deny") expect(decision.error.budget).toBe("maxTokens")
   })
 
   it("denies once the attempt timeout has elapsed", () => {

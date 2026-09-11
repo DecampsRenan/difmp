@@ -47,10 +47,14 @@ export const aggregate = (input: AggregationInput): AggregateOutcome => {
   }
   const unresolved = input.criteria.filter((c) => unresolvedStatuses.has(c.status))
   if (input.criteria.length === 0) {
+    // Nothing was evaluated. If a blocking budget is what stopped us (a fixture setup that never
+    // returned, say), say so — "no criterion was evaluated" alone hides the reason.
     return {
       status: "inconclusive",
-      reason: "unresolved-criteria",
-      detail: "no criterion was evaluated"
+      reason: input.budgetExhausted === true ? "budget-exhausted" : "unresolved-criteria",
+      detail: input.budgetExhausted === true && input.budgetDetail !== undefined
+        ? input.budgetDetail
+        : "no criterion was evaluated"
     }
   }
   if (unresolved.length > 0) {

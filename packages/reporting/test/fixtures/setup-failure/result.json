@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runId": "r_qq7m3t7vzx4b2",
+  "specPath": "tests/e2e/creation-projet.e2e.md",
+  "scenarioId": "creation-projet",
+  "contractHash": "",
+  "startedAt": "2026-03-04T14:10:00.000Z",
+  "finishedAt": "2026-03-04T14:10:04.120Z",
+  "durationMs": 4120,
+  "finalized": true,
+  "status": "error",
+  "stage": "fixture-setup",
+  "reason": "fixture \"authenticated-workspace\": seed API refused the request (HTTP 503)",
+  "attempts": [
+    {
+      "attemptId": "a1",
+      "startedAt": "2026-03-04T14:10:00.000Z",
+      "finishedAt": "2026-03-04T14:10:04.120Z",
+      "durationMs": 4120,
+      "status": "error",
+      "stage": "fixture-setup",
+      "reason": "fixture \"authenticated-workspace\": seed API refused the request (HTTP 503)",
+      "criteria": [],
+      "actions": { "used": 0, "guidance": 25, "guidanceExceeded": false },
+      "model": { "calls": 0, "inputTokens": 0, "outputTokens": 0, "verifierTokens": 0 },
+      "artifacts": []
+    }
+  ]
+}

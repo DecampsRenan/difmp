@@ -91,7 +91,7 @@ describe.each(fixtureNames)("standalone report for %s", (name: FixtureName) => {
   it("renders every criterion with its status and its method", async () => {
     const input = loadFixture(name, outputDir)
     const evaluations = await page.locator("#evaluations").innerText()
-    for (const criterion of input.contract.criteria) {
+    for (const criterion of input.contract?.criteria ?? []) {
       expect(evaluations).toContain(criterion.id)
       expect(evaluations).toContain(`méthode ${criterion.method}`)
       expect(evaluations).toContain(criterion.text)
@@ -103,12 +103,9 @@ describe.each(fixtureNames)("standalone report for %s", (name: FixtureName) => {
     const notes = await page.locator("#evaluations .note").allInnerTexts()
     const probabilistic = notes.filter((n) => n.includes("probabiliste"))
     const deterministic = notes.filter((n) => n.includes("déterministe") && !n.includes("probabiliste"))
-    expect(probabilistic.length).toBeGreaterThanOrEqual(
-      input.contract.criteria.filter((c) => c.method === "model").length
-    )
-    expect(deterministic.length).toBeGreaterThanOrEqual(
-      input.contract.criteria.filter((c) => c.method === "code").length
-    )
+    const criteria = input.contract?.criteria ?? []
+    expect(probabilistic.length).toBeGreaterThanOrEqual(criteria.filter((c) => c.method === "model").length)
+    expect(deterministic.length).toBeGreaterThanOrEqual(criteria.filter((c) => c.method === "code").length)
   })
 
   it("keeps budgets and the indicative action threshold apart", async () => {
@@ -132,10 +129,13 @@ describe.each(fixtureNames)("standalone report for %s", (name: FixtureName) => {
   })
 
   it("links artifacts as relative paths that resolve next to the report", async () => {
+    const input = loadFixture(name, outputDir)
+    const linkable = input.inventory.artifacts.filter((a) => a.state === "present" && a.path !== undefined)
     const hrefs = await page.locator("#artefacts a").evaluateAll((nodes) =>
       nodes.map((n) => (n as HTMLAnchorElement).getAttribute("href") ?? "")
     )
-    expect(hrefs.length).toBeGreaterThan(0)
+    expect(hrefs.length).toBe(linkable.length)
+    if (linkable.length === 0) return
     for (const href of hrefs) {
       expect(href.startsWith("/")).toBe(false)
       expect(href).not.toMatch(/^[a-z]+:/i)

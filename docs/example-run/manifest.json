@@ -1,9 +1,8 @@
 {
   "schemaVersion": 1,
-  "runId": "r_fttvannvtzn4m",
-  "createdAt": "2026-09-11T19:36:25.813Z",
+  "runId": "r_334qewxw37sjy",
+  "createdAt": "2026-09-11T20:10:48.623Z",
   "specPath": "../scenarios/project-create.e2e.md",
-  "scenarioId": "project-create",
   "harnessVersion": "0.1.0",
   "nodeVersion": "v24.19.0",
   "dependencies": {
@@ -32,9 +31,9 @@
       "**/dist/**",
       "**/invalid/**"
     ],
-    "baseUrl": "http://127.0.0.1:41161",
+    "baseUrl": "http://127.0.0.1:41835",
     "allowedOrigins": [
-      "http://127.0.0.1:41161"
+      "http://127.0.0.1:41835"
     ],
     "inputs": {
       "projectName": "Projet {{ run.id }}"
@@ -42,7 +41,7 @@
     "provider": "scripted",
     "providerOptions": {
       "script": "auto",
-      "maxTokens": 2048,
+      "maxTokens": "[redacted]",
       "temperature": 0
     },
     "maxActions": 25,
@@ -52,7 +51,10 @@
       "maxModelCalls": 40,
       "maxTokens": 200000,
       "verifierReserveTokens": 20000,
-      "fixtureCleanupTimeoutMs": 15000
+      "fixtureSetupTimeoutMs": 60000,
+      "fixtureCleanupTimeoutMs": 15000,
+      "maxIdleTurns": 3,
+      "maxEvidenceRequests": 1
     },
     "capture": {
       "trace": "on",
@@ -60,21 +62,20 @@
       "screenshots": "checkpoints",
       "retainTraceOn": "all"
     },
-    "outputDir": "runs",
+    "outputDir": "/tmp/claude-1000/-home-ubuntu-apps-difmp/bbcff204-5cd9-4221-a1c9-6a2a72d1f1b2/scratchpad/runs2",
     "reporters": [
-      "console",
-      "json",
-      "junit",
-      "html"
+      "console"
     ]
   },
+  "stage": "final",
+  "scenarioId": "project-create",
   "hashes": {
     "spec": "e880ac1ae62012d7d05f905cc64446eb3593f98a9b5ac41d12a28070c76b97c3",
-    "contract": "76cd363a17487c70374c26aeb09df3999240fec4621e1b7d6fbac5f0f7462ec8",
+    "contract": "27a57a903363fc6240ed96469bbebc9e5120ec3ea98dd9ed0b540df1e18afebc",
     "criteria": {
-      "c1": "b3b6eed51425e15d744e78aa28708f8274c8c25d3510f83fa204722a4017aeba",
-      "c2": "722bf6ab6038dd3e087098475b73dd63805aeb17de63586527104eb778cc83e7",
-      "c3": "9a396f13e04d7e8ba061aa249eb916d21bb9f5c40fa8886f1a0e4e2418632c07"
+      "c1": "5bc36524c40c3945e4a7f518a5660ccca2143c6159c639727b1d0055982d6a9d",
+      "c2": "234a178099d19f7641096cad531568c87ba40a7942fc0bf189e85230de829fc1",
+      "c3": "53c9a986aea2003ae2b3a3f3b6ce6e2620e9b28f4ee620464c728b9e8d2a7cb3"
     },
     "prompts": {}
   }

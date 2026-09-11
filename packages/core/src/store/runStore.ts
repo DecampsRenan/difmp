@@ -70,6 +70,11 @@ const make = (options: RunStoreOptions) =>
 
     const lock = yield* Semaphore.make(1)
     const events = yield* PubSub.dropping<HarnessEvent>({ capacity: 1024, replay: 64 })
+    // The store is built inside the LAYER's scope, so this finalizer fires when the run is over.
+    // Without it a subscriber parked in `PubSub.take` (the SSE fan-out) never receives a
+    // termination signal and the process waits on it at shutdown — the hang documented in
+    // api-effect-http-node.md §6. Proven by .recon/critic-pubsub3.ts.
+    yield* Effect.addFinalizer(() => PubSub.shutdown(events))
 
     let seq = 0
     const counters = new Map<string, AttemptCounters>()

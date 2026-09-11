@@ -70,7 +70,8 @@ export default defineConfig({
     operationTimeoutMs: 15_000,
     maxModelCalls: 40,
     maxTokens: 200_000,
-    // Held back from the browsing loop so the final verification can always run.
+    // A pool for the final verification: withheld from the browsing loop, and guaranteed to the
+    // verifier even if a browsing turn overshot the ceiling. See design-contracts §7.
     verifierReserveTokens: 20_000,
     fixtureCleanupTimeoutMs: 15_000
   },

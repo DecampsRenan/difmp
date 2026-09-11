@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "stage": "final",
   "runId": "r_x3v7bqs2mnk5d",
   "createdAt": "2026-03-04T13:05:00.000Z",
   "specPath": "tests/e2e/creation-projet-hostile.e2e.md",
