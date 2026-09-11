@@ -1,0 +1,8 @@
+node_modules/
+dist/
+runs/
+.env
+*.tsbuildinfo
+.harness-tmp/
+coverage/
+.recon/

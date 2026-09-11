@@ -1,0 +1,22 @@
+{
+  "name": "agentic-e2e-harness-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.29.3",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" run build",
+    "typecheck": "tsc -b tsconfig.build.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.0-rc.113",
+    "@types/node": "^24.13.4",
+    "playwright": "1.63.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
+  }
+}
