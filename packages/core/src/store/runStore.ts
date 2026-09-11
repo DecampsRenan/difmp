@@ -1,4 +1,4 @@
-import { Context, DateTime, Effect, FileSystem, Layer, Path, PubSub, Result, Schema, Semaphore } from "effect"
+import { Context, DateTime, Effect, Exit, FileSystem, Layer, Path, PubSub, Result, Schema, Semaphore } from "effect"
 import type { PlatformError } from "effect/PlatformError"
 import { StoreError } from "../domain/errors.js"
 import type { HarnessEventInput } from "../domain/events.js"
@@ -90,10 +90,19 @@ const make = (options: RunStoreOptions) =>
     }
 
     const atomicWrite = (target: string, content: string) =>
-      Effect.gen(function*() {
+      Effect.suspend(() => {
         const temp = `${target}.tmp-${++tempCounter}`
-        yield* fs.writeFileString(temp, content).pipe(Effect.mapError(storeError("write", temp)))
-        yield* fs.rename(temp, target).pipe(Effect.mapError(storeError("rename", target)))
+        return Effect.gen(function*() {
+          yield* fs.writeFileString(temp, content).pipe(Effect.mapError(storeError("write", temp)))
+          yield* fs.rename(temp, target).pipe(Effect.mapError(storeError("rename", target)))
+        }).pipe(
+          // The rename IS the commit: until it lands, `<target>.tmp-<n>` holds nothing anyone wants.
+          // A failed (or interrupted) write used to leave it behind for good — there is no sweeper,
+          // and the run directory is supposed to hold the design-contracts §9 layout and nothing
+          // else. Removing it here is the sweeper. A hard process kill still leaves one, because
+          // nothing runs then.
+          Effect.onExit((exit) => Exit.isSuccess(exit) ? Effect.void : Effect.ignore(fs.remove(temp)))
+        )
       })
 
     const writeInventory = Effect.suspend(() =>
@@ -132,7 +141,17 @@ const make = (options: RunStoreOptions) =>
         // `emit` takes the same, non-reentrant permit, so it stays OUTSIDE this block.
         yield* lock.withPermits(1)(Effect.gen(function*() {
           artifacts.push(record)
-          yield* writeInventory
+          // An inventory the disk refused is not an inventory: `attemptArtifacts` (which decides
+          // whether a cited artifactId is admissible) and `inventory` are read back from this
+          // array, so keeping a record whose write failed would let `result.json` cite an id
+          // `artifacts.json` never received. `atomicWrite` renames into place, so a failure leaves
+          // the file exactly as it was — rolling the push back is what keeps the two identical.
+          yield* writeInventory.pipe(Effect.onError(() =>
+            Effect.sync(() => {
+              const at = artifacts.lastIndexOf(record)
+              if (at >= 0) artifacts.splice(at, 1)
+            })
+          ))
         }))
         yield* emit({
           type: "artifactAvailable",

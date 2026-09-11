@@ -8,7 +8,7 @@ import type {
   OpenContextOptions
 } from "@harness/core"
 import { BrowserError, checkNavigationOrigin } from "@harness/core"
-import { Effect, Semaphore } from "effect"
+import { Clock, Effect, Semaphore } from "effect"
 import { mkdir, rm, stat, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import type { BrowserContext, Locator, Page, Video } from "playwright"
@@ -171,14 +171,25 @@ export const makeSession = (
         return locator
       })
 
-    const didNavigate = (before: number, probeMs: number) =>
-      attempt("navigation-probe", async () => {
-        const deadline = Date.now() + probeMs
-        while (navigations === before && Date.now() < deadline) {
-          await page.waitForTimeout(25)
+    /**
+     * Did the action we just performed start a navigation? Polls the counter the context's
+     * `framenavigated` listener increments.
+     *
+     * Time comes from `Clock` and the wait from `Effect.sleep`, not from `Date.now()` and
+     * `page.waitForTimeout`: the deadline is then the one the runtime believes in (a test clock
+     * included), and the wait is interruptible, so a cancellation stops the probe instead of
+     * having to sit through it.
+     */
+    const didNavigate = (before: number, probeMs: number): Effect.Effect<boolean, BrowserError> =>
+      Effect.gen(function*() {
+        const deadline = (yield* Clock.currentTimeMillis) + probeMs
+        while (navigations === before && (yield* Clock.currentTimeMillis) < deadline) {
+          yield* Effect.sleep("25 millis")
         }
         if (navigations === before) return false
-        await page.waitForLoadState("load", { timeout }).catch(() => undefined)
+        yield* attempt("navigation-probe", () => page.waitForLoadState("load", { timeout })).pipe(
+          Effect.ignore
+        )
         return true
       })
 

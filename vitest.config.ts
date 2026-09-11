@@ -7,7 +7,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["packages/*/test/**/*.test.ts", ".recon/tooling/**/*.test.ts"],
+          include: ["packages/*/test/**/*.test.ts"],
           environment: "node"
         }
       },

@@ -256,8 +256,13 @@ export const runScenario = (request: RunScenarioRequest): Effect.Effect<
       })
     }
 
+    // Released at most once: the ordered call sites below run it where the journal wants
+    // `fixtureCleaned` (before `runFinished`), and the safety net attached to the rest of the run
+    // then finds nothing left to do.
+    let fixtureReleased = false
     const cleanupFixture = Effect.suspend(() => {
-      if (fixtureSession === undefined) return Effect.void
+      if (fixtureSession === undefined || fixtureReleased) return Effect.void
+      fixtureReleased = true
       const session = fixtureSession
       const timeoutMs = config.budgets.fixtureCleanupTimeoutMs
       return session.cleanup({ timeoutMs }).pipe(
@@ -287,67 +292,75 @@ export const runScenario = (request: RunScenarioRequest): Effect.Effect<
       )
     })
 
-    // --- step 3b: freeze the contract BEFORE any navigation -----------------------------------
-    const frozen = yield* freezeContract({
-      spec,
-      specPath: request.specPath,
-      config,
-      runId: request.runId,
-      attemptId,
-      inputs,
-      ...(fixtureSession === undefined ? {} : { fixturePublic: redactor.deep(fixtureSession.publicValues) })
-    }).pipe(Effect.result)
-    if (frozen._tag === "Failure") {
-      yield* cleanupFixture
-      return yield* failEarly("contract", frozen.failure.message)
-    }
-    const contract = frozen.success
+    // A fixture is a live RESOURCE from here on, so its release is attached to the whole
+    // remainder of the run right where it is acquired. Attaching it later (it used to be bound
+    // to the attempt only) leaked the fixture on every path that fails in between — a
+    // `writeContract` or `writeManifest` store failure walks out of this gen without ever
+    // reaching the attempt. `cleanupFixture` is idempotent, so the explicitly ordered call sites
+    // inside still put `fixtureCleaned` in the journal before `runFinished`.
+    return yield* Effect.gen(function*() {
+      // --- step 3b: freeze the contract BEFORE any navigation -----------------------------------
+      const frozen = yield* freezeContract({
+        spec,
+        specPath: request.specPath,
+        config,
+        runId: request.runId,
+        attemptId,
+        inputs,
+        ...(fixtureSession === undefined ? {} : { fixturePublic: redactor.deep(fixtureSession.publicValues) })
+      }).pipe(Effect.result)
+      if (frozen._tag === "Failure") {
+        yield* cleanupFixture
+        return yield* failEarly("contract", frozen.failure.message)
+      }
+      const contract = frozen.success
 
-    yield* store.writeContract(contract).pipe(Effect.mapError(storeFailure("contract")))
-    yield* emit({
-      type: "contractFrozen",
-      attemptId,
-      contractHash: contract.hashes.contract,
-      specHash: contract.hashes.spec,
-      criterionIds: contract.criteria.map((c) => c.id)
-    })
-
-    // The manifest is now enriched with what the freeze produced; `stage` says which write this is.
-    const manifest: Manifest = {
-      ...baseManifest,
-      stage: "final",
-      scenarioId: contract.id,
-      hashes: contract.hashes
-    }
-    yield* store.writeManifest(manifest).pipe(Effect.mapError(storeFailure("manifest")))
-
-    // --- steps 4-9 ----------------------------------------------------------------------------
-    // `Effect.exit` does NOT catch interruption in v4 (.recon/critic-exit-interrupt2.ts): an
-    // interrupted fiber dies where it stands and every statement after it is skipped, finalize
-    // tail included — no `result.json`, no `runFinished`, so a cancellation could never be read
-    // back as `cancelled` (design-contracts §8/§9/§12). The tail therefore runs inside ONE
-    // uninterruptible region and only the attempt body stays interruptible, through `restore`.
-    // Everything in that region is bounded: the attempt by `attemptTimeoutMs`, the browser
-    // finalizer by the driver, fixture cleanup by `fixtureCleanupTimeoutMs`.
-    return yield* Effect.uninterruptibleMask((restore) =>
-      Effect.gen(function*() {
-        const outcome = yield* runAttempt({
-          request,
-          contract,
-          store,
-          driver,
-          provider,
-          verifier,
-          registries,
-          redactor,
-          ...(fixtureSession === undefined ? {} : { fixtureSession }),
-          startedAtMs,
-          restore
-        }).pipe(Effect.onExit(() => cleanupFixture))
-
-        return yield* finish(outcome, contract)
+      yield* store.writeContract(contract).pipe(Effect.mapError(storeFailure("contract")))
+      yield* emit({
+        type: "contractFrozen",
+        attemptId,
+        contractHash: contract.hashes.contract,
+        specHash: contract.hashes.spec,
+        criterionIds: contract.criteria.map((c) => c.id)
       })
-    )
+
+      // The manifest is now enriched with what the freeze produced; `stage` says which write this is.
+      const manifest: Manifest = {
+        ...baseManifest,
+        stage: "final",
+        scenarioId: contract.id,
+        hashes: contract.hashes
+      }
+      yield* store.writeManifest(manifest).pipe(Effect.mapError(storeFailure("manifest")))
+
+      // --- steps 4-9 ----------------------------------------------------------------------------
+      // `Effect.exit` does NOT catch interruption in v4 (.recon/critic-exit-interrupt2.ts): an
+      // interrupted fiber dies where it stands and every statement after it is skipped, finalize
+      // tail included — no `result.json`, no `runFinished`, so a cancellation could never be read
+      // back as `cancelled` (design-contracts §8/§9/§12). The tail therefore runs inside ONE
+      // uninterruptible region and only the attempt body stays interruptible, through `restore`.
+      // Everything in that region is bounded: the attempt by `attemptTimeoutMs`, the browser
+      // finalizer by the driver, fixture cleanup by `fixtureCleanupTimeoutMs`.
+      return yield* Effect.uninterruptibleMask((restore) =>
+        Effect.gen(function*() {
+          const outcome = yield* runAttempt({
+            request,
+            contract,
+            store,
+            driver,
+            provider,
+            verifier,
+            registries,
+            redactor,
+            ...(fixtureSession === undefined ? {} : { fixtureSession }),
+            startedAtMs,
+            restore
+          }).pipe(Effect.onExit(() => cleanupFixture))
+
+          return yield* finish(outcome, contract)
+        })
+      )
+    }).pipe(Effect.onExit(() => cleanupFixture))
   })
 
 /** A blocking budget was exhausted before any criterion could be evaluated. */
@@ -488,6 +501,33 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
     const withAbortSignal = <A, E, R>(f: (signal: AbortSignal) => Effect.Effect<A, E, R>) =>
       Effect.scoped(Effect.flatMap(Effect.abortSignal, f))
 
+    /**
+     * Persist one artifact record, and say so when the store could not.
+     *
+     * spec §10 forbids hiding a capture failure, and design-contracts §9 makes `artifacts.json`
+     * the inventory of every artifact the run produced. An `Effect.ignore` here used to swallow
+     * the inventory write while the artifact still entered the evidence index, so `result.json`
+     * could cite an `art_*` id `artifacts.json` on disk had never received. A record the store
+     * refused is therefore NOT a known artifact: it never enters the evidence index (so no
+     * evaluator can cite it), the failure is journalled as an `error`, and the call sites that
+     * treat a capture as mandatory evidence (checkpoint captures, check payloads) see a `failed`
+     * state and let `enforceEvidencePersistence` downgrade the criterion.
+     *
+     * Returns the reason the record could not be persisted, or `undefined` on success.
+     */
+    const persistArtifact = (record: ArtifactRecord): Effect.Effect<string | undefined> =>
+      store.recordArtifact(record).pipe(
+        Effect.result,
+        Effect.flatMap((written) => {
+          if (written._tag === "Success") return Effect.succeed(undefined)
+          const reason = `artifact ${record.artifactId} (${record.kind}) could not be recorded in ` +
+            `the inventory: ${written.failure.message}`
+          return emit({ type: "error", attemptId, stage: "evidence", reason, fatal: false }).pipe(
+            Effect.as(reason)
+          )
+        })
+      )
+
     const registerArtifact = (capture: CaptureOutcome, options?: {
       readonly summary?: string
       readonly data?: unknown
@@ -508,8 +548,8 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
           ts: now,
           ...(options?.sourceSeq === undefined ? {} : { sourceSeq: options.sourceSeq })
         }
-        yield* store.recordArtifact(record).pipe(Effect.ignore)
-        if (capture.state === "present") {
+        const notPersisted = yield* persistArtifact(record)
+        if (capture.state === "present" && notPersisted === undefined) {
           evidenceIndex.set(id, {
             artifactId: id,
             kind: capture.kind,
@@ -553,8 +593,8 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
           ts: now,
           ...(options?.sourceSeq === undefined ? {} : { sourceSeq: options.sourceSeq })
         }
-        yield* store.recordArtifact(record).pipe(Effect.ignore)
-        if (capture.state === "present") {
+        const notPersisted = yield* persistArtifact(record)
+        if (capture.state === "present" && notPersisted === undefined) {
           evidenceIndex.set(id, {
             artifactId: id,
             kind: "screenshot",
@@ -564,7 +604,12 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             summary: `screenshot "${label}"`
           })
         }
-        return { artifactId: id, state: capture.state, reason: capture.reason }
+        // A capture nobody can look up is a failed capture, whatever the browser managed to write:
+        // this is what makes a checkpoint whose record was lost demote its criterion instead of
+        // passing it on evidence that is not in the inventory.
+        return notPersisted === undefined
+          ? { artifactId: id, state: capture.state, reason: capture.reason }
+          : { artifactId: id, state: "failed" as const, reason: notPersisted }
       })
 
     const recordObservation = (observation: ObserveResult, seq: number) =>
@@ -586,8 +631,8 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
           ts: now,
           sourceSeq: seq
         }
-        yield* store.recordArtifact(record).pipe(Effect.ignore)
-        if (!failed) {
+        const notPersisted = yield* persistArtifact(record)
+        if (!failed && notPersisted === undefined) {
           evidenceIndex.set(id, {
             artifactId: id,
             kind: "aria-snapshot",
@@ -835,7 +880,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             const written = yield* store.writeRunFile(relative, body).pipe(Effect.result)
             const now = DateTime.formatIso(yield* DateTime.now)
             const failed = written._tag === "Failure"
-            yield* store.recordArtifact({
+            const notPersisted = yield* persistArtifact({
               artifactId: id,
               attemptId,
               kind: "check-evidence",
@@ -845,11 +890,14 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
               ...(failed ? { reason: written.failure.message } : {}),
               ts: now,
               sourceSeq: seq
-            }).pipe(Effect.ignore)
-            if (failed) {
+            })
+            if (failed || notPersisted !== undefined) {
               // A check's probe output is mandatory evidence for its own criterion: a citation the
-              // report cannot open is not a proof, so this forbids a `passed` further down.
-              options.evidenceFailed(`check evidence "${e.label}" (${id}): ${written.failure.message}`)
+              // report cannot open is not a proof, so this forbids a `passed` further down. The
+              // payload not reaching `artifacts.json` counts the same as the payload not reaching
+              // disk: either way nothing can be looked up behind the id.
+              const why = written._tag === "Failure" ? written.failure.message : notPersisted
+              options.evidenceFailed(`check evidence "${e.label}" (${id}): ${why}`)
             } else {
               evidenceIndex.set(id, {
                 artifactId: id,
@@ -1290,6 +1338,21 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             withAbortSignal((signal) =>
               provider.generate({ role: "browser", prompt: { messages }, tools, signal })
             ).pipe(
+              // A provider that DIES (an SDK that throws where the seam declares a typed failure)
+              // used to kill the attempt fiber, and the generic handler at the end of the attempt
+              // attributes a dead fiber to the `browser` stage — so an exploding model adapter was
+              // reported as a browser failure. The defect is named here, where we know whose it is.
+              Effect.catchDefect((defect) =>
+                Effect.fail(
+                  new ProviderError({
+                    provider: provider.id,
+                    reason: `the provider raised a defect: ${
+                      defect instanceof Error ? defect.message : String(defect)
+                    }`,
+                    retryable: false
+                  })
+                )
+              ),
               Effect.timeoutOrElse({
                 duration: contract.budgets.operationTimeoutMs,
                 orElse: () =>
@@ -1520,7 +1583,24 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
       // Step 9: settle the evidence. A failed capture is recorded, never hidden.
       const retainTrace = config.capture.retainTraceOn === "all" ||
         contract.criteria.some((c) => results.get(c.id)?.status !== "passed")
-      const captures = yield* session.finalize({ retainTrace })
+      // Bounded like every other call into the driver. This one is the last statement of a run
+      // that is otherwise FINISHED: a trace that never stops settling would have held the whole
+      // remaining attempt budget with nothing smaller than `attemptTimeoutMs` to cut it, and the
+      // two finalizer paths that do the same work (the scope finalizer above, and the driver's own)
+      // are already bounded by `operationTimeoutMs`. A timeout is reported as a failed capture
+      // instead of being swallowed — spec §10: a capture failure is recorded, never hidden.
+      const captures = yield* session.finalize({ retainTrace }).pipe(
+        Effect.timeoutOrElse({
+          duration: contract.budgets.operationTimeoutMs,
+          orElse: () =>
+            Effect.succeed<ReadonlyArray<CaptureOutcome>>([{
+              kind: "trace",
+              state: "failed",
+              reason: `closing the browser context exceeded the per-operation timeout ` +
+                `(${contract.budgets.operationTimeoutMs} ms)`
+            }])
+        })
+      )
       for (const capture of captures) {
         yield* registerArtifact(capture)
       }

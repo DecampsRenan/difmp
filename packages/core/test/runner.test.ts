@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest"
-import { Effect, FileSystem, Layer } from "effect"
+import { Effect, FileSystem, Layer, Result } from "effect"
 import {
   FixtureError,
   FixtureManager,
@@ -11,8 +11,9 @@ import {
   runScenario
 } from "../src/index.js"
 import type { Check, Fixture, HarnessEvent, LoadedSpec, ResolvedConfig, RunResult } from "../src/index.js"
-import { fakeBrowser, fakeFixtures, scriptedProvider, scriptedVerifier } from "./fakes.js"
-import type { ScriptedTurn, ScriptedVerdict } from "./fakes.js"
+import type { ModelProvider, RunFailure } from "../src/index.js"
+import { dyingProvider, fakeBrowser, fakeFixtures, scriptedProvider, scriptedVerifier } from "./fakes.js"
+import type { FakeBrowserOptions, ScriptedTurn, ScriptedVerdict } from "./fakes.js"
 import { expectSuccess, platform, readFixture } from "./helpers.js"
 
 const runId = "r_abcdefghijklm"
@@ -29,6 +30,15 @@ interface RunOptions {
   readonly checks?: Record<string, Check>
   /** Makes `FixtureManager.setup` fail, to exercise a run that dies during infrastructure setup. */
   readonly fixtureSetupError?: string
+  /** Passed to the fake browser — a failing screenshot, a `finalize` that never returns, … */
+  readonly browserOptions?: FakeBrowserOptions
+  /** Replaces the scripted model provider (used to make the provider DIE rather than fail). */
+  readonly providerLayer?: Layer.Layer<ModelProvider>
+  /**
+   * Run-directory entries to pre-create as DIRECTORIES, so the store's write to that path really
+   * fails. A genuine filesystem failure, not a stubbed one.
+   */
+  readonly blockWrites?: ReadonlyArray<string>
 }
 
 interface RunOutput {
@@ -39,7 +49,12 @@ interface RunOutput {
   readonly runRoot: string
 }
 
-const execute = (options: RunOptions) =>
+interface RawRunOutput extends Omit<RunOutput, "result"> {
+  /** `Failure` when `runScenario` itself failed — a store write, for instance. */
+  readonly outcome: Result.Result<RunResult, RunFailure>
+}
+
+const executeRaw = (options: RunOptions) =>
   Effect.gen(function*() {
     const fs = yield* FileSystem.FileSystem
     const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harness-runner-" }).pipe(Effect.orDie)
@@ -47,7 +62,10 @@ const execute = (options: RunOptions) =>
       source: "harness.config.ts",
       config: { outputDir: dir, ...options.configOverrides }
     }))
-    const browser = fakeBrowser()
+    for (const entry of options.blockWrites ?? []) {
+      yield* fs.makeDirectory(`${dir}/${runId}/${entry}`, { recursive: true }).pipe(Effect.orDie)
+    }
+    const browser = fakeBrowser(options.browserOptions ?? {})
     const fixtures = fakeFixtures()
     const fixtureLayer = options.fixtureSetupError === undefined
       ? fixtures.layer
@@ -65,7 +83,7 @@ const execute = (options: RunOptions) =>
         })
       )
 
-    const result = yield* runScenario({
+    const outcome = yield* runScenario({
       spec: options.spec,
       specPath: options.spec.specPath,
       config: project.config,
@@ -81,22 +99,31 @@ const execute = (options: RunOptions) =>
       Effect.provide(Layer.mergeAll(
         RunStore.layer({ runId, outputDir: dir }),
         browser.layer,
-        scriptedProvider(options.turns),
+        options.providerLayer ?? scriptedProvider(options.turns),
         scriptedVerifier(options.verdicts ?? {}, options.fallbackVerdict ?? { status: "passed" }),
         fixtureLayer
       )),
-      Effect.orDie
+      Effect.result
     )
 
     const journal = yield* readRunJournal(`${dir}/${runId}/events.jsonl`).pipe(Effect.orDie)
     return {
-      result,
+      outcome,
       events: journal.events,
       config: project.config,
       fixtureCleanups: fixtures.cleanups,
       runRoot: `${dir}/${runId}`
-    } satisfies RunOutput
+    } satisfies RawRunOutput
   })
+
+/** The usual case: the run is expected to settle into a `RunResult`, whatever its status. */
+const execute = (options: RunOptions) =>
+  executeRaw(options).pipe(Effect.map((raw): RunOutput => {
+    if (Result.isFailure(raw.outcome)) {
+      throw new Error(`expected the run to settle, it failed with: ${raw.outcome.failure.message}`)
+    }
+    return { ...raw, result: raw.outcome.success }
+  }))
 
 const observe = { name: "observe", params: {} }
 const finish = { name: "finish", params: {} }
@@ -309,5 +336,110 @@ describe("runner", () => {
       }
       expect(manifest.stage).toBe("final")
       expect(manifest.hashes?.contract).toBe(out.result.contractHash)
+    }).pipe(Effect.provide(platform)))
+  it.effect("releases the fixture when a store write fails after it was acquired", () =>
+    Effect.gen(function*() {
+      // `writeContract` and `writeManifest` fail out of the run BEFORE the attempt starts, and the
+      // fixture release used to be attached to the attempt only — so the freeze-failure branch
+      // cleaned up and these two leaked the fixture (a seeded workspace, a database row, a server
+      // process) for the rest of the process's life.
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"))
+      const out = yield* executeRaw({
+        spec: loaded,
+        turns: [{ toolCalls: [finish] }],
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) },
+        blockWrites: ["contract.json"]
+      })
+      expect(Result.isFailure(out.outcome)).toBe(true)
+      if (Result.isFailure(out.outcome)) expect(out.outcome.failure.stage).toBe("contract")
+      expect(out.fixtureCleanups).toEqual(["authenticated-workspace"])
+      expect(out.events.some((e) => e.type === "fixtureCleaned")).toBe(true)
+    }).pipe(Effect.provide(platform)))
+
+  it.effect("cleans the fixture up exactly once on the happy path", () =>
+    Effect.gen(function*() {
+      // The release is now attached both where the journal wants it and as a safety net around the
+      // rest of the run; it must still run once and only once.
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"))
+      const out = yield* execute({
+        spec: loaded,
+        turns: [{ toolCalls: [observe] }, { toolCalls: [finish] }],
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) }
+      })
+      expect(out.result.status).toBe("passed")
+      expect(out.fixtureCleanups).toEqual(["authenticated-workspace"])
+      expect(out.events.filter((e) => e.type === "fixtureCleaned")).toHaveLength(1)
+    }).pipe(Effect.provide(platform)))
+
+  // `it.live`, not `it.effect`: the point of this test is a REAL deadline, and `it.effect` runs on
+  // a TestClock whose time only moves when a test advances it — a wall-clock timeout would never
+  // fire there and the run would hang exactly as it did before the fix.
+  it.live("bounds the closing capture so a trace that never settles cannot wedge the run", () =>
+    Effect.gen(function*() {
+      // Step 9 ran `session.finalize` with no bound of its own: a driver that never returned held
+      // the run until `attemptTimeoutMs`, which would have turned a finished, passing run into an
+      // `inconclusive` on an exhausted blocking budget. `operationTimeoutMs` is the per-operation
+      // bound everywhere else, and a timeout is reported as a FAILED capture, never swallowed.
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"))
+      const out = yield* execute({
+        spec: loaded,
+        turns: [{ toolCalls: [observe] }, { toolCalls: [finish] }],
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) },
+        browserOptions: { finalizeHangs: true },
+        configOverrides: { budgets: { operationTimeoutMs: 200, attemptTimeoutMs: 20_000 } }
+      })
+      expect(out.result.status).toBe("passed")
+      expect(out.events.some((e) => e.type === "budgetExhausted")).toBe(false)
+      const traces = out.events.filter((e) => e.type === "artifactAvailable" && e.kind === "trace")
+      expect(traces).toHaveLength(1)
+      expect(traces[0]).toMatchObject({ state: "failed" })
+      expect(traces[0]).toMatchObject({ reason: expect.stringContaining("per-operation timeout") })
+    }).pipe(Effect.provide(platform)))
+
+  it.effect("never cites evidence the artifact inventory refused", () =>
+    Effect.gen(function*() {
+      // `recordArtifact` failures were ignored while the artifact still entered the evidence index,
+      // so `result.json` could cite an `art_*` id that `artifacts.json` on disk never received —
+      // a citation a reader cannot open. spec §10: a capture failure is never hidden.
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"))
+      const out = yield* execute({
+        spec: loaded,
+        turns: [{ toolCalls: [observe] }, { toolCalls: [finish] }],
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) },
+        blockWrites: ["artifacts.json"]
+      })
+      const attempt = out.result.attempts[0]!
+      expect(attempt.artifacts).toEqual([])
+      for (const criterion of attempt.criteria) {
+        expect(criterion.evidence).toEqual([])
+        expect(criterion.status).not.toBe("passed")
+      }
+      // Mandatory checkpoint captures could not be persisted: the run is an `error`, and says so.
+      expect(out.result.status).toBe("error")
+      if (out.result.status === "error") expect(out.result.stage).toBe("evidence")
+      expect(out.events.some((e) =>
+        e.type === "error" && e.stage === "evidence" && !e.fatal && e.reason.includes("could not be recorded")
+      )).toBe(true)
+    }).pipe(Effect.provide(platform)))
+
+  it.effect("blames the provider, not the browser, when the adapter raises a defect", () =>
+    Effect.gen(function*() {
+      // A provider that throws used to kill the attempt fiber, and a dead fiber is attributed to
+      // the `browser` stage — an exploding model adapter was reported as a browser failure.
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"))
+      const out = yield* execute({
+        spec: loaded,
+        turns: [],
+        providerLayer: dyingProvider("the SDK exploded"),
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) }
+      })
+      expect(out.result.status).toBe("error")
+      if (out.result.status === "error") {
+        expect(out.result.stage).toBe("agent-loop")
+        expect(out.result.reason).toContain("the SDK exploded")
+      }
+      const errors = out.events.filter((e) => e.type === "error")
+      expect(errors.some((e) => e.type === "error" && e.stage === "agent-loop")).toBe(true)
+      expect(errors.some((e) => e.type === "error" && e.stage === "browser")).toBe(false)
     }).pipe(Effect.provide(platform)))
 })

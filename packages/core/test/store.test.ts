@@ -201,4 +201,53 @@ describe("RunStore artifacts", () => {
         expect(new Set(onDisk.artifacts.map((a) => a.artifactId)).size).toBe(100)
       })
     ))
+  it.effect("does not keep an artifact the inventory write could not persist", () =>
+    withStore((store, fs) =>
+      Effect.gen(function*() {
+        // `artifacts.json` is the inventory of §9 and `attemptArtifacts` is what decides whether a
+        // cited `art_*` is admissible; both used to be read from an in-memory list the store
+        // appended to BEFORE the write, so a refused write left the store claiming an artifact the
+        // file on disk had never received — and `result.json` could then cite it.
+        yield* fs.makeDirectory(store.layout.artifacts, { recursive: true })
+        const id = yield* store.mintArtifactId("a1")
+        const written = yield* Effect.result(store.recordArtifact({
+          artifactId: id,
+          attemptId: "a1",
+          kind: "screenshot",
+          state: "present",
+          path: `attempts/a1/screenshots/${id}.png`,
+          ts: "2026-09-11T00:00:00.000Z"
+        }))
+        expect(written._tag).toBe("Failure")
+        const usable = yield* store.attemptArtifacts("a1")
+        expect(usable.has(id)).toBe(false)
+        const inventory = yield* store.inventory
+        expect(inventory.artifacts).toEqual([])
+      })
+    ))
+
+  it.effect("removes the temp file when an atomic write fails", () =>
+    withStore((store, fs) =>
+      Effect.gen(function*() {
+        // The rename is the commit point; a write that never commits must not leave `.tmp-<n>`
+        // behind, because nothing else ever sweeps the run directory.
+        yield* fs.makeDirectory(store.layout.result, { recursive: true })
+        const written = yield* Effect.result(store.writeResult({
+          schemaVersion: 1 as const,
+          runId,
+          specPath: "a.e2e.md",
+          scenarioId: "a",
+          contractHash: "h",
+          startedAt: "2026-09-11T00:00:00.000Z",
+          finishedAt: "2026-09-11T00:00:01.000Z",
+          durationMs: 1000,
+          attempts: [],
+          finalized: true,
+          status: "passed" as const
+        }))
+        expect(written._tag).toBe("Failure")
+        const entries = yield* fs.readDirectory(store.layout.root)
+        expect(entries.filter((e) => e.includes(".tmp-"))).toEqual([])
+      })
+    ))
 })

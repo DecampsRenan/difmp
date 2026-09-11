@@ -363,8 +363,17 @@ runs/<run-id>/
   artifacts.json   # inventory: every expected artifact with state present|missing|failed + reason
   attempts/<attempt-id>/{trace.zip,screenshots/,video.webm,console.jsonl,network.jsonl}
 ```
-Result files are written by atomic replace (temp file + rename). Missing optional artifacts are
-listed in `artifacts.json` with a reason — a capture failure is never hidden.
+Result files are written by atomic replace (temp file + rename); a write that fails removes its own
+temp file, so the directory only ever holds the layout above. Missing optional artifacts are listed
+in `artifacts.json` with a reason — a capture failure is never hidden.
+
+**An artifact the inventory refused is not an artifact.** If the `artifacts.json` write itself
+fails, the record is rolled back out of the store (so `attemptArtifacts` and the in-memory inventory
+never claim what the file does not hold), it does not enter the evidence index — no evaluator can
+cite it and `result.json` cannot reference an id the file never received — and the failure is
+journalled as an `error` (`stage: "evidence"`, `fatal: false`). Where the capture was MANDATORY
+evidence (a checkpoint capture, a check's probe payload) the criterion is demoted by the
+mandatory-evidence rule of §8, exactly as if the capture itself had failed.
 
 `manifest.json` is written **twice**, and carries a `stage` saying which write it is:
 

@@ -10,8 +10,7 @@ import {
   outputModeOf,
   renderJsonDocument,
   renderRunLines,
-  renderSummaryLines,
-  writeReportFiles
+  renderSummaryLines
 } from "../reporters.js"
 import type { RunOutcome } from "../runOne.js"
 import { runOne } from "../runOne.js"
@@ -115,7 +114,9 @@ export const runHandler = (flags: RunFlags): Effect.Effect<
           ...(bus === undefined ? {} : { bus })
         })
 
-        if (outcome.report !== undefined) yield* writeReportFiles(outcome.report)
+        // `result.json`, `junit.xml` and `report.html` are written by `runOne` itself, inside the
+        // region that survives a Ctrl-C: doing it here meant an interrupted run lost two of the
+        // three (see the comment on `runOne`).
         outcomes.push(outcome)
         results.push(outcome.result)
 

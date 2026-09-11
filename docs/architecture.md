@@ -372,6 +372,27 @@ and such a value, handed back under `public`, reached `contract.json`, `events.j
 `result.json`, `junit.xml` and `report.html` verbatim (`apps/cli/test/run.test.ts` covers it). Read
 those files as history, not as a current defect list.
 
+A later lane closed the remaining contract gaps the final audit listed, each with a regression test
+that fails without it: a `writeContract` / `writeManifest` failure no longer leaks the fixture (the
+release is attached where the fixture is acquired and is idempotent); step 9's `session.finalize` is
+bounded by `operationTimeoutMs` like every other driver call, and a timeout is reported as a failed
+trace capture; a `recordArtifact` failure is no longer swallowed — the record is rolled back out of
+the store's inventory, never enters the evidence index, is journalled as an `error`, and a lost
+checkpoint capture demotes its criterion through the mandatory-evidence rule; Ctrl-C now writes
+`junit.xml` and `report.html` like the dashboard's Cancel (the reporting tail runs inside the same
+uninterruptible mask that lets the run settle, and the interrupt is re-raised afterwards so the exit
+code is still `130`); a provider **defect** is translated into a `ProviderError` both in the adapter
+(`providerErrorFromDefect`, previously dead code) and at the runner's call site, so an exploding SDK
+is no longer reported as a browser-stage failure.
+
+One change from that lane carries **no** regression test: the navigation probe in `session.ts` now
+takes its deadline from `Clock` with `Effect.sleep` instead of `Date.now()` with
+`page.waitForTimeout`. It is a testability/interruptibility change rather than a bug fix, and it is
+covered only by real-browser runs — verified directly (`.recon/lane-nav-probe.ts`, real Chromium
+against the demo app): a click that navigates reports `navigated=true` after 197 ms, and a keypress
+that navigates nowhere reports `false` after the full 500 ms probe window. Nothing drives it from a
+`TestClock` yet, which is the very thing the change was meant to make possible.
+
 What follows is what is **actually** still open. Each item was checked against the code as it stands,
 not copied from the review that raised it.
 
@@ -388,18 +409,24 @@ not copied from the review that raised it.
   requests" binds the agent and the model, not harness-initiated evidence capture) and it is now
   written into design-contracts §7 — but it is a decision, not a consequence, and a reader who
   expects the letter of the earlier wording will be surprised.
-* **The GitHub Actions workflow has never run on a runner.** `.github/workflows/ci.yml` exists and
-  every one of its `run:` steps was executed locally, exactly as written. What only exists on a
-  runner was never exercised: `corepack enable`, the four marketplace actions, the `--with-deps` apt
-  install, the cache hit/miss branches, and the optional `secrets.ANTHROPIC_API_KEY` job. The file's
-  own header says so.
-* **Ctrl-C leaves the run directory without `junit.xml` and `report.html`.** The run itself settles
-  correctly — `result.json` with `status: "cancelled"`, `runFinished` as the journal's last line,
-  the fixture cleaned, the evidence recorded, exit `130` — but SIGINT interrupts the CLI before the
-  file reporters run, so only the run-owned files are on disk. Cancelling from the dashboard's
-  button does write all of them, and `harness report <run-directory>` rebuilds them afterwards
-  (verified: it emits `<error type="run-cancelled">` and no `<skipped>`). Still, a CI job that
-  times out and sends SIGINT gets no JUnit unless it re-runs `harness report`.
+* **The GitHub Actions workflow has run once on a runner, and it FAILED.** `main` was pushed to
+  `github.com/DecampsRenan/agentic-e2e-harness` at commit `8da6e6f`, which triggered run
+  [`34653238470`](https://github.com/DecampsRenan/agentic-e2e-harness/actions/runs/34653238470)
+  (2026-09-11T22:16Z, 4m17s). Everything up to and including the Vitest suites passed on the runner
+  — `corepack enable`, `pnpm/action-setup`, `setup-node`, `pnpm install --frozen-lockfile`, the
+  typecheck, the Playwright cache and `--with-deps` install, both builds, the harness test suites.
+  The **packaging matrix failed**: the runner's consumer projects install with **pnpm 12.4.1**,
+  which turns an unapproved build script into an error, and the tarball pulls `esbuild` in
+  transitively through `tsx` —
+  `ERR_PNPM_IGNORED_BUILDS · Ignored build scripts: esbuild@0.28.2`. The `npm` and `Yarn` cells
+  passed 24/24 on the runner; both `pnpm` cells reported `INSTALL FAILED`. This is reproducible off
+  the runner (`npx pnpm@12.4.1 add <tarball>` in a scaffolded consumer exits 1 with the same error,
+  while pnpm 10.29.3 only warns), and the installed tree is in fact complete and usable — the CLI
+  runs, including the `tsx` path a CommonJS consumer needs. `pnpm add --allow-build=esbuild <pkg>`
+  (or `pnpm approve-builds`) exits 0; the README now says so. The consequence for this document is
+  that the workflow is **red**, and what comes after the packaging step — the example scenarios
+  through the distributed CLI, and `actions/cache` on a cache hit — still has **never** run on a
+  runner, nor has the optional `secrets.ANTHROPIC_API_KEY` job.
 * **The dashboard's "stream unavailable / Reprendre le flux" path is untested.** The SSE resume
   contract itself is proven at the levels that matter (`Last-Event-ID` header and `?lastEventId=`
   query both replay from the right cursor; a full page reload rebuilds the timeline with no loss and
@@ -410,13 +437,11 @@ not copied from the review that raised it.
   subscriber can never make the runner wait — but it means that if the recorder ever fell more than
   1024 events behind, those events would be missing from the dashboard's view. `events.jsonl` on disk
   is always complete, and the SSE sequence stays contiguous either way.
-* **Smaller, and known:** `providerErrorFromDefect` in `agent-runtime/src/errors.ts` is dead code, so
-  an HTTP-layer *defect* (as opposed to a typed error) from the provider surfaces mislabelled as a
-  browser-stage execution error. `atomicWrite` leaves a stray `<target>.tmp-<n>` in the run directory
-  if the process dies between the write and the rename; nothing sweeps them. `session.ts`'s
-  post-interaction navigation probe uses `Date.now()` rather than `Clock`, so `TestClock` cannot drive
-  it. `press` with a `ref` but no `observationId` skips the runner-side reference check — the driver
-  refuses it, so the behaviour is correct, but the runner's guard reads as if it covered the case.
+* **Smaller, and known:** `atomicWrite` now removes its `<target>.tmp-<n>` whenever the write or the
+  rename fails, but a **hard process kill** between the two still leaves one behind and nothing
+  sweeps the directory later. `press` with a `ref` but no `observationId` skips the runner-side
+  reference check — the driver refuses it, so the behaviour is correct, but the runner's guard reads
+  as if it covered the case.
 
 ---
 

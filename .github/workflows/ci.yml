@@ -20,18 +20,24 @@
 # NO AUTOMATIC SCENARIO RETRIES (spec §12): no step re-runs a scenario, and no retry action is
 # used. A flaky result must be seen, not papered over.
 #
-# WHAT WAS ACTUALLY VERIFIED, AND WHAT WAS NOT. This workflow has never been executed on a GitHub
-# runner — there is no Actions environment on the development machine and `act` is not installed.
-# Every `run:` step's command was executed locally, on Node 24.19.0 / pnpm 10.29.3, exactly as
-# written: `pnpm install --frozen-lockfile`, `pnpm run typecheck`, `pnpm run build`,
-# `pnpm --filter @harness/fixture-app build`, `pnpm run test`,
-# `apps/cli/scripts/consumer-smoke/run.sh` (8/8 cells, 24/24 assertions each, npm + pnpm + Yarn 4
-# via corepack + Yarn 1, ESM and CommonJS), `apps/cli/scripts/ci/run-examples.sh` (healthy and
-# alt-layout, 3 scenarios each, exit 0 through the tarball's binary), and both `rsync` collection
-# commands. UNVERIFIED, because they only exist on a runner: `corepack enable`, the four
-# marketplace actions (checkout, pnpm/action-setup, setup-node, cache, upload-artifact), the
-# `--with-deps` apt install (the libraries were already present here), the cache hit/miss branches,
-# and the `secrets.ANTHROPIC_API_KEY` path of the optional job — no Anthropic call was made.
+# WHAT WAS ACTUALLY VERIFIED, AND WHAT WAS NOT. Every `run:` step's command was executed locally,
+# on Node 24.19.0 / pnpm 10.29.3, exactly as written: `pnpm install --frozen-lockfile`,
+# `pnpm run typecheck`, `pnpm run build`, `pnpm --filter @harness/fixture-app build`,
+# `pnpm run test`, `apps/cli/scripts/consumer-smoke/run.sh` (the step below passes `npm pnpm yarn`
+# = 6 cells; adding `yarn1` gives the 8 cells the README quotes — 24/24 assertions in each),
+# `apps/cli/scripts/ci/run-examples.sh` (healthy and alt-layout, 3 scenarios each, exit 0 through
+# the tarball's binary), and both `rsync` collection commands.
+#
+# THIS WORKFLOW HAS NOW RUN ONCE ON A GITHUB RUNNER, AND IT FAILED: run 34653238470 (push of
+# `8da6e6f`, 2026-09-11T22:16Z, 4m17s). Everything through `pnpm run test` passed there. The
+# packaging step failed because the runner's consumer installs resolve **pnpm 12.4.1**, which turns
+# an unapproved dependency build into an error — `ERR_PNPM_IGNORED_BUILDS · Ignored build scripts:
+# esbuild@0.28.2` (esbuild arrives transitively through `tsx`); the npm and Yarn cells passed 24/24
+# there, both pnpm cells reported INSTALL FAILED. Locally pnpm 10.29.3 only warns, which is why the
+# matrix is green here. `pnpm add --allow-build=esbuild` exits 0 under both pnpm versions.
+# STILL UNVERIFIED on a runner, because the job stopped before them or they only exist there: the
+# example-scenarios step, the `actions/cache` hit branch, and the `secrets.ANTHROPIC_API_KEY` path
+# of the optional job — no Anthropic call was made.
 
 name: ci
 

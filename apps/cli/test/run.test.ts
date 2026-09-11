@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { allOutput, exec, fixture, startPage } from "./helpers.js"
+import { allOutput, exec, execInterrupted, fixture, startPage } from "./helpers.js"
 
 const project = fixture("project")
 
@@ -363,5 +363,49 @@ describe("a run that fails before the contract is frozen is still reported", () 
     const replay = await exec(["report", runDir], { cwd: failing })
     expect(replay.code, allOutput(replay)).toBe(0)
     expect(readdirSync(runDir)).toEqual(expect.arrayContaining(["junit.xml", "report.html"]))
+  })
+})
+
+/**
+ * audit §4.6: the run itself already settled correctly under Ctrl-C (`result.json` says
+ * `cancelled`, `runFinished` is last, exit 130) but the SIGINT interrupt reached the CLI before the
+ * file reporters ran, so an interrupted run left CI without a JUnit file — while the dashboard's
+ * Cancel button, which is a cooperative Deferred rather than a fiber interrupt, wrote both. The two
+ * cancellation routes must leave the same run directory behind.
+ */
+describe("a run interrupted by Ctrl-C", () => {
+  it("still writes result.json, junit.xml and report.html, and exits 130", async () => {
+    const dir = join(output, "sigint")
+    // Interrupt only once the run is genuinely under way: the contract is frozen, the run
+    // directory exists, and the attempt is opening the browser.
+    const underWay = () => {
+      try {
+        const runs = readdirSync(dir).filter((entry) => entry.startsWith("r_")).sort()
+        const last = runs[runs.length - 1]
+        if (last === undefined) return false
+        return readFileSync(join(dir, last, "events.jsonl"), "utf8").includes("contractFrozen")
+      } catch {
+        return false
+      }
+    }
+    const result = await execInterrupted(
+      ["run", "tests/alpha.e2e.md", "--base-url", page.url, "--output", dir],
+      { cwd: project, ready: underWay }
+    )
+    expect(result.code, allOutput(result)).toBe(130)
+
+    const runDir = latestRunDir(dir)
+    const files = readdirSync(runDir)
+    expect(files).toContain("result.json")
+    expect(files).toContain("junit.xml")
+    expect(files).toContain("report.html")
+
+    const persisted = JSON.parse(readFileSync(join(runDir, "result.json"), "utf8")) as { status: string }
+    expect(persisted.status).toBe("cancelled")
+    // §12: a cancelled run is an `<error type="run-cancelled">`, never a silent `<skipped>`.
+    const junit = readFileSync(join(runDir, "junit.xml"), "utf8")
+    expect(junit).toContain('type="run-cancelled"')
+    expect(junit).not.toContain("<skipped")
+    expect(readFileSync(join(runDir, "report.html"), "utf8").startsWith("<!doctype html>")).toBe(true)
   })
 })

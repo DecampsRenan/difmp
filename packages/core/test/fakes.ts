@@ -19,6 +19,8 @@ export interface ScriptedTurn {
 export interface FakeBrowserOptions {
   readonly elements?: ReadonlyArray<{ readonly ref: string; readonly role: string; readonly name: string }>
   readonly screenshotFails?: boolean
+  /** `finalize` never returns — a trace that will not settle. Only a bound can end the run. */
+  readonly finalizeHangs?: boolean
 }
 
 export const fakeBrowser = (options: FakeBrowserOptions = {}) => {
@@ -62,7 +64,10 @@ export const fakeBrowser = (options: FakeBrowserOptions = {}) => {
     currentUrl: Effect.sync(() => url),
     consoleEntries: Effect.succeed([]),
     networkEntries: Effect.succeed([]),
-    finalize: () => Effect.succeed([{ kind: "trace", state: "present", path: "/tmp/trace.zip" } as CaptureOutcome])
+    finalize: () =>
+      options.finalizeHangs === true
+        ? Effect.never
+        : Effect.succeed([{ kind: "trace", state: "present", path: "/tmp/trace.zip" } as CaptureOutcome])
   }
   return {
     captures,
@@ -163,3 +168,14 @@ export const fakeFixtures = (publicValues: Record<string, string> = { workspaceN
   )
   return { cleanups, layer }
 }
+
+/** A provider that DIES instead of failing — an SDK throwing where the seam declares a typed error. */
+export const dyingProvider = (message: string): Layer.Layer<ModelProvider> =>
+  Layer.succeed(
+    ModelProvider,
+    ModelProvider.of({
+      id: "exploding",
+      modelId: "exploding-v1",
+      generate: () => Effect.die(new Error(message))
+    })
+  )

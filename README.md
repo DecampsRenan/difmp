@@ -26,6 +26,11 @@ PASS  project-create  4.4s  ../scenarios/project-create.e2e.md
       criteria: 3 · run r_xgqxoxsbcesee · report …/runs/r_xgqxoxsbcesee/report.html
 ```
 
+`harness` is the executable an **installed** package puts on your PATH. This repository installs
+nothing globally and has no `harness` bin of its own — inside the checkout, every invocation below
+is written out in full as `node apps/cli/dist/bin/harness.js` (after `pnpm build`). If you would
+rather type `harness`, alias it once: `alias harness="node $PWD/apps/cli/dist/bin/harness.js"`.
+
 **The specs and the example scenarios are in French; the code, the comments and this documentation
 are in English.** That split is deliberate and it is the only language rule in the repository.
 
@@ -65,18 +70,28 @@ pnpm typecheck     # tsc -b tsconfig.build.json — the whole workspace, example
 pnpm test          # vitest run
 ```
 
-Observed here, in this order:
+Observed, in this order, on a **fresh `git clone`** of this repository (Node v24.19.0, pnpm
+10.29.3):
 
 ```
-pnpm install --frozen-lockfile   ->  Lockfile is up to date, resolution step is skipped. Done in 1.9s
-pnpm build                       ->  6 of 9 workspace projects built, exit 0
+pnpm install --frozen-lockfile   ->  Lockfile is up to date, resolution step is skipped. Done in 2.3s
+                                     + 2 warnings, see below
+npx playwright install chromium  ->  exit 0 (silent when the browser is already in the cache)
+pnpm build                       ->  Scope: 6 of 9 workspace projects, exit 0
 pnpm --filter @harness/fixture-app build  ->  exit 0
 pnpm typecheck                   ->  exit 0
-pnpm test                        ->  Test Files 24 passed (24) · Tests 307 passed (307), exit 0
+pnpm test                        ->  Test Files 21 passed (21) · Tests 312 passed (312), exit 0
 ```
 
-(The test count is what the suite reported at the time of writing; treat the exit code as the
-contract, not the number.)
+The test count is what the suite reported at the time of writing; treat the exit code as the
+contract, not the number. A clone and a working copy report the same figure — `vitest.config.ts`
+only globs tracked directories, deliberately, so the suite a contributor runs is the suite CI runs.
+
+> The **first** `pnpm install` in a clone prints two warnings:
+> `WARN Failed to create bin at …/examples/support/node_modules/.bin/fixture-app. ENOENT … examples/fixture-app/dist/main.js`.
+> They are expected and harmless: that bin points at a build output that does not exist yet. They
+> are gone the next time you install, once `pnpm --filter @harness/fixture-app build` has run.
+> Nothing below uses that bin — the demo calls `node examples/fixture-app/dist/main.js` directly.
 
 `pnpm build` filters `./packages/*` and `./apps/*`; `examples/*` is not in that scope, which is why
 the fixture app is built separately. `pnpm typecheck` does cover `examples/*` — it is the project
@@ -94,7 +109,10 @@ The demonstration is a tiny "Projects" app ([`examples/fixture-app`](examples/fi
 reproducible variants, three scenarios ([`examples/scenarios`](examples/scenarios/README.md)) and the project
 side a real consumer would write ([`examples/support`](examples/support/README.md)).
 
-**1. Start the app under test.** It binds `127.0.0.1` only and prints the guarded seed token:
+**1. Start the app under test.** It binds `127.0.0.1` only and prints the guarded seed token. It
+**runs in the foreground and does not return your prompt** — use a second terminal for the rest, or
+append `&` and keep the job id, because you will need to stop it before restarting it on the same
+port:
 
 ```sh
 node examples/fixture-app/dist/main.js --port 3000 --variant healthy \
@@ -123,22 +141,42 @@ export FIXTURE_APP_SEED_TOKEN=<the token printed above>
 node apps/cli/dist/bin/harness.js run --config examples/support/harness.config.ts
 ```
 
-```
-PASS  project-create-checked      4.5s  ../scenarios/project-create-checked.e2e.md
-PASS  project-create-no-fixture   6.2s  ../scenarios/project-create-no-fixture.e2e.md
-PASS  project-create              4.0s  ../scenarios/project-create.e2e.md
+The demo config enables **all four reporters** (`reporters: ["console", "json", "junit", "html"]`),
+and the rule from "The CLI contract" below applies: with `json` among them, **stdout carries one
+JSON document — roughly 380 lines — and every human-readable diagnostic goes to stderr.** So what
+you see is the resolved-configuration block, then this, interleaved with the JSON:
 
-Summary  3 scenarios  14.6s
+```
+PASS  project-create-checked  4.8s  ../scenarios/project-create-checked.e2e.md
+      actions 8/25 indicatives · model calls 13 · tokens 2080
+      criteria: 3 · run r_nyqvz3sh4q4pa · report …/examples/support/runs/r_nyqvz3sh4q4pa/report.html
+PASS  project-create-no-fixture  5.9s  ../scenarios/project-create-no-fixture.e2e.md
+PASS  project-create  4.2s  ../scenarios/project-create.e2e.md
+
+Summary  3 scenarios  14.9s
          3 passed · 0 failed · 0 inconclusive · 0 error · 0 cancelled
+```
+
+To read just that, send stdout away — the JSON reporter's document is the only thing on it:
+
+```sh
+node apps/cli/dist/bin/harness.js run --config examples/support/harness.config.ts > /dev/null
 ```
 
 Exit code `0`. Run directories land in **`examples/support/runs/<run-id>/`** — `outputDir` is
 `runs`, resolved against the directory holding `harness.config.ts`, so the location does not depend
-on where you invoked the CLI from. Open the report with any browser; it is standalone and offline:
+on where you invoked the CLI from. `result.json`, `junit.xml` and `report.html` are written there
+whichever reporters you selected.
+
+Open the report with any browser; it is standalone and offline, so the file path is all you need:
 
 ```sh
 xdg-open examples/support/runs/<run-id>/report.html      # or: open … on macOS
 ```
+
+`xdg-open` is part of `xdg-utils` and is **not installed on a bare Linux box** (`command -v
+xdg-open` comes back empty on this machine). Without it, copy the single file to a machine that has
+a browser, or point the browser at the absolute path yourself — there is nothing to serve.
 
 ### The four variants
 
@@ -147,12 +185,26 @@ process: the app changes what it does, and the variable tells the deterministic 
 it is about to meet (`alt-layout` renames every control). Because `--port 0` gives an ephemeral port,
 export `HARNESS_BASE_URL` too when you do not pin the port.
 
+**Stop the instance you already have before you start the next one.** Nothing frees port 3000 for
+you, and the failure is indirect: the new app dies with
+`Error: listen EADDRINUSE: address already in use 127.0.0.1:3000`, so it never prints a token, so
+the export below is empty, and the run ends at
+`error at stage fixture-setup: fixture "authenticated-workspace" setup failed: … FIXTURE_APP_SEED_TOKEN is not set`
+with exit `2` — which looks like a harness bug and is not one.
+
 ```sh
-node examples/fixture-app/dist/main.js --port 3000 --variant false-success --seed &
+kill %1                                  # or Ctrl-C in the terminal running the app
+node examples/fixture-app/dist/main.js --port 3000 --variant false-success \
+     --seed --seed-email demo@example.test --seed-password demo-password &
 export FIXTURE_APP_SEED_TOKEN=<token> FIXTURE_APP_VARIANT=false-success
 node apps/cli/dist/bin/harness.js run examples/scenarios/project-create.e2e.md \
      --config examples/support/harness.config.ts
 ```
+
+Keep `--seed-email` / `--seed-password`: a bare `--seed` generates random credentials
+(`user-4cc3d5cc@example.test / pw-cfd6f0b6-0f2`), which is fine for `project-create` — it
+authenticates through the fixture and the seed token — but breaks `project-create-no-fixture`, whose
+prose and scripted walkthrough both type `demo@example.test` / `demo-password` into the login form.
 
 Observed, one app instance per variant, real Chromium each time:
 
@@ -242,9 +294,11 @@ config.inputs  <  spec frontmatter `inputs`  <  --inputs-file  <  --input
 A key that neither the config nor the spec **declares** is rejected, whichever side supplies it:
 
 ```sh
-$ harness run examples/scenarios/project-create.e2e.md -c examples/support/harness.config.ts --input nope=1
+$ node apps/cli/dist/bin/harness.js run examples/scenarios/project-create.e2e.md \
+      -c examples/support/harness.config.ts --input nope=1
 ERROR
-  --input declares "nope", which is not an input of the config or the spec
+  ../scenarios/project-create.e2e.md: …/examples/support/harness.config.ts: invalid configuration
+  - --input declares "nope", which is not an input of the config or the spec
 # exit 2
 ```
 
@@ -281,7 +335,7 @@ filtered, or `harness run .` would walk `node_modules`.
 **Selecting nothing is an explicit error, never a silent success:**
 
 ```sh
-$ harness list --config examples/support/harness.config.ts --tag nonexistent
+$ node apps/cli/dist/bin/harness.js list --config examples/support/harness.config.ts --tag nonexistent
 ERROR
   no *.e2e.md scenario selected — include ["../scenarios/**/*.e2e.md"] under …/examples/support
   filtered by --tag nonexistent (3 discovered, none matched the tag filter)
@@ -370,7 +424,7 @@ consumers. `tsx` ships as a real dependency; there is no global loader to instal
 **Verified end to end**, and re-runnable with one command:
 
 ```sh
-bash apps/cli/scripts/consumer-smoke/run.sh /tmp/consumer-smoke npm pnpm yarn
+bash apps/cli/scripts/consumer-smoke/run.sh /tmp/consumer-smoke npm pnpm yarn yarn1
 ```
 
 It packs the tarball, refuses one whose `dependencies` name a `@harness/*` package, then builds a
@@ -378,8 +432,21 @@ throwaway consumer **outside this workspace** for each package manager and modul
 24 assertions through it — the bin, discovery, the TypeScript config, the `test:e2e` script, the
 run directory, the report assets, the dashboard and all four exit codes. On this machine, Node
 24.19.0: **24/24 in all eight cells** — npm 11.17.0, pnpm 10.29.3, Yarn 4.13.0 via corepack and
-Yarn 1.22.22, each with a `"type": "module"` consumer and a `"type": "commonjs"` one. See
-[`apps/cli/README.md`](apps/cli/README.md) for the matrix and the external system dependencies.
+Yarn 1.22.22, each with a `"type": "module"` consumer and a `"type": "commonjs"` one. (The four
+package managers are the arguments: with `npm pnpm yarn` you get six cells, and `yarn1` — Yarn
+classic — is the eighth-cell pair.) See [`apps/cli/README.md`](apps/cli/README.md) for the matrix
+and the external system dependencies.
+
+> **pnpm 12 refuses the install unless you approve one build script.** pnpm ≥ 12 turns an ignored
+> dependency build into an error, and the package pulls `esbuild` in transitively through `tsx`:
+> `pnpm add -D <package>` ends with
+> `ERR_PNPM_IGNORED_BUILDS · Ignored build scripts: esbuild@0.28.2` and exit `1`. Install with
+> `pnpm add -D --allow-build=esbuild <package>` (or run `pnpm approve-builds` afterwards), which
+> exits 0 — verified against pnpm 12.4.1 and 10.29.3. The installed tree is complete either way:
+> the CLI runs, including the `tsx` fallback a CommonJS consumer's config needs, with the build
+> script skipped. pnpm 10.29.3 only prints a warning, which is why the matrix above is green on
+> this machine and the same step is **red on GitHub Actions**, where the consumer installs resolve
+> pnpm 12.4.1 — see [`docs/architecture.md`](docs/architecture.md) §4.
 
 A consumer run only means something once the adapter does. With `provider: "scripted"` and no
 `scripts` entry the built-in double asserts nothing, so such a run comes back `inconclusive` with

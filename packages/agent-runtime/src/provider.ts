@@ -4,7 +4,7 @@ import { Effect, SchemaAST } from "effect"
 import type { Schema } from "effect"
 import { LanguageModel } from "effect/unstable/ai"
 import type { Response } from "effect/unstable/ai"
-import { providerErrorFromAiError } from "./errors.js"
+import { providerErrorFromAiError, providerErrorFromDefect } from "./errors.js"
 import { toAiPrompt } from "./prompt.js"
 import { toToolkit } from "./toolkit.js"
 
@@ -140,6 +140,8 @@ export const makeLanguageModelProvider = (
       )
     }
 
+    const toDefectError = providerErrorFromDefect(options.id)
+
     const generate = (request: GenerateRequest): Effect.Effect<ProviderResponse, ProviderError> =>
       withAbort(
         options.id,
@@ -147,6 +149,12 @@ export const makeLanguageModelProvider = (
         request.responseSchema === undefined
           ? generateText(request)
           : generateObject(request, request.responseSchema)
+      ).pipe(
+        // The seam promises `ProviderError` and nothing else. An SDK that throws outside the
+        // `AiError` channel (a bad payload, a broken stream, a client bug) would otherwise reach
+        // the runner as an unlabelled defect that kills the attempt fiber, and a dead fiber is
+        // attributed to the browser stage. Translating it here keeps the blame on the provider.
+        Effect.catchDefect((defect) => Effect.fail(toDefectError(defect)))
       )
 
     return { id: options.id, modelId: options.modelId, generate }
