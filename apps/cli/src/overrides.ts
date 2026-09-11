@@ -1,4 +1,5 @@
 import type { ConfigOverrides, ProviderName, ReporterName, ResolvedConfig } from "@harness/core"
+import { isSensitiveKey } from "@harness/core"
 import { Effect, Option } from "effect"
 import { UsageError } from "./errors.js"
 import { reporterNames } from "./project.js"
@@ -42,38 +43,13 @@ export const toOverrides = (flags: OverrideFlags): Effect.Effect<ConfigOverrides
   })
 
 /**
- * Words that make a KEY look like a credential. Matching is per word, not per substring, so
- * `maxTokens` and `verifierReserveTokens` — plural, and a count of units, never a credential —
- * are printed, while `token`, `sessionToken` and `apiKey` are not.
+ * Whether a KEY looks like a credential. The rule lives in `@harness/core` (`isSensitiveKey`), so
+ * what this printer hides and what `sanitizeConfig` blanks in `manifest.json` and the
+ * `configResolved` event can never drift apart. Matching is per word, not per substring, so
+ * `maxTokens` and `verifierReserveTokens` are printed while `token`, `sessionToken` and `apiKey`
+ * are not.
  */
-const secretWords = new Set([
-  "key",
-  "keys",
-  "apikey",
-  "token",
-  "secret",
-  "secrets",
-  "password",
-  "passwd",
-  "credential",
-  "credentials",
-  "auth",
-  "authorization",
-  "bearer",
-  "cookie",
-  "cookies",
-  "session"
-])
-
-/** `apiKeyEnvVar` -> ["api","key","env","var"]; `api_key` -> ["api","key"]. */
-const words = (key: string): ReadonlyArray<string> =>
-  key
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .split(/[^A-Za-z0-9]+|\s+/)
-    .filter((w) => w !== "")
-    .map((w) => w.toLowerCase())
-
-export const looksSensitive = (key: string): boolean => words(key).some((w) => secretWords.has(w))
+export const looksSensitive = (key: string): boolean => isSensitiveKey(key)
 
 /**
  * Never print a value whose key looks like a credential, whatever the project put in the config.

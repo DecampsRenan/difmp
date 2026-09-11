@@ -6,6 +6,7 @@ import {
   enforceAbsenceRule,
   enforceEvidenceIntegrity,
   enforceEvidencePersistence,
+  isSensitiveKey,
   makeRedactor,
   recordingSecrets,
   REDACTED,
@@ -233,5 +234,27 @@ describe("redaction of known secrets", () => {
       script: "healthy"
     })
     expect(JSON.stringify(safe)).not.toContain("sk-ant-secret")
+  })
+
+  it("matches a key by WORD, so a token COUNT is not mistaken for a credential", () => {
+    // A substring test blanked `maxTokens` and `verifierReserveTokens` in `manifest.json`, in the
+    // `configResolved` event and therefore in the report — configuration hidden for nothing, while
+    // no secret was protected by it.
+    expect(isSensitiveKey("maxTokens")).toBe(false)
+    expect(isSensitiveKey("verifierReserveTokens")).toBe(false)
+    expect(isSensitiveKey("temperature")).toBe(false)
+    expect(isSensitiveKey("script")).toBe(false)
+    for (
+      const key of ["token", "sessionToken", "apiKey", "api_key", "accessKey", "private_key", "sessionId", "Cookie", "AUTHORIZATION", "passphrase"]
+    ) {
+      expect(isSensitiveKey(key), key).toBe(true)
+    }
+
+    const config = {
+      baseUrl: "http://127.0.0.1:3000",
+      providerOptions: { maxTokens: 2048, temperature: 0, sessionToken: "sk-live-1" }
+    } as unknown as ResolvedConfig
+    const safe = sanitizeConfig(config, makeRedactor(collectSensitiveValues(config.providerOptions)))
+    expect(safe.providerOptions).toEqual({ maxTokens: 2048, temperature: 0, sessionToken: REDACTED })
   })
 })

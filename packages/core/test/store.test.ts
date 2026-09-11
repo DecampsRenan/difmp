@@ -172,4 +172,33 @@ describe("RunStore artifacts", () => {
         expect(entries.filter((e) => e.includes(".tmp-"))).toEqual([])
       })
     ))
+
+  it.effect("keeps artifacts.json in step with memory under concurrent recordArtifact", () =>
+    withStore((store, fs) =>
+      Effect.gen(function*() {
+        // The inventory write used to sit OUTSIDE the permit that appended to the in-memory list,
+        // so two concurrent callers could serialise their snapshots in one order and land their
+        // renames in the other: `artifacts.json` on disk silently lost entries the store still
+        // reported (.recon/critic-jsonl-race.ts measured 64 on disk against 100 recorded).
+        yield* Effect.forEach(
+          Array.from({ length: 100 }, (_, i) => i),
+          (i) =>
+            store.recordArtifact({
+              artifactId: `art_${i + 1}`,
+              attemptId: "a1",
+              kind: "screenshot",
+              state: "present",
+              ts: "2026-09-11T00:00:00.000Z"
+            }),
+          { concurrency: "unbounded", discard: true }
+        )
+        const onDisk = JSON.parse(yield* fs.readFileString(store.layout.artifacts)) as {
+          artifacts: ReadonlyArray<{ artifactId: string }>
+        }
+        const inMemory = yield* store.inventory
+        expect(onDisk.artifacts).toHaveLength(inMemory.artifacts.length)
+        expect(onDisk.artifacts).toHaveLength(100)
+        expect(new Set(onDisk.artifacts.map((a) => a.artifactId)).size).toBe(100)
+      })
+    ))
 })

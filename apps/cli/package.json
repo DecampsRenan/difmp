@@ -24,7 +24,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "build": "node scripts/copy-ui.mjs && tsc -b tsconfig.json",
+    "build": "node scripts/copy-ui.mjs && rm -rf dist tsconfig.tsbuildinfo && tsc -b tsconfig.json",
     "build:bundle": "node scripts/copy-ui.mjs && tsdown --config tsdown.config.ts",
     "typecheck": "tsc -b tsconfig.json",
     "test": "vitest run --config vitest.config.ts",

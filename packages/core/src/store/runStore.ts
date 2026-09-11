@@ -125,10 +125,15 @@ const make = (options: RunStoreOptions) =>
 
     const recordArtifact = (record: ArtifactRecord) =>
       Effect.gen(function*() {
-        yield* lock.withPermits(1)(Effect.sync(() => {
+        // The push AND the inventory write share ONE permit. With the write outside it, two
+        // concurrent `recordArtifact`s could build their JSON snapshots in one order and land
+        // their renames in the other, so `artifacts.json` on disk silently lost entries the store
+        // still held in memory (.recon/critic-jsonl-race.ts measured 64 on disk vs 100 recorded).
+        // `emit` takes the same, non-reentrant permit, so it stays OUTSIDE this block.
+        yield* lock.withPermits(1)(Effect.gen(function*() {
           artifacts.push(record)
+          yield* writeInventory
         }))
-        yield* writeInventory
         yield* emit({
           type: "artifactAvailable",
           attemptId: record.attemptId,

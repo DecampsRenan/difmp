@@ -212,7 +212,10 @@ and inject one short nudge into the agent conversation. Nothing is refused, no s
 no approval is required. A run that passes in 40 actions is `passed`.
 
 Blocking budgets are the separate, configurable ones in §3 `budgets`. Exhausting one ends the loop
-and yields `inconclusive` (not `failed`), with no late actions or requests permitted afterwards.
+and yields `inconclusive` (not `failed`) **for every criterion it stopped the run from concluding**,
+with no late actions or requests permitted afterwards. A run whose criteria had all already resolved
+when the budget fired keeps its verdict — spec §9 says "budget épuisé *avant de pouvoir conclure*",
+and `aggregate.ts` implements that reading: the budget is not itself a verdict.
 The agent is TOLD these budgets in its system prompt, next to the indicative threshold and
 explicitly distinguished from it (spec §6 step 5).
 

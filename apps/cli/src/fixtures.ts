@@ -1,5 +1,5 @@
 import type { FixtureCleanupReport, FixtureSession, Registries, StorageStateLike } from "@harness/core"
-import { FixtureError, FixtureManager } from "@harness/core"
+import { FixtureError, FixtureManager, recordingSecrets } from "@harness/core"
 import { Duration, Effect, Exit, Layer, Option } from "effect"
 
 type Cleanup = () => Promise<void> | void
@@ -33,6 +33,13 @@ export const fixtureManagerLayer = (registries: Registries): Layer.Layer<Fixture
             )
           )
           const cleanups: Array<Cleanup> = []
+          // design-contracts §11/§13: the harness can only strip values it was TOLD about.
+          // `recordingSecrets` wraps the env accessor and remembers every value the fixture
+          // actually read, and those values are reported on the session below. Without this the
+          // runner's redactor stayed the identity function, so a secret a fixture read and handed
+          // back under `public` landed verbatim in contract.json, events.jsonl, result.json,
+          // junit.xml and report.html.
+          const recorder = recordingSecrets((name: string) => process.env[name])
           const result = yield* Effect.tryPromise({
             // `signal` is aborted when the setup is cancelled or exceeds
             // `budgets.fixtureSetupTimeoutMs`. A fixture that ignores it is merely ABANDONED: a row
@@ -42,8 +49,9 @@ export const fixtureManagerLayer = (registries: Registries): Layer.Layer<Fixture
                 runId: request.runId,
                 attemptId: request.attemptId,
                 inputs: request.inputs,
-                // Env-backed. Secret values never reach prompts, logs or reports.
-                secrets: (name: string) => process.env[name],
+                // Env-backed, and RECORDED: every value read here is reported to the runner as
+                // a known secret, which is what makes §13's redaction real.
+                secrets: recorder.secrets,
                 addCleanup: (fn: Cleanup) => {
                   cleanups.push(fn)
                 },
@@ -71,6 +79,7 @@ export const fixtureManagerLayer = (registries: Registries): Layer.Layer<Fixture
           return {
             fixtureName: request.fixtureName,
             publicValues: result.public ?? {},
+            secretValues: recorder.values(),
             ...(storageState === undefined ? {} : { storageState }),
             cleanup: ({ timeoutMs }) => runCleanups(cleanups, timeoutMs)
           } satisfies FixtureSession

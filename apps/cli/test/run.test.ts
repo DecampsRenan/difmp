@@ -275,6 +275,42 @@ describe("live dashboard (--ui)", () => {
 })
 
 /**
+ * design-contracts §11 and §13. A fixture learns a credential through `ctx.secrets`; that call is
+ * the ONLY way the harness finds out a value is secret, so the `FixtureManager` must report what
+ * was read (`FixtureSession.secretValues`) or the runner's redactor stays the identity function.
+ * It did: a secret read through `ctx.secrets` and handed back under `public` used to land verbatim
+ * in contract.json, events.jsonl, result.json, junit.xml and report.html.
+ */
+describe("a secret a fixture read is stripped from everything the run writes", () => {
+  const leaky = fixture("secret-fixture")
+  const secret = "sk-test-DO-NOT-PERSIST-7f3a"
+
+  it("redacts it from the contract, the journal, the result and both reports", async () => {
+    const dir = join(output, "secret-fixture")
+    const previous = process.env["HARNESS_TEST_SECRET"]
+    process.env["HARNESS_TEST_SECRET"] = secret
+    try {
+      const result = await exec(["run", "--base-url", page.url, "--output", dir], { cwd: leaky })
+      expect(result.code, allOutput(result)).toBe(0)
+      const runDir = latestRunDir(dir)
+      for (const file of ["contract.json", "events.jsonl", "result.json", "junit.xml", "report.html", "manifest.json"]) {
+        const content = readFileSync(join(runDir, file), "utf8")
+        expect(content, `${file} leaked the fixture secret`).not.toContain(secret)
+      }
+      // The redactor strips the VALUE it was told about and nothing else: a public value that was
+      // never read through `ctx.secrets` is untouched, and the key itself still appears.
+      const contract = readFileSync(join(runDir, "contract.json"), "utf8")
+      expect(contract).toContain("public-value")
+      expect(contract).toContain("[redacted]")
+      expect(allOutput(result)).not.toContain(secret)
+    } finally {
+      if (previous === undefined) delete process.env["HARNESS_TEST_SECRET"]
+      else process.env["HARNESS_TEST_SECRET"] = previous
+    }
+  })
+})
+
+/**
  * spec §6 step 2 + integration.md §5: the initial manifest is persisted before the fixture runs,
  * so a run that dies in infrastructure setup is still reportable. CI must get a JUnit file naming
  * the failure rather than an empty run directory.

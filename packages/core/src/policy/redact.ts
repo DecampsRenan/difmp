@@ -9,9 +9,41 @@ export const REDACTED = "[redacted]"
  * promise that what reaches `manifest.json` and the journal is "resolved NON-SENSITIVE config",
  * and this is what enforces that promise instead of trusting the project.
  */
-const sensitiveKey = /(secret|token|password|passwd|passphrase|credential|api[-_]?key|access[-_]?key|private[-_]?key|authorization|auth[-_]?header|bearer|cookie|session[-_]?id)/i
+const secretWords: ReadonlySet<string> = new Set([
+  "key",
+  "keys",
+  "apikey",
+  "token",
+  "secret",
+  "secrets",
+  "password",
+  "passwd",
+  "passphrase",
+  "credential",
+  "credentials",
+  "auth",
+  "authorization",
+  "bearer",
+  "cookie",
+  "cookies",
+  "session"
+])
 
-export const isSensitiveKey = (key: string): boolean => sensitiveKey.test(key)
+/** `apiKeyEnvVar` -> ["api","key","env","var"]; `api_key` -> ["api","key"]. */
+const words = (key: string): ReadonlyArray<string> =>
+  key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .split(/[^A-Za-z0-9]+|\s+/)
+    .filter((word) => word !== "")
+    .map((word) => word.toLowerCase())
+
+/**
+ * Matching is per WORD, not per substring. A substring test blanked `maxTokens` and
+ * `verifierReserveTokens` — plural, a count of units, never a credential — which hid ordinary
+ * configuration from `manifest.json` and from the report while protecting nothing. `token`,
+ * `sessionToken`, `apiKey`, `api_key`, `accessKey`, `privateKey` and `sessionId` still redact.
+ */
+export const isSensitiveKey = (key: string): boolean => words(key).some((word) => secretWords.has(word))
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 

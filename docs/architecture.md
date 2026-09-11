@@ -362,25 +362,19 @@ an SSE subscriber parked in `take` is released; a code check's own probe evidenc
 `method: "code"` criterion can pass; a `failed` + `uncertain-navigation` verdict is downgraded to
 `inconclusive`; a `failed` is sticky against an agent re-`check`; and a run whose mandatory evidence
 could not be persisted comes back `error` with its criteria `inconclusive` instead of a clean
-`passed`. Read those files as history, not as a current defect list.
+`passed`. A later audit pass closed three more: tool *results* are now decoded against
+`toolResultSchemas` at the driver boundary before they reach the model; `artifacts.json` no longer
+loses an update under concurrent `recordArtifact` (the inventory write moved inside the store's
+semaphore; `packages/core/test/store.test.ts` covers it); and the `FixtureManager` now wraps its env
+accessor in `recordingSecrets` and reports `FixtureSession.secretValues`, so a credential a fixture
+read through `ctx.secrets` is really stripped — without it the redactor was the identity function
+and such a value, handed back under `public`, reached `contract.json`, `events.jsonl`,
+`result.json`, `junit.xml` and `report.html` verbatim (`apps/cli/test/run.test.ts` covers it). Read
+those files as history, not as a current defect list.
 
 What follows is what is **actually** still open. Each item was checked against the code as it stands,
 not copied from the review that raised it.
 
-* **Tool *results* are not Schema-validated at the driver boundary.** `ObserveResult`,
-  `NavigateResult`, `InteractionResult`, `ScreenshotResult`, `CheckAccepted` and `FinishAccepted` are
-  declared as Effect Schemas in `core/domain/tools.ts` but are used only as TypeScript types — there
-  is no `decode` call on any of them anywhere. Tool *arguments* are strictly validated
-  (`onExcessProperty: "error"`); the driver's return value is handed to the model as-is. The driver
-  is a separate package, so this is an unchecked trust boundary rather than a tautology. Compile-time
-  types make it low-risk; it is still a gap against design-contracts §5.
-* **`artifacts.json` can lose an update under concurrent `recordArtifact`.** The in-memory push is
-  under the store's semaphore; the serialise + temp-write + rename that follows is not, so two
-  concurrent renames can land out of order. Re-run while writing this document:
-  `npx tsx .recon/critic-jsonl-race.ts` → `INVENTORY on disk: 43 in memory: 100 · lost update:
-  true`. The runner's own path is sequential, so it is latent there; a TS check that fires several
-  `recordEvidence` calls without awaiting them can reach it. `events.jsonl` is unaffected — the same
-  probe reports 200 lines, 200 unique `seq`, gapless and strictly increasing.
 * **`verifierReserveTokens` cannot prevent an overshoot.** Every budget is checked *before* a call
   and a turn's cost is only known after it, so a single browsing turn larger than the remaining
   headroom crosses the ceiling. The reserve then still guarantees the final verification its own
@@ -394,12 +388,18 @@ not copied from the review that raised it.
   requests" binds the agent and the model, not harness-initiated evidence capture) and it is now
   written into design-contracts §7 — but it is a decision, not a consequence, and a reader who
   expects the letter of the earlier wording will be surprised.
-* **There is no GitHub Actions workflow in the repository.** Spec §12 asks for a demonstrator
-  workflow that installs the pinned Node and pnpm, runs `pnpm install --frozen-lockfile`, the
-  typecheck, the tests and a scripted scenario through the distributed CLI, installs Chromium with
-  its Linux dependencies and publishes artifacts even on failure. Every one of those commands is
-  verified locally and documented in the README; none of them is wired into CI. `.github/` does not
-  exist.
+* **The GitHub Actions workflow has never run on a runner.** `.github/workflows/ci.yml` exists and
+  every one of its `run:` steps was executed locally, exactly as written. What only exists on a
+  runner was never exercised: `corepack enable`, the four marketplace actions, the `--with-deps` apt
+  install, the cache hit/miss branches, and the optional `secrets.ANTHROPIC_API_KEY` job. The file's
+  own header says so.
+* **Ctrl-C leaves the run directory without `junit.xml` and `report.html`.** The run itself settles
+  correctly — `result.json` with `status: "cancelled"`, `runFinished` as the journal's last line,
+  the fixture cleaned, the evidence recorded, exit `130` — but SIGINT interrupts the CLI before the
+  file reporters run, so only the run-owned files are on disk. Cancelling from the dashboard's
+  button does write all of them, and `harness report <run-directory>` rebuilds them afterwards
+  (verified: it emits `<error type="run-cancelled">` and no `<skipped>`). Still, a CI job that
+  times out and sends SIGINT gets no JUnit unless it re-runs `harness report`.
 * **The dashboard's "stream unavailable / Reprendre le flux" path is untested.** The SSE resume
   contract itself is proven at the levels that matter (`Last-Event-ID` header and `?lastEventId=`
   query both replay from the right cursor; a full page reload rebuilds the timeline with no loss and
