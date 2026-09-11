@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Harness — vue live</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!--
+      The CLI may inject `<script>globalThis.__HARNESS_UI__ = {...}</script>` here to override the
+      endpoints. Without it the app uses relative defaults (events, cancel, contract, artifacts/).
+    -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -6,7 +6,8 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist dist-types *.tsbuildinfo",
+    "typecheck": "tsc -b tsconfig.json"
   },
   "dependencies": {
     "react": "^19.3.0",
