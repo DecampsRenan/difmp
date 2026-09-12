@@ -1,4 +1,4 @@
-import { defineConfig } from "tsdown"
+import { defineConfig } from "tsdown";
 
 /**
  * A standalone tarball: the `@difmp/*` workspace packages are PRIVATE, so they must be bundled
@@ -19,5 +19,5 @@ export default defineConfig({
   treeshake: true,
   noExternal: [/^@difmp\//],
   // tsdown writes .mjs / .d.mts for the esm format by default; `bin` and `exports` point at .js.
-  outExtensions: () => ({ js: ".js", dts: ".d.ts" })
-})
+  outExtensions: () => ({ js: ".js", dts: ".d.ts" }),
+});

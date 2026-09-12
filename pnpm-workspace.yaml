@@ -5,3 +5,7 @@ packages:
 onlyBuiltDependencies:
   - esbuild
   - "@esbuild/linux-x64"
+  # lefthook's postinstall is what installs the git hooks into .git/hooks. Without this entry pnpm
+  # skips it silently on 10.x and hard-errors on 12.x (ERR_PNPM_IGNORED_BUILDS), so CI would fail
+  # on install. The script is CI-aware and no-ops when $CI is set.
+  - lefthook

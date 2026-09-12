@@ -16,7 +16,7 @@ directory you can read afterwards: a journal, the frozen expectations, screensho
 snapshots, a Playwright trace, a JUnit file and a standalone HTML report.
 
 It is for teams whose UI changes faster than their selectors, on journeys that are worth testing but
-not worth re-writing every sprint. It is *not* a replacement for deterministic assertions — see
+not worth re-writing every sprint. It is _not_ a replacement for deterministic assertions — see
 [Honest limitations](#honest-limitations) before you adopt it.
 
 A whole scenario:
@@ -63,16 +63,16 @@ Summary  1 scenario  3.3s
 ## Quick start — add difmp to your project
 
 Nothing is cloned and no orchestration script is written. The package ships a compiled ESM
-executable, its TypeScript declarations and the report/dashboard assets; it only ever *reads* your
+executable, its TypeScript declarations and the report/dashboard assets; it only ever _reads_ your
 project's configuration.
 
 ### 0. Prerequisites
 
-| | |
-| --- | --- |
-| Node.js | `>= 22.12.0`. Verified here on **v24.19.0**. |
-| Browser | Playwright **1.63.0** Chromium. Nothing else is launched. |
-| OS | Linux/macOS. |
+|         |                                                                               |
+| ------- | ----------------------------------------------------------------------------- |
+| Node.js | `>= 22.12.0`. Verified here on **v24.19.0**.                                  |
+| Browser | Playwright **1.63.0** Chromium. Nothing else is launched.                     |
+| OS      | Linux/macOS.                                                                  |
 | API key | Only if you use the `anthropic` provider. The `scripted` provider needs none. |
 
 ### 1. Get the tarball
@@ -92,7 +92,7 @@ cd apps/cli && pnpm pack --pack-destination /tmp
 Those five commands need pnpm (`10.29.3`, pinned in the root `packageManager`). That requirement
 stops here: your own project installs the tarball with whatever package manager it already uses.
 
-> **Everything from step 2 on happens in *your* project, not in this clone.** The last command above
+> **Everything from step 2 on happens in _your_ project, not in this clone.** The last command above
 > leaves your shell in `difmp/apps/cli/`. `cd` back to the project you want to test before you run
 > anything below, or you will install difmp into difmp's own CLI package.
 
@@ -115,12 +115,12 @@ yarn add -D ./difmp-local.tgz            # Yarn 1: copy the tarball in first, se
 
 Two install-time notes, both about the same transitive dependency:
 
-* **pnpm:** difmp pulls `esbuild` in through `tsx`, and pnpm does not run its build script by
+- **pnpm:** difmp pulls `esbuild` in through `tsx`, and pnpm does not run its build script by
   default. pnpm 10 prints `Ignored build scripts: esbuild@0.28.2` and **exits 0**; pnpm ≥ 12 turns
   that into `ERR_PNPM_IGNORED_BUILDS` and **exits 1**. `--allow-build=esbuild` (or `pnpm
-  approve-builds` afterwards) is the fix and is harmless on pnpm 10. The installed tree is complete
+approve-builds` afterwards) is the fix and is harmless on pnpm 10. The installed tree is complete
   either way — including the `tsx` fallback a CommonJS-typed config needs.
-* **npm:** npm 11 prints `npm warn allow-scripts … esbuild@0.28.2` and exits 0. Nothing to do.
+- **npm:** npm 11 prints `npm warn allow-scripts … esbuild@0.28.2` and exits 0. Nothing to do.
 
 ### 3. Install Chromium
 
@@ -140,8 +140,8 @@ from difmp's own dependencies and the browsers land in the shared `~/.cache/ms-p
   "type": "module",
   "scripts": {
     "test:e2e": "difmp run",
-    "test:e2e:ui": "difmp run --ui"
-  }
+    "test:e2e:ui": "difmp run --ui",
+  },
 }
 ```
 
@@ -164,13 +164,13 @@ whose extension declares the module type on its own. Both are verified.
 At the root of your project, beside `package.json`:
 
 ```ts
-import { defineConfig } from "difmp"
+import { defineConfig } from "difmp";
 
 export default defineConfig({
   baseUrl: process.env.APP_URL ?? "http://127.0.0.1:3000",
   include: ["tests/e2e/**/*.e2e.md"],
-  provider: "scripted"
-})
+  provider: "scripted",
+});
 ```
 
 That is the whole minimum. Every other key has a default (`maxActions: 25`, `outputDir: "runs"`,
@@ -190,11 +190,15 @@ mkdir -p tests/e2e
 
 ```markdown
 <!-- tests/e2e/home.e2e.md -->
+
 ---
+
 version: 1
 id: home
 verification: |
-  - The home page renders without an error.
+
+- The home page renders without an error.
+
 ---
 
 Open the home page and look at what is displayed.
@@ -261,10 +265,10 @@ Open `report.html` in any browser. It is standalone and offline, so the file pat
 
 Two ways, and you have to pick one:
 
-| | what it gives you | what it costs |
-| --- | --- | --- |
-| `provider: "anthropic"` + `ANTHROPIC_API_KEY` | a model actually reads the evidence and judges the criteria | an API key, per-run token cost, and verdicts that are probabilistic |
-| `provider: "scripted"` + `providerOptions` | fully deterministic, offline, free | you describe the walkthrough yourself; it proves your app is reachable, not that a model can navigate it |
+|                                               | what it gives you                                           | what it costs                                                                                            |
+| --------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `provider: "anthropic"` + `ANTHROPIC_API_KEY` | a model actually reads the evidence and judges the criteria | an API key, per-run token cost, and verdicts that are probabilistic                                      |
+| `provider: "scripted"` + `providerOptions`    | fully deterministic, offline, free                          | you describe the walkthrough yourself; it proves your app is reachable, not that a model can navigate it |
 
 For the model path — `--model` takes a provider model id, the one used throughout this README being
 `claude-sonnet-5`:
@@ -280,8 +284,8 @@ it is the whole change:
 ```ts
 export default defineConfig({
   provider: "scripted",
-  providerOptions: { verdict: "passed" }
-})
+  providerOptions: { verdict: "passed" },
+});
 ```
 
 ```
@@ -301,7 +305,7 @@ exactly why step 7 came back `INCO`. The installed package's own README,
 
 > **What you cannot do from a tarball install.** That README also documents a richer `scripts: { … }`
 > registry. Its entries are factories whose return type comes from `@difmp/agent-runtime`, a
-> workspace package the tarball *bundles* but does not *install*: `import "@difmp/agent-runtime"` in
+> workspace package the tarball _bundles_ but does not _install_: `import "@difmp/agent-runtime"` in
 > your project fails with `ERR_MODULE_NOT_FOUND`, and the worked example it cites,
 > `examples/support/scripts/registry.ts`, is not shipped either. Until difmp is published, the
 > `providerOptions` above are the deterministic path open to a consumer; the factory registry is
@@ -319,17 +323,17 @@ given to the agent. Discovery is `**/*.e2e.md` under `include`.
 
 ### Frontmatter
 
-| field | | |
-| --- | --- | --- |
-| `version` | **required** | `1`. |
-| `id` | **required** | Unique across the selection; duplicates are rejected. |
-| `tags` | optional | `string[]`, matched by `--tag`. |
-| `fixture` | **optional** | A **name** registered in `fixtures`. Never a module path. |
-| `timeout` | optional | `90s`, or `90 seconds`, or a number of milliseconds. |
-| `maxActions` | optional | The indicative threshold for this scenario. |
-| `inputs` | **optional** | `Record<string, string \| number \| boolean>`, declared here or in the config. |
-| `checks` | optional | `Record<criterionId, checkName>` — binds `c3` to a TS check. |
-| `verification` | see below | The expectations, as text. |
+| field          |              |                                                                                |
+| -------------- | ------------ | ------------------------------------------------------------------------------ |
+| `version`      | **required** | `1`.                                                                           |
+| `id`           | **required** | Unique across the selection; duplicates are rejected.                          |
+| `tags`         | optional     | `string[]`, matched by `--tag`.                                                |
+| `fixture`      | **optional** | A **name** registered in `fixtures`. Never a module path.                      |
+| `timeout`      | optional     | `90s`, or `90 seconds`, or a number of milliseconds.                           |
+| `maxActions`   | optional     | The indicative threshold for this scenario.                                    |
+| `inputs`       | **optional** | `Record<string, string \| number \| boolean>`, declared here or in the config. |
+| `checks`       | optional     | `Record<criterionId, checkName>` — binds `c3` to a TS check.                   |
+| `verification` | see below    | The expectations, as text.                                                     |
 
 Unknown fields are rejected, duplicate YAML keys are rejected, and every error names the file, the
 field and the line. The YAML is parsed in strict data mode: core schema 1.2, no executable tags, no
@@ -360,12 +364,12 @@ if you bind one to a TS check — reordering the list rebinds it.
 
 Data substitution only; there is no expression engine.
 
-| variable | |
-| --- | --- |
-| `{{ run.id }}` | the run id — the usual way to make a name unique per run |
-| `{{ attempt.id }}` | the attempt id |
-| `{{ <inputKey> }}` | any declared input |
-| `{{ fixture.<key> }}` | a public value the fixture returned |
+| variable              |                                                          |
+| --------------------- | -------------------------------------------------------- |
+| `{{ run.id }}`        | the run id — the usual way to make a name unique per run |
+| `{{ attempt.id }}`    | the attempt id                                           |
+| `{{ <inputKey> }}`    | any declared input                                       |
+| `{{ fixture.<key> }}` | a public value the fixture returned                      |
 
 Resolution order: inputs (reserved variables only) → fixture setup → body and criteria (resolved
 inputs **and** fixture public values). Inputs may not reference fixture values or each other. An
@@ -386,13 +390,13 @@ advanced extension, not the norm.
 
 ## Choosing a provider
 
-| | `scripted` | `anthropic` |
-| --- | --- | --- |
-| what it is | a deterministic, network-free test double | the real adapter, on `@effect/ai-anthropic` |
-| needs a key | no | `ANTHROPIC_API_KEY` |
-| network | none | yes |
-| what a green run proves | that *difmp* behaves as specified | that *a model* navigated your app and judged the evidence |
-| verdict label | `evaluator.kind: "scripted-model"` | `evaluator.kind: "model"` |
+|                         | `scripted`                                | `anthropic`                                               |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------- |
+| what it is              | a deterministic, network-free test double | the real adapter, on `@effect/ai-anthropic`               |
+| needs a key             | no                                        | `ANTHROPIC_API_KEY`                                       |
+| network                 | none                                      | yes                                                       |
+| what a green run proves | that _difmp_ behaves as specified         | that _a model_ navigated your app and judged the evidence |
+| verdict label           | `evaluator.kind: "scripted-model"`        | `evaluator.kind: "model"`                                 |
 
 Pick `scripted` for difmp's own tests, for CI smoke lanes that must not cost money, and for pinning
 a known journey. Pick `anthropic` for the thing difmp is actually for.
@@ -401,8 +405,8 @@ a known journey. Pick `anthropic` for the thing difmp is actually for.
 export default defineConfig({
   provider: "anthropic",
   model: "claude-sonnet-5",
-  providerOptions: { maxTokens: 2048, temperature: 0 }
-})
+  providerOptions: { maxTokens: 2048, temperature: 0 },
+});
 ```
 
 `model` is never defaulted in code — set it in the config or pass `--model`. The API key is read as a
@@ -421,8 +425,8 @@ unpublished `@difmp/agent-runtime`:
 export default defineConfig({
   provider: "scripted",
   scripts: { healthy: myScriptFactory },
-  providerOptions: { script: "healthy" }
-})
+  providerOptions: { script: "healthy" },
+});
 ```
 
 An entry is a **factory**, not a finished script: it is called once the run id is minted and the
@@ -446,7 +450,7 @@ node apps/cli/dist/bin/difmp.js run examples/scenarios/project-create.e2e.md \
 **This has NOT been run in this repository. No Anthropic API call has been made, because no API key
 is configured here.** Every result quoted in this README comes from the scripted adapter, which
 exercises the real prompt construction, tool dispatch, policy, budgets and real Playwright against
-the demo app — it tests *difmp*. It is not evidence that a model can navigate. `alt-layout` is the
+the demo app — it tests _difmp_. It is not evidence that a model can navigate. `alt-layout` is the
 variant worth pointing a real model at: functionally identical to `healthy`, differently shaped, so a
 walkthrough memorised from `healthy` does not transfer.
 
@@ -458,13 +462,13 @@ walkthrough memorised from `healthy` does not transfer.
 
 A run ends in exactly one of five:
 
-| status | console | meaning |
-| --- | --- | --- |
-| `passed` | `PASS` | every criterion was evaluated and held |
-| `failed` | `FAIL` | a criterion was evaluated and contradicted — a product problem |
-| `inconclusive` | `INCO` | difmp refused to conclude: insufficient evidence, an unevaluated criterion, a verdict citing an artifact that does not exist, or a blocking budget exhausted before the answer existed |
-| `error` | `ERR ` | a technical failure — fixture setup, a store write, an invalid tool result |
-| `cancelled` | `CANC` | Ctrl-C, or the dashboard's cancel button |
+| status         | console | meaning                                                                                                                                                                                |
+| -------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `passed`       | `PASS`  | every criterion was evaluated and held                                                                                                                                                 |
+| `failed`       | `FAIL`  | a criterion was evaluated and contradicted — a product problem                                                                                                                         |
+| `inconclusive` | `INCO`  | difmp refused to conclude: insufficient evidence, an unevaluated criterion, a verdict citing an artifact that does not exist, or a blocking budget exhausted before the answer existed |
+| `error`        | `ERR `  | a technical failure — fixture setup, a store write, an invalid tool result                                                                                                             |
+| `cancelled`    | `CANC`  | Ctrl-C, or the dashboard's cancel button                                                                                                                                               |
 
 Criteria carry the same vocabulary plus `pending` (never reached — it survives a cancellation rather
 than being invented into a verdict).
@@ -474,12 +478,12 @@ the tool is worth trusting: a green run means something was checked.
 
 ### Exit codes
 
-| code | meaning |
-| --- | --- |
-| `0` | every selected scenario passed |
-| `1` | any scenario `failed` or `inconclusive` |
-| `2` | invalid configuration, unusable arguments, no scenario selected, or an execution error |
-| `130` | user interrupt — Ctrl-C, or the dashboard's cancel command |
+| code  | meaning                                                                                |
+| ----- | -------------------------------------------------------------------------------------- |
+| `0`   | every selected scenario passed                                                         |
+| `1`   | any scenario `failed` or `inconclusive`                                                |
+| `2`   | invalid configuration, unusable arguments, no scenario selected, or an execution error |
+| `130` | user interrupt — Ctrl-C, or the dashboard's cancel command                             |
 
 `130` is produced **after** the finalizers have run: the browser context is closed, the trace is
 settled, the fixture cleanups have executed and `result.json` exists. An indeterminate result is
@@ -514,16 +518,16 @@ runs/<run-id>/
 
 Each file answers a different question. `manifest.json` is **the sole source of "which adapter
 ran"**, so a scripted run can never be re-presented as a model validation. `contract.json` is what
-the agent was held to and can never modify. `events.jsonl` is the ordered truth, written *before*
+the agent was held to and can never modify. `events.jsonl` is the ordered truth, written _before_
 the live fan-out, so the dashboard can never show something the journal does not have.
 `result.json` is the verdict, including every downgrade difmp imposed on the evaluator's answer.
-`artifacts.json` records capture *failures* too, so a missing screenshot is visible rather than
+`artifacts.json` records capture _failures_ too, so a missing screenshot is visible rather than
 silently absent.
 
 `manifest.json` is written twice and carries a `stage`: `initial` before the fixture and the freeze
 (so a run that dies in infrastructure setup is still attributable and still gets a JUnit file), then
 `final` with the contract hashes once the freeze succeeded. `contract.json` is therefore optional,
-and its absence *is* the information.
+and its absence _is_ the information.
 
 `result.json`, `junit.xml` and `report.html` are written whichever reporters you selected — that is
 the layout `difmp report` replays from. **Ctrl-C is not an exception:** the three files are written
@@ -600,8 +604,8 @@ module path.
 ```ts
 export default defineConfig({
   fixtures: { "authenticated-workspace": authenticatedWorkspace },
-  checks:   { "project-unique-in-storage": projectUniqueInStorage }
-})
+  checks: { "project-unique-in-storage": projectUniqueInStorage },
+});
 ```
 
 ```yaml
@@ -620,8 +624,8 @@ reference:
 creates a per-attempt workspace, user and session through the demo app's guarded seed API, then
 returns:
 
-* `public` — the workspace name, exposed as `{{ fixture.workspaceName }}` and visible to the model;
-* `storageState` — the session cookie, **private**, handed to the browser context only, never to a
+- `public` — the workspace name, exposed as `{{ fixture.workspaceName }}` and visible to the model;
+- `storageState` — the session cookie, **private**, handed to the browser context only, never to a
   prompt.
 
 It reads the seed token through `ctx.secrets("FIXTURE_APP_SEED_TOKEN")` rather than from an input.
@@ -629,12 +633,12 @@ That is the whole point of `ctx.secrets`: difmp learns the value and strips it f
 prompts, the events and the report. A secret your fixture obtains some other way cannot be redacted,
 because difmp was never told about it.
 
-Cleanups are registered at *acquisition* time and run after success, failure **and** cancellation,
+Cleanups are registered at _acquisition_ time and run after success, failure **and** cancellation,
 bounded by `budgets.fixtureCleanupTimeoutMs`.
 
 **[`checks/project-unique-in-storage.ts`](examples/support/checks/project-unique-in-storage.ts)**
 answers something the rendered list cannot: how many projects with this name were actually
-*persisted*. It calls a reserved probe endpoint that is deliberately absent from the agent's toolset.
+_persisted_. It calls a reserved probe endpoint that is deliberately absent from the agent's toolset.
 Its verdict is authoritative for the criterion it is bound to and is reported with `method: "code"`.
 
 It also guards its own binding: criterion ids are positional, so the check verifies that the text it
@@ -670,21 +674,21 @@ Because the bare `difmp` is an alias of `difmp run`, a file literally named `run
 
 ### `difmp run` options
 
-| option | meaning |
-| --- | --- |
-| `--config, -c <path>` | Path to `difmp.config.ts`. Default: the nearest one at or above the working directory. |
-| `--tag <name>` | Repeatable. A scenario is selected if it carries **any** of the given tags. |
-| `--input, -i <key=value>` | Repeatable scenario input. **Always a string.** |
-| `--inputs-file <file.json>` | Scenario inputs with JSON types preserved (string / number / boolean). |
-| `--reporter, -r <name>` | Repeatable: `console`, `json`, `junit`. Default: `console`. |
-| `--output, -o <dir>` | Where run directories are written. Default: `runs`. |
-| `--provider <scripted\|anthropic>` | Model provider. |
-| `--model <id>` | Provider-specific model id. Never defaulted in code. |
-| `--base-url <url>` | The application under test. |
-| `--max-actions <n>` | The **indicative** action threshold. Crossing it warns once and changes no verdict. |
-| `--ui` | Serve the live dashboard while the run progresses. |
-| `--ui-port <n>` / `--ui-host <host>` | Default `0` (ephemeral) and `127.0.0.1`. |
-| `--headed` | Run Chromium with a visible window. |
+| option                               | meaning                                                                                |
+| ------------------------------------ | -------------------------------------------------------------------------------------- |
+| `--config, -c <path>`                | Path to `difmp.config.ts`. Default: the nearest one at or above the working directory. |
+| `--tag <name>`                       | Repeatable. A scenario is selected if it carries **any** of the given tags.            |
+| `--input, -i <key=value>`            | Repeatable scenario input. **Always a string.**                                        |
+| `--inputs-file <file.json>`          | Scenario inputs with JSON types preserved (string / number / boolean).                 |
+| `--reporter, -r <name>`              | Repeatable: `console`, `json`, `junit`. Default: `console`.                            |
+| `--output, -o <dir>`                 | Where run directories are written. Default: `runs`.                                    |
+| `--provider <scripted\|anthropic>`   | Model provider.                                                                        |
+| `--model <id>`                       | Provider-specific model id. Never defaulted in code.                                   |
+| `--base-url <url>`                   | The application under test.                                                            |
+| `--max-actions <n>`                  | The **indicative** action threshold. Crossing it warns once and changes no verdict.    |
+| `--ui`                               | Serve the live dashboard while the run progresses.                                     |
+| `--ui-port <n>` / `--ui-host <host>` | Default `0` (ephemeral) and `127.0.0.1`.                                               |
+| `--headed`                           | Run Chromium with a visible window.                                                    |
 
 `--reporter` chooses what reaches your **terminal**, and accepts only those three names —
 `--reporter html` is rejected with `unknown reporter (available: console, json, junit)`. The config
@@ -757,7 +761,7 @@ one at or above the working directory. `.ts` wins within a directory. With no co
 the built-in defaults apply, which is enough for a text-only scenario.
 
 > **Renamed from `harness`.** The package, the binary, the workspace scopes (`@difmp/*`) and the
-> config filename were all called *harness* until this repository was renamed. The rename is total:
+> config filename were all called _harness_ until this repository was renamed. The rename is total:
 > **a project that still has `harness.config.ts` must rename the file** — that basename is no longer
 > discovered, and difmp will silently fall back to its defaults rather than read it. The demo's
 > environment variables are `DIFMP_*`. Persisted run directories are untouched: `manifest.json`
@@ -779,10 +783,10 @@ comments and this documentation. That is the only language rule.
 
 ### From a clean checkout
 
-| | |
-| --- | --- |
-| pnpm | `10.29.3`, pinned in the root `packageManager`. Only needed to work *on* difmp. |
-| Node.js | `>= 22.12.0`, declared in every `engines.node`. Verified on **v24.19.0**. |
+|         |                                                                                 |
+| ------- | ------------------------------------------------------------------------------- |
+| pnpm    | `10.29.3`, pinned in the root `packageManager`. Only needed to work _on_ difmp. |
+| Node.js | `>= 22.12.0`, declared in every `engines.node`. Verified on **v24.19.0**.       |
 
 ```sh
 pnpm install --frozen-lockfile
@@ -815,7 +819,7 @@ runs is the suite CI runs.
 
 > The **first** `pnpm install` in a clone prints two warnings:
 > `WARN Failed to create bin at …/examples/support/node_modules/.bin/fixture-app. ENOENT …
-> examples/fixture-app/dist/main.js`. They are expected and harmless: that bin points at a build
+examples/fixture-app/dist/main.js`. They are expected and harmless: that bin points at a build
 > output that does not exist yet, and they are gone the next time you install, once
 > `pnpm --filter @difmp/fixture-app build` has run. Nothing uses that bin — the demo calls
 > `node examples/fixture-app/dist/main.js` directly.
@@ -917,30 +921,30 @@ prose and scripted walkthrough both type `demo@example.test` / `demo-password` i
 
 Observed, one app instance per variant, real Chromium each time:
 
-| variant | run | exit | criteria |
-| --- | --- | --- | --- |
-| `healthy` | `passed` | 0 | c1 c2 c3 passed |
-| `create-500` | `failed` | 1 | c1 c2 c3 failed — the alert quotes `HTTP 500`, `network.jsonl` carries the `500` |
-| `false-success` | `failed` | 1 | **c1 passed**, c2 c3 failed — the split is exactly at the reload |
-| `alt-layout` | `passed` | 0 | c1 c2 c3 passed, 10 actions instead of 8 (toggle + re-observe) |
+| variant         | run      | exit | criteria                                                                         |
+| --------------- | -------- | ---- | -------------------------------------------------------------------------------- |
+| `healthy`       | `passed` | 0    | c1 c2 c3 passed                                                                  |
+| `create-500`    | `failed` | 1    | c1 c2 c3 failed — the alert quotes `HTTP 500`, `network.jsonl` carries the `500` |
+| `false-success` | `failed` | 1    | **c1 passed**, c2 c3 failed — the split is exactly at the reload                 |
+| `alt-layout`    | `passed` | 0    | c1 c2 c3 passed, 10 actions instead of 8 (toggle + re-observe)                   |
 
 `false-success` is the interesting one: the server answers `201 Created` and the page optimistically
 renders the project, but nothing is persisted. The creation criterion legitimately passes and the
-persistence criterion fails — which is the whole point of asking for evidence *after* a reload.
+persistence criterion fails — which is the whole point of asking for evidence _after_ a reload.
 
 ### Repository layout
 
-| path | |
-| --- | --- |
-| [`packages/core`](packages/core/README.md) | Schemas, spec loader, interpolation, config, registries, policy and budgets, events, `RunStore`, the runner. Depends on no React, no Playwright, no model SDK. |
-| [`packages/browser-playwright`](packages/browser-playwright/README.md) | The `BrowserDriver` implementation: accessibility observations, actions, evidence capture. |
-| [`packages/agent-runtime`](packages/agent-runtime/README.md) | The model seam: the Anthropic adapter, the scripted double, the agent prompt and the `Verifier`. |
-| [`packages/reporting`](packages/reporting/README.md) | JSON, JUnit and standalone HTML reporters. |
-| [`apps/cli`](apps/cli/README.md) | Commands, layer assembly, the SSE server, the console reporter, exit codes, packaging. |
-| [`apps/ui`](apps/ui/README.md) | The React live dashboard, built to static assets the CLI serves. |
-| [`examples/fixture-app`](examples/fixture-app/README.md) | The demo app and its four variants. |
-| [`examples/scenarios`](examples/scenarios/README.md) | The demo scenarios, including four deliberately invalid ones. |
-| [`examples/support`](examples/support/README.md) | The project side of the demo: config, fixture, TS check, scripted walkthroughs. |
+| path                                                                   |                                                                                                                                                                |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`packages/core`](packages/core/README.md)                             | Schemas, spec loader, interpolation, config, registries, policy and budgets, events, `RunStore`, the runner. Depends on no React, no Playwright, no model SDK. |
+| [`packages/browser-playwright`](packages/browser-playwright/README.md) | The `BrowserDriver` implementation: accessibility observations, actions, evidence capture.                                                                     |
+| [`packages/agent-runtime`](packages/agent-runtime/README.md)           | The model seam: the Anthropic adapter, the scripted double, the agent prompt and the `Verifier`.                                                               |
+| [`packages/reporting`](packages/reporting/README.md)                   | JSON, JUnit and standalone HTML reporters.                                                                                                                     |
+| [`apps/cli`](apps/cli/README.md)                                       | Commands, layer assembly, the SSE server, the console reporter, exit codes, packaging.                                                                         |
+| [`apps/ui`](apps/ui/README.md)                                         | The React live dashboard, built to static assets the CLI serves.                                                                                               |
+| [`examples/fixture-app`](examples/fixture-app/README.md)               | The demo app and its four variants.                                                                                                                            |
+| [`examples/scenarios`](examples/scenarios/README.md)                   | The demo scenarios, including four deliberately invalid ones.                                                                                                  |
+| [`examples/support`](examples/support/README.md)                       | The project side of the demo: config, fixture, TS check, scripted walkthroughs.                                                                                |
 
 ### Verifying the distributed package
 
@@ -960,29 +964,29 @@ the SSE endpoints live in [`apps/cli/README.md`](apps/cli/README.md).
 Read these before you adopt difmp, not afterwards. The full treatment, with the reasoning and the
 open items, is in [`docs/architecture.md`](docs/architecture.md) §4.
 
-* **Textual verification is probabilistic.** A `method: "model"` criterion is judged by a model
+- **Textual verification is probabilistic.** A `method: "model"` criterion is judged by a model
   reading the collected evidence. **It can produce false positives and false negatives, and it is not
   equivalent to a deterministic assertion.** Two runs over the same evidence may disagree. Vague
   wording in a scenario stays vague in the judgement — difmp deliberately never turns "quickly" into
   a numeric threshold. Where an expectation must be exact, bind it to a TS check and accept that this
-  is the escape hatch, not the default path. What difmp does guarantee is what it *refuses* to
+  is the escape hatch, not the default path. What difmp does guarantee is what it _refuses_ to
   conclude: insufficient evidence stays `inconclusive`, a verdict citing an artifact that does not
   exist is forced to `inconclusive`, `finish` alone never declares success, and an unevaluated
   criterion makes the run `inconclusive`.
-* **`allowedOrigins` is a tool-level check, not network isolation.** It is applied to the `navigate`
+- **`allowedOrigins` is a tool-level check, not network isolation.** It is applied to the `navigate`
   tool. The page under test can still load third-party subresources, `fetch` anywhere and be
   redirected off-origin by the server; none of that passes through a difmp tool. There is no proxy,
   no container, no network namespace. Run scenarios in a controlled environment against an
   application you control.
-* **Traces, videos and DOM snapshots can contain sensitive data.** There is no anonymisation. The
+- **Traces, videos and DOM snapshots can contain sensitive data.** There is no anonymisation. The
   redactor covers textual logs, prompts, events and the report; it does not reach inside `trace.zip`,
   `video.webm` or a screenshot, and it only knows the secrets it was told about through
   `ctx.secrets`. Use synthetic fixture data, and adopt a retention policy for run directories.
-* **A scripted run tests difmp, not a model.** `provider: "scripted"` exercises the real prompt
-  construction, tool dispatch, policy, budgets and real Playwright — so it proves *difmp* behaves as
+- **A scripted run tests difmp, not a model.** `provider: "scripted"` exercises the real prompt
+  construction, tool dispatch, policy, budgets and real Playwright — so it proves _difmp_ behaves as
   specified. It is not evidence that a model can navigate an application. **No Anthropic API call has
   been made in this repository.**
-* **Ctrl-C costs you the console block, not the files.** The run settles correctly and all three of
+- **Ctrl-C costs you the console block, not the files.** The run settles correctly and all three of
   `result.json`, `junit.xml` and `report.html` are written before the process exits `130`; the
   interrupt is re-raised the moment they are on disk, so the console reporter never prints the block
   for the scenario it interrupted. Read the status from `result.json`, or re-render the directory

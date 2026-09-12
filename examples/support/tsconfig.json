@@ -4,12 +4,7 @@
     "rootDir": ".",
     "outDir": "dist"
   },
-  "include": [
-    "difmp.config.ts",
-    "fixtures/**/*.ts",
-    "checks/**/*.ts",
-    "scripts/**/*.ts"
-  ],
+  "include": ["difmp.config.ts", "fixtures/**/*.ts", "checks/**/*.ts", "scripts/**/*.ts"],
   "references": [
     {
       "path": "../../packages/core"

@@ -1,29 +1,46 @@
-import { describe, expect, it } from "@effect/vitest"
-import { Effect } from "effect"
-import { defaultBudgets, freezeContract, parseSpec, resolveConfig, systemPrompt } from "../src/index.js"
-import { expectSuccess, platform, readFixture } from "./helpers.js"
+import { describe, expect, it } from "@effect/vitest";
+import { Effect } from "effect";
+import {
+  defaultBudgets,
+  freezeContract,
+  parseSpec,
+  resolveConfig,
+  systemPrompt,
+} from "../src/index.js";
+import { expectSuccess, platform, readFixture } from "./helpers.js";
 
-const frozen = Effect.gen(function*() {
-  const spec = yield* expectSuccess(parseSpec({
-    specPath: "project-create.e2e.md",
-    content: readFixture("project-create.e2e.md")
-  }))
-  const project = yield* expectSuccess(resolveConfig({
-    source: "difmp.config.ts",
-    config: {
-      baseUrl: "http://127.0.0.1:3000",
-      budgets: { maxModelCalls: 12, maxTokens: 90_000, verifierReserveTokens: 9_000, attemptTimeoutMs: 90_000 }
-    }
-  }))
-  return yield* expectSuccess(freezeContract({
-    spec,
-    specPath: "project-create.e2e.md",
-    config: project.config,
-    runId: "r_abcdefghijklm",
-    attemptId: "a1",
-    inputs: { projectName: "Demo project" }
-  }))
-})
+const frozen = Effect.gen(function* () {
+  const spec = yield* expectSuccess(
+    parseSpec({
+      specPath: "project-create.e2e.md",
+      content: readFixture("project-create.e2e.md"),
+    }),
+  );
+  const project = yield* expectSuccess(
+    resolveConfig({
+      source: "difmp.config.ts",
+      config: {
+        baseUrl: "http://127.0.0.1:3000",
+        budgets: {
+          maxModelCalls: 12,
+          maxTokens: 90_000,
+          verifierReserveTokens: 9_000,
+          attemptTimeoutMs: 90_000,
+        },
+      },
+    }),
+  );
+  return yield* expectSuccess(
+    freezeContract({
+      spec,
+      specPath: "project-create.e2e.md",
+      config: project.config,
+      runId: "r_abcdefghijklm",
+      attemptId: "a1",
+      inputs: { projectName: "Demo project" },
+    }),
+  );
+});
 
 /**
  * spec.md §6 step 5: the agent is handed the scenario, the criteria, the tools, the indicative
@@ -32,34 +49,36 @@ const frozen = Effect.gen(function*() {
  */
 describe("system prompt", () => {
   it.effect("states every configured blocking budget", () =>
-    Effect.gen(function*() {
-      const contract = yield* frozen
+    Effect.gen(function* () {
+      const contract = yield* frozen;
       const prompt = systemPrompt(contract, {
         baseUrl: "http://127.0.0.1:3000",
-        allowedOrigins: ["http://127.0.0.1:3000"]
-      })
-      expect(prompt).toContain("Blocking budgets")
-      expect(prompt).toContain("90 s")
-      expect(prompt).toContain("12")
-      expect(prompt).toContain("90000")
-      expect(prompt).toContain("9000")
-      expect(prompt).toContain(`${defaultBudgets.operationTimeoutMs / 1000} s`)
-    }).pipe(Effect.provide(platform)))
+        allowedOrigins: ["http://127.0.0.1:3000"],
+      });
+      expect(prompt).toContain("Blocking budgets");
+      expect(prompt).toContain("90 s");
+      expect(prompt).toContain("12");
+      expect(prompt).toContain("90000");
+      expect(prompt).toContain("9000");
+      expect(prompt).toContain(`${defaultBudgets.operationTimeoutMs / 1000} s`);
+    }).pipe(Effect.provide(platform)),
+  );
 
   it.effect("keeps the indicative threshold and the blocking budgets legibly apart", () =>
-    Effect.gen(function*() {
-      const contract = yield* frozen
+    Effect.gen(function* () {
+      const contract = yield* frozen;
       const prompt = systemPrompt(contract, {
         baseUrl: "http://127.0.0.1:3000",
-        allowedOrigins: ["http://127.0.0.1:3000"]
-      })
-      const threshold = prompt.indexOf("Indicative action threshold")
-      const budgets = prompt.indexOf("Blocking budgets")
-      expect(threshold).toBeGreaterThan(-1)
-      expect(budgets).toBeGreaterThan(threshold)
+        allowedOrigins: ["http://127.0.0.1:3000"],
+      });
+      const threshold = prompt.indexOf("Indicative action threshold");
+      const budgets = prompt.indexOf("Blocking budgets");
+      expect(threshold).toBeGreaterThan(-1);
+      expect(budgets).toBeGreaterThan(threshold);
       // The threshold says it stops nothing; the budgets say they stop the run.
-      expect(prompt).toContain("crossing it interrupts nothing")
-      expect(prompt).toContain("STOPS the run")
-      expect(prompt).toContain("`inconclusive`")
-    }).pipe(Effect.provide(platform)))
-})
+      expect(prompt).toContain("crossing it interrupts nothing");
+      expect(prompt).toContain("STOPS the run");
+      expect(prompt).toContain("`inconclusive`");
+    }).pipe(Effect.provide(platform)),
+  );
+});

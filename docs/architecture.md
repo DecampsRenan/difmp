@@ -12,7 +12,7 @@ comments and the documentation. That is the only language rule.
 adversarial reviews were written in. It is in `.gitignore` and is **not** part of the repository, so
 a reader who clones this project will not find those files. They are cited for provenance — to say
 which claim was checked by running something rather than by recollection — not as artifacts you can
-open. Every claim that a *shipped* test covers names that test instead.
+open. Every claim that a _shipped_ test covers names that test instead.
 
 ---
 
@@ -36,7 +36,7 @@ examples/
 
 **`@difmp/core` depends on no React, no Playwright and no model SDK.** That is the load-bearing
 constraint, and every other seam follows from it. The driver, the model provider, the verifier, the
-fixture manager and the reporter are `Context.Service` interfaces *declared in core* and implemented
+fixture manager and the reporter are `Context.Service` interfaces _declared in core_ and implemented
 elsewhere; core owns the decisions, the other packages own the I/O.
 
 The reason is not aesthetic. The rules that matter — a stale element reference is refused, a
@@ -47,7 +47,7 @@ All of them live in `packages/core/src/policy` and `packages/core/src/runner`, a
 test suite drives the whole runner against fakes.
 
 The split also keeps the trust boundaries visible. A model's output crosses one seam
-(`ModelProvider`), a page's content crosses another (`BrowserDriver`), and both are *data* on the
+(`ModelProvider`), a page's content crosses another (`BrowserDriver`), and both are _data_ on the
 other side: the system prompt states that text from the page can never grant a tool or change the
 scenario, and the contract text is never re-sent from the page.
 
@@ -57,15 +57,15 @@ script tag, so the dashboard has no knowledge of where it is mounted.
 
 ### The Effect service graph
 
-| service | declared in | implemented by | needs |
-| --- | --- | --- | --- |
-| `SpecLoader` | `core/spec/loader.ts` | core | `FileSystem` |
-| `RunStore` | `core/store/runStore.ts` | core | `FileSystem`, `Path` |
-| `BrowserDriver` | `core/services/browser.ts` | `browser-playwright` | — |
-| `ModelProvider` | `core/services/model.ts` | `agent-runtime` (`anthropic` \| `scripted`) | `LanguageModel` |
-| `Verifier` | `core/services/verifier.ts` | `agent-runtime` | `RunStore`, `ModelProvider` |
-| `FixtureManager` | `core/services/fixture.ts` | `apps/cli` | the config registries |
-| `Reporter` | `core/services/reporter.ts` | `reporting` | `FileSystem`, `Path` |
+| service          | declared in                 | implemented by                              | needs                       |
+| ---------------- | --------------------------- | ------------------------------------------- | --------------------------- |
+| `SpecLoader`     | `core/spec/loader.ts`       | core                                        | `FileSystem`                |
+| `RunStore`       | `core/store/runStore.ts`    | core                                        | `FileSystem`, `Path`        |
+| `BrowserDriver`  | `core/services/browser.ts`  | `browser-playwright`                        | —                           |
+| `ModelProvider`  | `core/services/model.ts`    | `agent-runtime` (`anthropic` \| `scripted`) | `LanguageModel`             |
+| `Verifier`       | `core/services/verifier.ts` | `agent-runtime`                             | `RunStore`, `ModelProvider` |
+| `FixtureManager` | `core/services/fixture.ts`  | `apps/cli`                                  | the config registries       |
+| `Reporter`       | `core/services/reporter.ts` | `reporting`                                 | `FileSystem`, `Path`        |
 
 `apps/cli/src/runOne.ts` merges `RunStore`, the provider, the driver and the fixture manager into one
 `base` layer, then builds `Verifier` **on top of it** — the verifier journals a code check's probe
@@ -96,7 +96,7 @@ against.
 ### `effect/unstable/cli`, `/http` and `/ai` rather than third-party libraries
 
 Argument parsing, the HTTP server for the dashboard and the model seam all use modules shipped
-*inside* `effect` itself. Three reasons:
+_inside_ `effect` itself. Three reasons:
 
 1. **Not a vendor SDK.** `effect/unstable/ai` is part of `effect`, so putting
    `LanguageModel.LanguageModel` under `ModelProvider` does not violate "core depends on no model
@@ -122,7 +122,7 @@ arrive in wire shape for the harness to validate. It is one interface with one i
 ### `disableToolCallResolution: true` — the harness executes tool calls, not the SDK
 
 `generateText` will happily run tool handlers itself. It must not. The harness has to increment the
-action counter *before* schema validation (so a refused stale reference still counts), validate
+action counter _before_ schema validation (so a refused stale reference still counts), validate
 parameters against the Effect Schema that produced the JSON Schema, apply the origin allow-list,
 journal `actionStarted`, execute, and journal `actionFinished` — for every call, including the ones
 it rejects. A tool executed inside the provider would bypass the counter, the policy, the journal
@@ -142,12 +142,12 @@ DOM.
 
 Two constraints come with it, and both are enforced:
 
-* **A ref is valid only against the most recent ai-mode snapshot in its frame.** So exactly one
-  `observationId` is live per attempt; a ref from an older one is rejected *without touching the
-  page*, with a typed tool error telling the agent to re-observe. The rejection is double-gated —
+- **A ref is valid only against the most recent ai-mode snapshot in its frame.** So exactly one
+  `observationId` is live per attempt; a ref from an older one is rejected _without touching the
+  page_, with a typed tool error telling the agent to re-observe. The rejection is double-gated —
   once in the runner, once in the driver, which also re-checks `locator.count()` and treats `>1` as
   ambiguity. The harness must never "helpfully" click something else.
-* **Any default-mode `ariaSnapshot` anywhere disarms every outstanding ref.** Playwright's own
+- **Any default-mode `ariaSnapshot` anywhere disarms every outstanding ref.** Playwright's own
   tracing takes one on every action when `aria: true`, which silently breaks every ref
   (`aria-ref=e7` then resolves to 0 elements — verified in `.recon/bp-t2.mjs`). Tracing is therefore
   configured with screenshots and snapshots but **never** `aria: true`, and `observe` is the only
@@ -198,43 +198,43 @@ re-packing over the same filename silently reinstalls the previous bytes.)
 
 ### Other decisions worth knowing
 
-* **`maxActions` is indicative; the blocking limits are `budgets`, and there are no hidden ones.**
+- **`maxActions` is indicative; the blocking limits are `budgets`, and there are no hidden ones.**
   Crossing `maxActions` emits one `actionGuidanceExceeded`, renders `"28 actions / 25 suggested"`
   and injects one nudge. Nothing is refused, no verdict is degraded, and a run that passes in 40
-  actions is `passed`. Every threshold that actually *stops* something is a `budgets` key — including
+  actions is `passed`. Every threshold that actually _stops_ something is a `budgets` key — including
   the two that used to be hardcoded, `fixtureSetupTimeoutMs` (which bounds everything before the
   attempt body; without it a fixture that never returned hung the run forever) and `maxIdleTurns`.
   Each is printed with the resolved configuration, frozen into `contract.budgets`, recorded in
   `manifest.json`, and emits `budgetExhausted` with a matching kind.
-* **`verifierReserveTokens` is a pool, not a subtraction.** The browsing loop is refused a new model
+- **`verifierReserveTokens` is a pool, not a subtraction.** The browsing loop is refused a new model
   call at `maxTokens - verifierReserveTokens`; the verifier may always spend up to
-  `verifierReserveTokens` *whatever* the browsing loop consumed. Rule 2 is what makes the reserve
+  `verifierReserveTokens` _whatever_ the browsing loop consumed. Rule 2 is what makes the reserve
   real — see §4 for the price.
-* **The finalize tail is uninterruptible.** `Effect.exit` does **not** catch interruption in Effect
+- **The finalize tail is uninterruptible.** `Effect.exit` does **not** catch interruption in Effect
   v4 (proven in `.recon/critic-exit-interrupt2.ts`), so the tail that aggregates the outcome, runs
   the fixture cleanup, writes `result.json` and journals `runFinished` is wrapped in
   `Effect.uninterruptibleMask`/`Effect.onExit`, not `Effect.exit`. Everything inside it is separately
   bounded (`fixtureCleanupTimeoutMs`, the driver's finalizer deadline) so it cannot wedge.
-* **Cancellation is raced, not polled.** The cancellation `Deferred` is raced against the in-flight
+- **Cancellation is raced, not polled.** The cancellation `Deferred` is raced against the in-flight
   model call, the tool dispatch loop and the final verification loop, and the `AbortSignal` that race
   interrupts is threaded into the provider, the verifier, the driver, a fixture's setup and a TS
   check. `.recon/critic-runner-coop.ts`, re-run while writing this document: cancel requested during
   a 3 s model call, **run settled after 213 ms**, `result.json` written, status `cancelled`.
-* **`manifest.json` is written twice**, `stage: "initial"` before the fixture and the freeze and
+- **`manifest.json` is written twice**, `stage: "initial"` before the fixture and the freeze and
   `stage: "final"` after it. That is what makes a run that dies in infrastructure setup reportable:
   CI gets a `junit.xml` with one run-level `<error>` instead of an empty directory. `contract.json`
   is optional to a reporter, and its absence is itself the information.
-* **A terminal verdict is not re-decided by the agent.** `passed` and `failed` are decisions; a later
+- **A terminal verdict is not re-decided by the agent.** `passed` and `failed` are decisions; a later
   `check` on such a criterion is evaluated and kept in `reChecks`, and replaces the recorded status
   only when it is strictly worse. A regression observed later is never hidden, and a `failed` can
   never become `passed` because the agent asked again.
-* **The absence branch is the harness's, not the model's.** An evaluator's `absence` field is a
+- **The absence branch is the harness's, not the model's.** An evaluator's `absence` field is a
   claim. The runner re-derives the branch with `classifyAbsence` from what the driver reported —
   whether the last navigation settled, and whether an observation has been taken since — and an
   evaluator that reports `uncertain-navigation` itself can never obtain the established branch. Only
   a `failed` resting on an uncertain absence is downgraded, and the downgrade is recorded on the
   result so the report can name the rule that refused to conclude.
-* **Redaction covers what the harness was told about, and nothing else.** The secret *values* a
+- **Redaction covers what the harness was told about, and nothing else.** The secret _values_ a
   fixture read through `ctx.secrets`, and every string under a sensitive key inside `providerOptions`.
   Those are stripped from the browser prompt, every page observation, the verifier's fixture values,
   `manifest.json`, the `configResolved` event and every journalled event (so also `result.json`, the
@@ -263,15 +263,15 @@ Read them in this order when something went wrong.
 
 1. **`result.json`** — the aggregate and, per criterion, `status`, `expected` (the frozen contract
    text, verbatim), `observed`, the `evidence` artifact ids, and `downgrades`: every status the
-   *harness* imposed on the evaluator's answer, with the reason. A report showing `inconclusive` can
+   _harness_ imposed on the evaluator's answer, with the reason. A report showing `inconclusive` can
    always name the rule that refused to conclude.
 2. **`report.html`** — the same thing for humans, with the screenshots and snapshots inline. Open it
    directly; it needs no server and makes no network request.
 3. **`events.jsonl`** — the ordered truth. `seq` increases by 1 per run, the journal is written
-   *before* the live fan-out, and `runFinished` is the last line of any finished run, cancelled and
+   _before_ the live fan-out, and `runFinished` is the last line of any finished run, cancelled and
    interrupted ones included. A truncated last line is tolerated on reload and reported as "not
    finalised" rather than silently dropped.
-4. **`artifacts.json`** — what was *supposed* to exist. A capture that failed is listed with
+4. **`artifacts.json`** — what was _supposed_ to exist. A capture that failed is listed with
    `state: "failed"` and a reason; it is never silently absent. Only artifacts whose state is
    `present` are citable as evidence.
 5. **`manifest.json`** — which adapter ran, which model, which dependency versions, and the hashes.
@@ -291,7 +291,7 @@ console.
 **The trace does not contain the harness's assertions.** Playwright records what the browser did;
 the verdicts, the budget decisions, the evidence-integrity rules and the downgrades live in
 `events.jsonl` and `result.json`. Diagnosing a failure usually means reading both: the trace for
-*what the page was*, the journal for *what the harness concluded and why*.
+_what the page was_, the journal for _what the harness concluded and why_.
 
 ---
 
@@ -313,7 +313,7 @@ a reader has to be able to see, per criterion, whether a verdict came from a mod
 must be exact, bind it to a TS check with `checks: { c3: <name> }` and accept that this is the
 escape hatch, not the default path.
 
-The harness's own guarantees are about what it *refuses* to conclude, not about the model being
+The harness's own guarantees are about what it _refuses_ to conclude, not about the model being
 right: a criterion with no sufficient evidence stays `inconclusive`; a verdict citing an artifact
 that does not exist or was not persisted is forced to `inconclusive`, never `passed`; `finish` alone
 never declares success; an unevaluated criterion makes the run `inconclusive`.
@@ -347,7 +347,7 @@ data and delete them on a schedule. `capture.video: "off"` is the default, and `
 
 `provider: "scripted"` is a deterministic, network-free double. It exercises the real prompt
 construction, the real tool dispatch, the real policy and budgets, and real Playwright against the
-demo app — so it proves the *harness* behaves as specified. **It is not evidence that a model can
+demo app — so it proves the _harness_ behaves as specified. **It is not evidence that a model can
 navigate an application.** `manifest.json` and the report name the adapter for exactly this reason,
 and scripted verdicts are labelled `evaluator.kind: "scripted-model"` so they can never be read as a
 model judgement.
@@ -368,7 +368,7 @@ an SSE subscriber parked in `take` is released; a code check's own probe evidenc
 `method: "code"` criterion can pass; a `failed` + `uncertain-navigation` verdict is downgraded to
 `inconclusive`; a `failed` is sticky against an agent re-`check`; and a run whose mandatory evidence
 could not be persisted comes back `error` with its criteria `inconclusive` instead of a clean
-`passed`. A later audit pass closed three more: tool *results* are now decoded against
+`passed`. A later audit pass closed three more: tool _results_ are now decoded against
 `toolResultSchemas` at the driver boundary before they reach the model; `artifacts.json` no longer
 loses an update under concurrent `recordArtifact` (the inventory write moved inside the store's
 semaphore; `packages/core/test/store.test.ts` covers it); and the `FixtureManager` now wraps its env
@@ -402,20 +402,20 @@ that navigates nowhere reports `false` after the full 500 ms probe window. Nothi
 What follows is what is **actually** still open. Each item was checked against the code as it stands,
 not copied from the review that raised it.
 
-* **`verifierReserveTokens` cannot prevent an overshoot.** Every budget is checked *before* a call
+- **`verifierReserveTokens` cannot prevent an overshoot.** Every budget is checked _before_ a call
   and a turn's cost is only known after it, so a single browsing turn larger than the remaining
   headroom crosses the ceiling. The reserve then still guarantees the final verification its own
   tokens (that is rule 2, and it is what stops the run coming back entirely `inconclusive`), but the
   price is explicit: total spend can exceed `maxTokens` by the overshoot plus the reserve. The name
   promises slightly more than the mechanism delivers.
-* **The harness takes checkpoint screenshots after `budgetExhausted`.** No agent tool call and no
+- **The harness takes checkpoint screenshots after `budgetExhausted`.** No agent tool call and no
   model call happens after a blocking budget is exhausted — verified in the journal. But the runner's
   own final evaluation still captures the evidence it needs, so `artifactAvailable` events
   legitimately follow `budgetExhausted`. This is a deliberate reading of §7 ("no late actions or
   requests" binds the agent and the model, not harness-initiated evidence capture) and it is now
   written into design-contracts §7 — but it is a decision, not a consequence, and a reader who
   expects the letter of the earlier wording will be surprised.
-* **The GitHub Actions workflow has run once on a runner, and it FAILED.** `main` was pushed to
+- **The GitHub Actions workflow has run once on a runner, and it FAILED.** `main` was pushed to
   `github.com/DecampsRenan/difmp` at commit `8da6e6f`, which triggered run
   [`34653238470`](https://github.com/DecampsRenan/difmp/actions/runs/34653238470)
   (2026-09-11T22:16Z, 4m17s). Everything up to and including the Vitest suites passed on the runner
@@ -433,17 +433,17 @@ not copied from the review that raised it.
   that the workflow is **red**, and what comes after the packaging step — the example scenarios
   through the distributed CLI, and `actions/cache` on a cache hit — still has **never** run on a
   runner, nor has the optional `secrets.ANTHROPIC_API_KEY` job.
-* **The dashboard's "server unreachable / Resume the stream" path is untested.** The SSE resume
+- **The dashboard's "server unreachable / Resume the stream" path is untested.** The SSE resume
   contract itself is proven at the levels that matter (`Last-Event-ID` header and `?lastEventId=`
   query both replay from the right cursor; a full page reload rebuilds the timeline with no loss and
   no duplicates). But `context.setOffline(true)` does not tear down a live `EventSource` in Chromium
   over loopback, so the UI's own reconnect button could not be driven from a test. That code path has
   never executed.
-* **The dashboard journal is fed from a *dropping* pub-sub.** That is the right call — a slow
+- **The dashboard journal is fed from a _dropping_ pub-sub.** That is the right call — a slow
   subscriber can never make the runner wait — but it means that if the recorder ever fell more than
   1024 events behind, those events would be missing from the dashboard's view. `events.jsonl` on disk
   is always complete, and the SSE sequence stays contiguous either way.
-* **Smaller, and known:** `atomicWrite` now removes its `<target>.tmp-<n>` whenever the write or the
+- **Smaller, and known:** `atomicWrite` now removes its `<target>.tmp-<n>` whenever the write or the
   rename fails, but a **hard process kill** between the two still leaves one behind and nothing
   sweeps the directory later. `press` with a `ref` but no `observationId` skips the runner-side
   reference check — the driver refuses it, so the behaviour is correct, but the runner's guard reads
@@ -465,5 +465,5 @@ Two more are deferred by the design rather than by §3: **one attempt per run** 
 automatic scenario retry in the MVP, deliberately, because retrying a mutating action that may have
 succeeded is worse than reporting it), and **no watch mode**.
 
-Textual expectation evaluation is explicitly *in* the MVP — see the first limitation in §4 for what
+Textual expectation evaluation is explicitly _in_ the MVP — see the first limitation in §4 for what
 that means in practice.

@@ -1,7 +1,7 @@
-import type { ConnectionState } from "../state/useRunStream.js"
-import type { CancelState } from "../state/useRunStream.js"
-import type { RunModel } from "../state/model.js"
-import { Badge, durationOf, timeOf } from "./ui.js"
+import type { ConnectionState } from "../state/useRunStream.js";
+import type { CancelState } from "../state/useRunStream.js";
+import type { RunModel } from "../state/model.js";
+import { Badge, durationOf, timeOf } from "./ui.js";
 
 const statusTone: Record<string, string> = {
   running: "info",
@@ -9,37 +9,37 @@ const statusTone: Record<string, string> = {
   failed: "bad",
   inconclusive: "warn",
   error: "bad",
-  cancelled: "warn"
-}
+  cancelled: "warn",
+};
 
 const connectionLabel: Record<ConnectionState, string> = {
   connecting: "connecting…",
   live: "live stream",
   reconnecting: "reconnecting…",
   closed: "stream closed (run finished)",
-  unavailable: "server unreachable"
-}
+  unavailable: "server unreachable",
+};
 
 const connectionTone: Record<ConnectionState, string> = {
   connecting: "info",
   live: "ok",
   reconnecting: "warn",
   closed: "neutral",
-  unavailable: "bad"
-}
+  unavailable: "bad",
+};
 
 export const Header = (props: {
-  readonly model: RunModel
-  readonly connection: ConnectionState
-  readonly attempts: number
-  readonly cancel: CancelState
-  readonly onCancel: () => void
-  readonly onReconnect: () => void
-  readonly elapsedMs: number
+  readonly model: RunModel;
+  readonly connection: ConnectionState;
+  readonly attempts: number;
+  readonly cancel: CancelState;
+  readonly onCancel: () => void;
+  readonly onReconnect: () => void;
+  readonly elapsedMs: number;
 }) => {
-  const { model } = props
-  const finished = model.status !== "running"
-  const cancelDisabled = finished || props.cancel.pending || props.cancel.requested
+  const { model } = props;
+  const finished = model.status !== "running";
+  const cancelDisabled = finished || props.cancel.pending || props.cancel.requested;
 
   return (
     <header className="app-head">
@@ -50,7 +50,9 @@ export const Header = (props: {
             <span data-testid="run-status">{model.status}</span>
           </Badge>
         </div>
-        <p className="head-path" data-testid="spec-path">{model.specPath ?? "—"}</p>
+        <p className="head-path" data-testid="spec-path">
+          {model.specPath ?? "—"}
+        </p>
       </div>
 
       <dl className="head-meta">
@@ -73,7 +75,10 @@ export const Header = (props: {
       </dl>
 
       <div className="head-actions">
-        <span className={`conn conn-${connectionTone[props.connection]}`} data-testid="connection-state">
+        <span
+          className={`conn conn-${connectionTone[props.connection]}`}
+          data-testid="connection-state"
+        >
           <i className="dot" aria-hidden="true" />
           {connectionLabel[props.connection]}
         </span>
@@ -89,13 +94,16 @@ export const Header = (props: {
         >
           {model.applied} event(s) · {model.duplicates} duplicate(s) dropped · seq {model.lastSeq}
         </span>
-        {props.connection === "unavailable"
-          ? (
-            <button type="button" className="btn btn-ghost" onClick={props.onReconnect} data-testid="reconnect-button">
-              Resume the stream
-            </button>
-          )
-          : null}
+        {props.connection === "unavailable" ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={props.onReconnect}
+            data-testid="reconnect-button"
+          >
+            Resume the stream
+          </button>
+        ) : null}
         <button
           type="button"
           className="btn btn-danger"
@@ -106,16 +114,18 @@ export const Header = (props: {
           {props.cancel.pending
             ? "Cancelling…"
             : props.cancel.requested
-            ? "Cancellation requested"
-            : finished
-            ? "Run finished"
-            : "Cancel the run"}
+              ? "Cancellation requested"
+              : finished
+                ? "Run finished"
+                : "Cancel the run"}
         </button>
       </div>
 
-      {props.cancel.error === undefined
-        ? null
-        : <p className="head-error" data-testid="cancel-error">Cancellation failed: {props.cancel.error}</p>}
+      {props.cancel.error === undefined ? null : (
+        <p className="head-error" data-testid="cancel-error">
+          Cancellation failed: {props.cancel.error}
+        </p>
+      )}
     </header>
-  )
-}
+  );
+};

@@ -8,20 +8,20 @@
  * this file must change with it — `packages/core/src/domain/events.ts` remains authoritative.
  */
 
-export type RunId = string
-export type AttemptId = string
-export type ActionId = string
-export type ObservationId = string
-export type ArtifactId = string
-export type CriterionId = string
+export type RunId = string;
+export type AttemptId = string;
+export type ActionId = string;
+export type ObservationId = string;
+export type ArtifactId = string;
+export type CriterionId = string;
 
-export type ModelRole = "browser" | "verifier"
-export type CriterionMethod = "model" | "code"
-export type CriterionStatus = "pending" | "passed" | "failed" | "inconclusive" | "error"
-export type RunStatus = "passed" | "failed" | "inconclusive" | "error" | "cancelled"
-export type ArtifactState = "present" | "missing" | "failed"
-export type AbsenceBranch = "uncertain-navigation" | "established-at-checkpoint"
-export type InputValue = string | number | boolean
+export type ModelRole = "browser" | "verifier";
+export type CriterionMethod = "model" | "code";
+export type CriterionStatus = "pending" | "passed" | "failed" | "inconclusive" | "error";
+export type RunStatus = "passed" | "failed" | "inconclusive" | "error" | "cancelled";
+export type ArtifactState = "present" | "missing" | "failed";
+export type AbsenceBranch = "uncertain-navigation" | "established-at-checkpoint";
+export type InputValue = string | number | boolean;
 
 export type ToolName =
   | "observe"
@@ -32,7 +32,7 @@ export type ToolName =
   | "scroll"
   | "screenshot"
   | "check"
-  | "finish"
+  | "finish";
 
 export type ToolErrorCode =
   | "invalid-params"
@@ -42,9 +42,9 @@ export type ToolErrorCode =
   | "origin-not-allowed"
   | "unknown-criterion"
   | "operation-failed"
-  | "run-finished"
+  | "run-finished";
 
-export type BudgetKind = "attemptTimeout" | "operationTimeout" | "maxModelCalls" | "maxTokens"
+export type BudgetKind = "attemptTimeout" | "operationTimeout" | "maxModelCalls" | "maxTokens";
 
 export type RunStage =
   | "validate"
@@ -58,210 +58,270 @@ export type RunStage =
   | "evidence"
   | "aggregate"
   | "fixture-cleanup"
-  | "report"
+  | "report";
 
 export type Evaluator =
   | { readonly kind: "model"; readonly provider: string; readonly model: string }
   | { readonly kind: "scripted-model" }
-  | { readonly kind: "code"; readonly checkName: string }
+  | { readonly kind: "code"; readonly checkName: string };
 
 export interface CriterionResult {
-  readonly criterionId: CriterionId
-  readonly criterionHash: string
-  readonly status: CriterionStatus
-  readonly method: CriterionMethod
-  readonly evaluator: Evaluator
-  readonly expected: string
-  readonly observed: string
-  readonly evidence: ReadonlyArray<ArtifactId>
-  readonly limitations?: string
-  readonly absence?: AbsenceBranch
-  readonly evaluatedAtSeq: number
+  readonly criterionId: CriterionId;
+  readonly criterionHash: string;
+  readonly status: CriterionStatus;
+  readonly method: CriterionMethod;
+  readonly evaluator: Evaluator;
+  readonly expected: string;
+  readonly observed: string;
+  readonly evidence: ReadonlyArray<ArtifactId>;
+  readonly limitations?: string;
+  readonly absence?: AbsenceBranch;
+  readonly evaluatedAtSeq: number;
 }
 
 export interface Budgets {
-  readonly attemptTimeoutMs: number
-  readonly operationTimeoutMs: number
-  readonly maxModelCalls: number
-  readonly maxTokens: number
-  readonly verifierReserveTokens: number
-  readonly fixtureCleanupTimeoutMs: number
+  readonly attemptTimeoutMs: number;
+  readonly operationTimeoutMs: number;
+  readonly maxModelCalls: number;
+  readonly maxTokens: number;
+  readonly verifierReserveTokens: number;
+  readonly fixtureCleanupTimeoutMs: number;
 }
 
 export interface CaptureConfig {
-  readonly trace: "on" | "off"
-  readonly video: "on" | "off"
-  readonly screenshots: "checkpoints" | "every-action" | "off"
-  readonly retainTraceOn: "all" | "failure"
+  readonly trace: "on" | "off";
+  readonly video: "on" | "off";
+  readonly screenshots: "checkpoints" | "every-action" | "off";
+  readonly retainTraceOn: "all" | "failure";
 }
 
 export interface ResolvedConfig {
-  readonly include: ReadonlyArray<string>
-  readonly exclude: ReadonlyArray<string>
-  readonly baseUrl: string
-  readonly allowedOrigins: ReadonlyArray<string>
-  readonly inputs: Readonly<Record<string, InputValue>>
-  readonly provider: "scripted" | "anthropic"
-  readonly model?: string
-  readonly providerOptions: Readonly<Record<string, unknown>>
-  readonly maxActions: number
-  readonly budgets: Budgets
-  readonly capture: CaptureConfig
-  readonly outputDir: string
-  readonly reporters: ReadonlyArray<"console" | "json" | "junit" | "html">
+  readonly include: ReadonlyArray<string>;
+  readonly exclude: ReadonlyArray<string>;
+  readonly baseUrl: string;
+  readonly allowedOrigins: ReadonlyArray<string>;
+  readonly inputs: Readonly<Record<string, InputValue>>;
+  readonly provider: "scripted" | "anthropic";
+  readonly model?: string;
+  readonly providerOptions: Readonly<Record<string, unknown>>;
+  readonly maxActions: number;
+  readonly budgets: Budgets;
+  readonly capture: CaptureConfig;
+  readonly outputDir: string;
+  readonly reporters: ReadonlyArray<"console" | "json" | "junit" | "html">;
 }
 
 /** Envelope shared by every journal line. `seq` increases by exactly 1 per run. */
 export interface EventEnvelope {
-  readonly schemaVersion: 1
-  readonly seq: number
-  readonly runId: RunId
-  readonly attemptId?: AttemptId
-  readonly ts: string
-  readonly durationMs?: number
+  readonly schemaVersion: 1;
+  readonly seq: number;
+  readonly runId: RunId;
+  readonly attemptId?: AttemptId;
+  readonly ts: string;
+  readonly durationMs?: number;
 }
 
-type Ev<T extends string, F> = EventEnvelope & { readonly type: T } & F
+type Ev<T extends string, F> = EventEnvelope & { readonly type: T } & F;
 
-export type RunStartedEvent = Ev<"runStarted", {
-  readonly specPath: string
-  readonly scenarioId: string
-  readonly harnessVersion: string
-}>
+export type RunStartedEvent = Ev<
+  "runStarted",
+  {
+    readonly specPath: string;
+    readonly scenarioId: string;
+    readonly harnessVersion: string;
+  }
+>;
 
-export type ConfigResolvedEvent = Ev<"configResolved", {
-  readonly config: ResolvedConfig
-  readonly configPath?: string
-}>
+export type ConfigResolvedEvent = Ev<
+  "configResolved",
+  {
+    readonly config: ResolvedConfig;
+    readonly configPath?: string;
+  }
+>;
 
-export type ContractFrozenEvent = Ev<"contractFrozen", {
-  readonly contractHash: string
-  readonly specHash: string
-  readonly criterionIds: ReadonlyArray<CriterionId>
-  /**
-   * NOT in core today. `contractFrozen` carries ids only, so the live view cannot show criterion
-   * text or `model` vs `code` from the stream alone — it fetches `contractUrl` for that. Accepted
-   * here so that if core ever widens the event, the UI picks the detail up without a change.
-   */
-  readonly criteria?: ReadonlyArray<{
-    readonly id: CriterionId
-    readonly text: string
-    readonly method: CriterionMethod
-    readonly checkName?: string
-  }>
-}>
+export type ContractFrozenEvent = Ev<
+  "contractFrozen",
+  {
+    readonly contractHash: string;
+    readonly specHash: string;
+    readonly criterionIds: ReadonlyArray<CriterionId>;
+    /**
+     * NOT in core today. `contractFrozen` carries ids only, so the live view cannot show criterion
+     * text or `model` vs `code` from the stream alone — it fetches `contractUrl` for that. Accepted
+     * here so that if core ever widens the event, the UI picks the detail up without a change.
+     */
+    readonly criteria?: ReadonlyArray<{
+      readonly id: CriterionId;
+      readonly text: string;
+      readonly method: CriterionMethod;
+      readonly checkName?: string;
+    }>;
+  }
+>;
 
-export type FixtureReadyEvent = Ev<"fixtureReady", {
-  readonly fixtureName: string
-  readonly publicValues: Readonly<Record<string, InputValue>>
-}>
+export type FixtureReadyEvent = Ev<
+  "fixtureReady",
+  {
+    readonly fixtureName: string;
+    readonly publicValues: Readonly<Record<string, InputValue>>;
+  }
+>;
 
-export type FixtureCleanedEvent = Ev<"fixtureCleaned", {
-  readonly fixtureName: string
-  readonly cleanupsRun: number
-  readonly timedOut: boolean
-}>
+export type FixtureCleanedEvent = Ev<
+  "fixtureCleaned",
+  {
+    readonly fixtureName: string;
+    readonly cleanupsRun: number;
+    readonly timedOut: boolean;
+  }
+>;
 
-export type BrowserContextOpenedEvent = Ev<"browserContextOpened", {
-  readonly baseUrl: string
-  readonly usedStorageState: boolean
-  readonly capture: CaptureConfig
-}>
+export type BrowserContextOpenedEvent = Ev<
+  "browserContextOpened",
+  {
+    readonly baseUrl: string;
+    readonly usedStorageState: boolean;
+    readonly capture: CaptureConfig;
+  }
+>;
 
-export type ObservationTakenEvent = Ev<"observationTaken", {
-  readonly observationId: ObservationId
-  readonly url: string
-  readonly title: string
-  readonly elementCount: number
-}>
+export type ObservationTakenEvent = Ev<
+  "observationTaken",
+  {
+    readonly observationId: ObservationId;
+    readonly url: string;
+    readonly title: string;
+    readonly elementCount: number;
+  }
+>;
 
-export type ModelCallStartedEvent = Ev<"modelCallStarted", {
-  readonly role: ModelRole
-  readonly callId: string
-  readonly provider: string
-  readonly model: string
-}>
+export type ModelCallStartedEvent = Ev<
+  "modelCallStarted",
+  {
+    readonly role: ModelRole;
+    readonly callId: string;
+    readonly provider: string;
+    readonly model: string;
+  }
+>;
 
-export type ModelCallFinishedEvent = Ev<"modelCallFinished", {
-  readonly role: ModelRole
-  readonly callId: string
-  readonly inputTokens?: number
-  readonly outputTokens?: number
-  readonly toolCalls: number
-  readonly finishReason?: string
-}>
+export type ModelCallFinishedEvent = Ev<
+  "modelCallFinished",
+  {
+    readonly role: ModelRole;
+    readonly callId: string;
+    readonly inputTokens?: number;
+    readonly outputTokens?: number;
+    readonly toolCalls: number;
+    readonly finishReason?: string;
+  }
+>;
 
-export type ActionStartedEvent = Ev<"actionStarted", {
-  readonly actionId: ActionId
-  readonly tool: ToolName
-  readonly params: Readonly<Record<string, unknown>>
-  readonly intent?: string
-}>
+export type ActionStartedEvent = Ev<
+  "actionStarted",
+  {
+    readonly actionId: ActionId;
+    readonly tool: ToolName;
+    readonly params: Readonly<Record<string, unknown>>;
+    readonly intent?: string;
+  }
+>;
 
-export type ActionFinishedEvent = Ev<"actionFinished", {
-  readonly actionId: ActionId
-  readonly tool: ToolName
-  readonly outcome: "ok" | "error"
-  readonly code?: ToolErrorCode
-  readonly message?: string
-}>
+export type ActionFinishedEvent = Ev<
+  "actionFinished",
+  {
+    readonly actionId: ActionId;
+    readonly tool: ToolName;
+    readonly outcome: "ok" | "error";
+    readonly code?: ToolErrorCode;
+    readonly message?: string;
+  }
+>;
 
-export type EvidenceRequestedEvent = Ev<"evidenceRequested", {
-  readonly criterionId: CriterionId
-  readonly requestedBy: "agent" | "verifier" | "runner"
-  readonly note?: string
-}>
+export type EvidenceRequestedEvent = Ev<
+  "evidenceRequested",
+  {
+    readonly criterionId: CriterionId;
+    readonly requestedBy: "agent" | "verifier" | "runner";
+    readonly note?: string;
+  }
+>;
 
-export type VerificationFinishedEvent = Ev<"verificationFinished", {
-  readonly criterionId: CriterionId
-  readonly result: CriterionResult
-}>
+export type VerificationFinishedEvent = Ev<
+  "verificationFinished",
+  {
+    readonly criterionId: CriterionId;
+    readonly result: CriterionResult;
+  }
+>;
 
-export type ArtifactAvailableEvent = Ev<"artifactAvailable", {
-  readonly artifactId: ArtifactId
-  readonly kind: string
-  readonly state: ArtifactState
-  readonly path?: string
-  readonly reason?: string
-  readonly sourceSeq?: number
-}>
+export type ArtifactAvailableEvent = Ev<
+  "artifactAvailable",
+  {
+    readonly artifactId: ArtifactId;
+    readonly kind: string;
+    readonly state: ArtifactState;
+    readonly path?: string;
+    readonly reason?: string;
+    readonly sourceSeq?: number;
+  }
+>;
 
 /** Emitted EXACTLY ONCE, on the first crossing. Nothing is refused and no status is degraded. */
-export type ActionGuidanceExceededEvent = Ev<"actionGuidanceExceeded", {
-  readonly used: number
-  readonly guidance: number
-  readonly rendering: string
-}>
+export type ActionGuidanceExceededEvent = Ev<
+  "actionGuidanceExceeded",
+  {
+    readonly used: number;
+    readonly guidance: number;
+    readonly rendering: string;
+  }
+>;
 
-export type BudgetExhaustedEvent = Ev<"budgetExhausted", {
-  readonly budget: BudgetKind
-  readonly limit: number
-  readonly used: number
-  readonly detail?: string
-}>
+export type BudgetExhaustedEvent = Ev<
+  "budgetExhausted",
+  {
+    readonly budget: BudgetKind;
+    readonly limit: number;
+    readonly used: number;
+    readonly detail?: string;
+  }
+>;
 
-export type ProgressStalledEvent = Ev<"progressStalled", {
-  readonly reason: string
-  readonly repeatedActions: number
-}>
+export type ProgressStalledEvent = Ev<
+  "progressStalled",
+  {
+    readonly reason: string;
+    readonly repeatedActions: number;
+  }
+>;
 
-export type ErrorEvent = Ev<"error", {
-  readonly stage: RunStage
-  readonly reason: string
-  readonly fatal: boolean
-  readonly cause?: string
-}>
+export type ErrorEvent = Ev<
+  "error",
+  {
+    readonly stage: RunStage;
+    readonly reason: string;
+    readonly fatal: boolean;
+    readonly cause?: string;
+  }
+>;
 
-export type CancellationRequestedEvent = Ev<"cancellationRequested", {
-  readonly reason: string
-  readonly source: "user" | "signal" | "api"
-}>
+export type CancellationRequestedEvent = Ev<
+  "cancellationRequested",
+  {
+    readonly reason: string;
+    readonly source: "user" | "signal" | "api";
+  }
+>;
 
-export type RunFinishedEvent = Ev<"runFinished", {
-  readonly status: RunStatus
-  readonly criteriaCount: number
-  readonly failedCriteria: ReadonlyArray<CriterionId>
-}>
+export type RunFinishedEvent = Ev<
+  "runFinished",
+  {
+    readonly status: RunStatus;
+    readonly criteriaCount: number;
+    readonly failedCriteria: ReadonlyArray<CriterionId>;
+  }
+>;
 
 export type HarnessEvent =
   | RunStartedEvent
@@ -283,9 +343,9 @@ export type HarnessEvent =
   | ProgressStalledEvent
   | ErrorEvent
   | CancellationRequestedEvent
-  | RunFinishedEvent
+  | RunFinishedEvent;
 
-export type HarnessEventType = HarnessEvent["type"]
+export type HarnessEventType = HarnessEvent["type"];
 
 export const harnessEventTypes: ReadonlyArray<HarnessEventType> = [
   "runStarted",
@@ -307,10 +367,10 @@ export const harnessEventTypes: ReadonlyArray<HarnessEventType> = [
   "progressStalled",
   "error",
   "cancellationRequested",
-  "runFinished"
-]
+  "runFinished",
+];
 
-const eventTypeSet: ReadonlySet<string> = new Set<string>(harnessEventTypes)
+const eventTypeSet: ReadonlySet<string> = new Set<string>(harnessEventTypes);
 
 /**
  * Structural gate on data that arrives over the wire. It checks the envelope and that `type` is one
@@ -318,8 +378,8 @@ const eventTypeSet: ReadonlySet<string> = new Set<string>(harnessEventTypes)
  * counted and dropped rather than rendered.
  */
 export const isHarnessEvent = (value: unknown): value is HarnessEvent => {
-  if (typeof value !== "object" || value === null) return false
-  const record = value as Record<string, unknown>
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
   return (
     record["schemaVersion"] === 1 &&
     typeof record["seq"] === "number" &&
@@ -328,5 +388,5 @@ export const isHarnessEvent = (value: unknown): value is HarnessEvent => {
     typeof record["ts"] === "string" &&
     typeof record["type"] === "string" &&
     eventTypeSet.has(record["type"])
-  )
-}
+  );
+};

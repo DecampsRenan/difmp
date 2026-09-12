@@ -1,0 +1,88 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "react", "jsx-a11y", "vitest"],
+
+  // `correctness` is code that is outright wrong; the other two are close enough to it to be
+  // worth blocking a push. `pedantic`, `style` and `restriction` stay off — they are taste, and
+  // taste is oxfmt's job here, not the linter's.
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+
+  "env": {
+    "builtin": true,
+    "es2024": true,
+    "node": true
+  },
+
+  "ignorePatterns": [
+    // Consumer projects and golden run data, not our source.
+    "**/test/fixtures/**",
+    "docs/example-run/**",
+    "apps/cli/assets/**"
+  ],
+
+  "rules": {
+    // React 19 with the automatic JSX runtime: `React` is injected by the compiler.
+    "react/react-in-jsx-scope": "off",
+
+    // Effect models tagged unions with a `_tag` discriminant, and `Data.TaggedError` generates
+    // it. The dangling underscore is the framework's convention, not ours to fight.
+    "no-underscore-dangle": "off",
+
+    // `fill` is difmp's own vocabulary for "type into a form field" (`session.fill({ ref, value })`,
+    // and the `fill` action in every *.e2e.md scenario). The rule matches on the method NAME with
+    // no type information, so it reads every one of those as `Array#fill` with a reference value.
+    "unicorn/no-array-fill-with-reference-type": "off",
+
+    // The rule's premise — "if in-place mutation is acceptable" — does not hold at any of the
+    // sites it flags here. They are either a defensive copy whose entire purpose is to NOT share
+    // the source object (`toStorageState` in browser-playwright/driver.ts, handing Playwright a
+    // mutable copy of a readonly fixture), or `...(x === undefined ? {} : { x })`, which is how
+    // this codebase omits an absent optional property — mandatory under the
+    // `exactOptionalPropertyTypes` that tsconfig.base.json turns on, because `{ x: undefined }`
+    // does not typecheck against `x?: T`. Mutating instead would be a bug in the first case and
+    // impossible in the second.
+    "oxc/no-map-spread": "off",
+
+    // Sequential awaits in this codebase are deliberate: browser actions, attempt loops and
+    // artifact writes are ordered on purpose, and `Promise.all` would be a behaviour change.
+    "no-await-in-loop": "off",
+
+    // A stylesheet import has no binding to assign; that is what a side-effect import is for.
+    // The rule ships an `allow` list for exactly this.
+    "import/no-unassigned-import": ["error", { "allow": ["**/*.css"] }]
+
+    // Everything else this config does not name inherits its category severity above, i.e. error.
+    // The tree is at zero errors AND zero warnings, so there is no warning tier to get used to
+    // ignoring: anything the linter prints is something that has to be dealt with. The three
+    // genuine one-off exceptions are `oxlint-disable-next-line` comments at their own sites, each
+    // with the reason written next to it, where a reviewer will actually see it —
+    // see browser-playwright/src/session.ts and apps/ui/src/state/useRunStream.ts.
+  },
+
+  "overrides": [
+    {
+      // `@effect/vitest` drives tests through `it.effect(...)` with generator bodies. The Vitest
+      // plugin does not recognise those as test blocks, so every `expect` inside one is reported
+      // as standalone or conditional. 290+ false positives, zero true ones.
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/test/**"],
+      "rules": {
+        "vitest/no-standalone-expect": "off",
+        "vitest/no-conditional-expect": "off",
+
+        // Vitest's `expect(value, message)` second argument is a valid assertion message; the
+        // rule is written against Jest's single-argument signature.
+        "vitest/valid-expect": "off"
+      }
+    },
+    {
+      // Browser code.
+      "files": ["apps/ui/**", "examples/fixture-app/**"],
+      "env": { "browser": true }
+    }
+  ]
+}

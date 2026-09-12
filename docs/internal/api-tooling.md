@@ -32,14 +32,20 @@ Artifacts kept: `/home/ubuntu/apps/difmp/.recon/tooling/*`, `.recon/toy/` (2-pkg
 
 ```ts
 // @effect/vitest re-exports ALL of vitest (`export * from "vitest"`), so one import is enough.
-import { describe, expect, it, layer, live, effect, prop, flakyTest } from "@effect/vitest"
+import { describe, expect, it, layer, live, effect, prop, flakyTest } from "@effect/vitest";
 // Effect-aware assertion helpers live in a SUBPATH, not the root:
-import { assertTrue, deepStrictEqual, strictEqual, assertSome, assertExitSuccess } from "@effect/vitest/utils"
+import {
+  assertTrue,
+  deepStrictEqual,
+  strictEqual,
+  assertSome,
+  assertExitSuccess,
+} from "@effect/vitest/utils";
 ```
 
-* Exports map is `{".": "./dist/index.js", "./*": "./dist/*.js"}` — no `types` condition, types come
+- Exports map is `{".": "./dist/index.js", "./*": "./dist/*.js"}` — no `types` condition, types come
   from the sibling `.d.ts`. `@effect/vitest/utils` is the only other public subpath.
-* Peer deps: `vitest ">=5.0.0 <6.0.0"`, `effect "^4.0.0-rc.113"`.
+- Peer deps: `vitest ">=5.0.0 <6.0.0"`, `effect "^4.0.0-rc.113"`.
 
 ### 1.2 **There is no `it.scoped`.** `it.effect` already provides `Scope`.
 
@@ -56,46 +62,56 @@ Test fn signature: `(name: string, self: (ctx: V.TestContext) => Effect<A, E, R>
 ### 1.3 Providing layers — VERIFIED, all 7 tests pass (`.recon/tooling/sample.test.ts`)
 
 ```ts
-import { describe, expect, it, layer } from "@effect/vitest"
-import { assertTrue, strictEqual } from "@effect/vitest/utils"
-import { Context, Effect, Layer } from "effect"
+import { describe, expect, it, layer } from "@effect/vitest";
+import { assertTrue, strictEqual } from "@effect/vitest/utils";
+import { Context, Effect, Layer } from "effect";
 
 // NOTE: effect@4 root export is `Context`, NOT `ServiceMap`.
-class Greeter extends Context.Service<Greeter, { readonly hello: (n: string) => string }>()("Greeter") {}
-const GreeterLive = Layer.succeed(Greeter, { hello: (n: string) => `hello ${n}` })
+class Greeter extends Context.Service<Greeter, { readonly hello: (n: string) => string }>()(
+  "Greeter",
+) {}
+const GreeterLive = Layer.succeed(Greeter, { hello: (n: string) => `hello ${n}` });
 
 describe("tooling recon", () => {
   it.effect("it.effect has Scope in R", () =>
-    Effect.gen(function*() {
-      const n = yield* Effect.succeed(41)
-      expect(n + 1).toBe(42)
-      strictEqual(n + 1, 42)
-      return n
-    }))
+    Effect.gen(function* () {
+      const n = yield* Effect.succeed(41);
+      expect(n + 1).toBe(42);
+      strictEqual(n + 1, 42);
+      return n;
+    }),
+  );
 
   it.effect("scope is available without it.scoped", () =>
-    Effect.gen(function*() {
-      let released = false
-      yield* Effect.acquireRelease(Effect.succeed("res"), () => Effect.sync(() => { released = true }))
-      assertTrue(!released)
-    }))
+    Effect.gen(function* () {
+      let released = false;
+      yield* Effect.acquireRelease(Effect.succeed("res"), () =>
+        Effect.sync(() => {
+          released = true;
+        }),
+      );
+      assertTrue(!released);
+    }),
+  );
 
   it.live("it.live uses the real clock", () =>
-    Effect.gen(function*() {
-      const t0 = Date.now()
-      yield* Effect.sleep("10 millis")
-      assertTrue(Date.now() - t0 >= 5)
-    }))
-})
+    Effect.gen(function* () {
+      const t0 = Date.now();
+      yield* Effect.sleep("10 millis");
+      assertTrue(Date.now() - t0 >= 5);
+    }),
+  );
+});
 
 // Shared layer for a group. Two call shapes: layer(L)(fn) or layer(L)("name", fn).
 layer(GreeterLive)("with layer", (it) => {
   it.effect("service is provided", () =>
-    Effect.gen(function*() {
-      const g = yield* Greeter
-      strictEqual(g.hello("world"), "hello world")
-    }))
-})
+    Effect.gen(function* () {
+      const g = yield* Greeter;
+      strictEqual(g.hello("world"), "hello world");
+    }),
+  );
+});
 ```
 
 Options: `layer(L, { concurrent?, memoMap?, timeout?, excludeTestServices? })`. Inside a `layer(...)`
@@ -106,10 +122,17 @@ Unsatisfied `R` is a compile error (verified with `@ts-expect-error` in `.recon/
 
 ```ts
 // @ts-expect-error: R = Db not satisfied; it.effect only supplies Scope
-it.effect("needs Db", () => Effect.gen(function*() { yield* Db }))
+it.effect("needs Db", () =>
+  Effect.gen(function* () {
+    yield* Db;
+  }),
+);
 
-it.effect("ok", () => Effect.gen(function*() { return (yield* Db).q() })
-  .pipe(Effect.provideService(Db, { q: () => "x" })))
+it.effect("ok", () =>
+  Effect.gen(function* () {
+    return (yield* Db).q();
+  }).pipe(Effect.provideService(Db, { q: () => "x" })),
+);
 ```
 
 ### 1.4 **`workspace` is gone in vitest 5 — the field is `test.projects`**
@@ -117,18 +140,18 @@ it.effect("ok", () => Effect.gen(function*() { return (yield* Db).q() })
 `vitest.config.ts` (VERIFIED: typechecks + `vitest run` passes; copy at `.recon/tooling/vitest.config.example.ts`):
 
 ```ts
-import { defineConfig } from "vitest/config"
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     projects: [
       {
-        extends: true,                       // inherit root vite+test config
+        extends: true, // inherit root vite+test config
         test: {
           name: "unit",
           include: ["packages/*/test/**/*.test.ts", "apps/*/test/**/*.test.ts"],
-          environment: "node"
-        }
+          environment: "node",
+        },
       },
       {
         extends: true,
@@ -139,23 +162,23 @@ export default defineConfig({
           testTimeout: 120_000,
           hookTimeout: 120_000,
           fileParallelism: false,
-          pool: "forks"
-        }
-      }
+          pool: "forks",
+        },
+      },
     ],
     passWithNoTests: true,
     reporters: process.env["CI"] ? ["default", "junit"] : ["default"],
-    outputFile: { junit: "./reports/junit.xml" }
-  }
-})
+    outputFile: { junit: "./reports/junit.xml" },
+  },
+});
 ```
 
-* Type is `projects?: TestProjectConfiguration[]` where
+- Type is `projects?: TestProjectConfiguration[]` where
   `TestProjectConfiguration = string | (UserWorkspaceConfig & { extends?: string | boolean }) | Promise<UserWorkspaceConfig> | UserProjectConfigFn`.
   A `string` entry is a glob of project dirs/config files. **Inline configurations cannot declare
   `projects` themselves** (only a referenced config file can, and then it becomes a container).
-* Run one: `vitest run --project unit`. `--project` accepts the `test.name`.
-* `vitest list` prints nothing useful for an empty project; don't rely on it.
+- Run one: `vitest run --project unit`. `--project` accepts the `test.name`.
+- `vitest list` prints nothing useful for an empty project; don't rely on it.
 
 ### 1.5 GOTCHA THAT WILL BITE YOU: duplicate `vitest` instances under pnpm
 
@@ -201,14 +224,23 @@ apps/<a>/tsconfig.json       same
 ```jsonc
 {
   "compilerOptions": {
-    "target": "ES2023", "lib": ["ES2023"],
-    "module": "nodenext", "moduleResolution": "nodenext",
-    "strict": true, "exactOptionalPropertyTypes": true, "noUncheckedIndexedAccess": true,
-    "verbatimModuleSyntax": true, "isolatedModules": true, "skipLibCheck": true,
-    "declaration": true, "declarationMap": true, "sourceMap": true,
-    "composite": true, "incremental": true,
-    "customConditions": ["@difmp/source"]     // see 2.3
-  }
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "incremental": true,
+    "customConditions": ["@difmp/source"], // see 2.3
+  },
 }
 ```
 
@@ -217,9 +249,13 @@ Per-package:
 ```jsonc
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "./src", "outDir": "./dist", "tsBuildInfoFile": "./dist/.tsbuildinfo" },
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+  },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../../packages/core" }]
+  "references": [{ "path": "../../packages/core" }],
 }
 ```
 
@@ -235,15 +271,15 @@ composite + emit declarations.
   "type": "module",
   "exports": {
     ".": {
-      "@difmp/source": "./src/index.ts",   // dev-only condition, MUST be first
+      "@difmp/source": "./src/index.ts", // dev-only condition, MUST be first
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "default": "./dist/index.js",
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
   },
-  "types": "./dist/index.d.ts",              // legacy fallback, keep it
+  "types": "./dist/index.d.ts", // legacy fallback, keep it
   "files": ["dist"],
-  "engines": { "node": ">=22.12.0" }
+  "engines": { "node": ">=22.12.0" },
 }
 ```
 
@@ -271,12 +307,13 @@ node --conditions=@difmp/source apps/cli/src/bin.ts
 ```
 
 Two hard constraints on that trick:
-* **Node refuses to strip types under `node_modules`**:
+
+- **Node refuses to strip types under `node_modules`**:
   `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING: Stripping types is currently unsupported for files under node_modules`.
   It works in a pnpm workspace only because `apps/cli/node_modules/@difmp/core` is a **symlink**
   whose realpath (`packages/core/src/index.ts`) is outside `node_modules`. It breaks under
   `--preserve-symlinks` or `node-linker=hoisted` copies.
-* For vitest/vite dev, mirror it with `resolve: { conditions: ["@difmp/source"] }`.
+- For vitest/vite dev, mirror it with `resolve: { conditions: ["@difmp/source"] }`.
   UNVERIFIED: not exercised here.
 
 Consumers never set the condition, so published installs fall through to `types`/`default` -> `dist`.
@@ -284,13 +321,13 @@ Optionally strip it at publish time with `publishConfig.exports`.
 
 ### 2.4 `tsc -b` gotchas hit here
 
-* `import { run } from "./index.ts"` -> **`error TS5097: An import path can only end with a '.ts'
-  extension when 'allowImportingTsExtensions' is enabled.`** With `module: nodenext` + emit, write
+- `import { run } from "./index.ts"` -> **`error TS5097: An import path can only end with a '.ts'
+extension when 'allowImportingTsExtensions' is enabled.`** With `module: nodenext` + emit, write
   **`./index.js`** in source. (Alternative: `allowImportingTsExtensions` + `rewriteRelativeImportExtensions`,
   TS >= 5.7 — UNVERIFIED here.)
-* `tsc` **preserves a leading `#!/usr/bin/env node`** in emitted JS (verified) but does **not** set
+- `tsc` **preserves a leading `#!/usr/bin/env node`** in emitted JS (verified) but does **not** set
   the exec bit. npm/pnpm/yarn set it at install time from the `bin` field, so that is fine.
-* The root `package.json` currently has `"typecheck": "tsc -b tsconfig.build.json"` but
+- The root `package.json` currently has `"typecheck": "tsc -b tsconfig.build.json"` but
   **`tsconfig.build.json` does not exist** in this repo. Create it (or point at `tsconfig.json`).
 
 ---
@@ -304,71 +341,75 @@ Optionally strip it at publish time with `publishConfig.exports`.
 ### 3.1 The code (compiled ESM, `.recon/tooling/loader.ts`, typechecks clean)
 
 ```ts
-import { pathToFileURL } from "node:url"
+import { pathToFileURL } from "node:url";
 
-const isTs = (p: string): boolean => /\.(m|c)?ts$/.test(p)
+const isTs = (p: string): boolean => /\.(m|c)?ts$/.test(p);
 
 /** tsx transpiles ESM->CJS when the consumer package is CJS, producing
  *  `{ default: { default: cfg, __esModule: true } }`. Unwrap exactly that shape. */
 const pickDefault = (mod: Record<string, unknown>): unknown => {
-  const d = mod["default"]
-  if (d !== null && typeof d === "object" && (d as { __esModule?: unknown })["__esModule"] === true) {
-    return (d as { default?: unknown })["default"]
+  const d = mod["default"];
+  if (
+    d !== null &&
+    typeof d === "object" &&
+    (d as { __esModule?: unknown })["__esModule"] === true
+  ) {
+    return (d as { default?: unknown })["default"];
   }
-  return d
-}
+  return d;
+};
 
 export const importConfigModule = async (absPath: string): Promise<unknown> => {
-  const url = pathToFileURL(absPath).href
-  let mod: Record<string, unknown>
+  const url = pathToFileURL(absPath).href;
+  let mod: Record<string, unknown>;
   try {
-    mod = (await import(url)) as Record<string, unknown>   // Node >=22.18 strips types natively
+    mod = (await import(url)) as Record<string, unknown>; // Node >=22.18 strips types natively
   } catch (err) {
-    if (!isTs(absPath)) throw err
-    const { tsImport } = await import("tsx/esm/api")        // lazy: no cost on the happy path
-    mod = (await tsImport(url, import.meta.url)) as Record<string, unknown>
+    if (!isTs(absPath)) throw err;
+    const { tsImport } = await import("tsx/esm/api"); // lazy: no cost on the happy path
+    mod = (await tsImport(url, import.meta.url)) as Record<string, unknown>;
   }
-  const cfg = pickDefault(mod)
-  if (cfg === undefined) throw new Error(`${absPath}: no default export`)
-  return cfg
-}
+  const cfg = pickDefault(mod);
+  if (cfg === undefined) throw new Error(`${absPath}: no default export`);
+  return cfg;
+};
 ```
 
 ### 3.2 Verified matrix (packed tarball -> `npm i ./toy-harness-0.1.0.tgz` -> `npx toy-harness`)
 
-| consumer `"type"` | config syntax | bare `import()` | with tsx fallback |
-|---|---|---|---|
-| `module`     | erasable (types only) | PASS | PASS |
-| `module`     | `enum` (non-erasable) | FAIL `SyntaxError: TypeScript enum is not supported in strip-only mode` | **PASS** |
-| `commonjs`   | erasable | FAIL `Cannot use import statement outside a module` | **PASS** |
-| `commonjs`   | `enum`   | FAIL | **PASS** |
-| *(absent)*   | erasable | PASS + `MODULE_TYPELESS_PACKAGE_JSON` warning | PASS |
+| consumer `"type"` | config syntax         | bare `import()`                                                         | with tsx fallback |
+| ----------------- | --------------------- | ----------------------------------------------------------------------- | ----------------- |
+| `module`          | erasable (types only) | PASS                                                                    | PASS              |
+| `module`          | `enum` (non-erasable) | FAIL `SyntaxError: TypeScript enum is not supported in strip-only mode` | **PASS**          |
+| `commonjs`        | erasable              | FAIL `Cannot use import statement outside a module`                     | **PASS**          |
+| `commonjs`        | `enum`                | FAIL                                                                    | **PASS**          |
+| _(absent)_        | erasable              | PASS + `MODULE_TYPELESS_PACKAGE_JSON` warning                           | PASS              |
 
 ### 3.3 Why the other options lose
 
-* **`node --experimental-strip-types` / Node native stripping.** Free and fastest, but: only
+- **`node --experimental-strip-types` / Node native stripping.** Free and fastest, but: only
   **erasable** syntax (no `enum`, `namespace`, parameter properties, `import x = require()`); off by
   default on Node < 22.18 (our floor is 22.12); does nothing for a `"type": "commonjs"` consumer; and
-  you cannot turn it on for an *already running* process — you'd have to re-exec `node`.
+  you cannot turn it on for an _already running_ process — you'd have to re-exec `node`.
   Use it as the fast path only.
-* **`register()` from `tsx/esm/api`.** Works, but **do not cache-bust with a query string**:
+- **`register()` from `tsx/esm/api`.** Works, but **do not cache-bust with a query string**:
   `import(url + "?t=" + Date.now())` blows up with
   `Error: Cannot find module '/…/difmp.config.ts?tsx=1789…'` in a CJS-typed consumer, because the
   file is routed through the **CJS** loader which does not accept URL queries. (Reproduced.)
   `tsImport(specifier, parentURL)` uses a namespaced loader internally and has no such problem.
-* **jiti.** Not installed here; would be a second transpiler in the dependency tree next to tsx's
+- **jiti.** Not installed here; would be a second transpiler in the dependency tree next to tsx's
   esbuild. UNVERIFIED.
 
 ### 3.4 Other config-loading facts
 
-* `tsImport`'s second arg is `string | { parentURL, onImport?, tsconfig? }`; passing
+- `tsImport`'s second arg is `string | { parentURL, onImport?, tsconfig? }`; passing
   `import.meta.url` (a string) is the short form.
-* tsx pulls in `esbuild@0.28.2`. Both npm 11 (`allow-scripts`) and pnpm 10 **block esbuild's
+- tsx pulls in `esbuild@0.28.2`. Both npm 11 (`allow-scripts`) and pnpm 10 **block esbuild's
   postinstall by default** — verified that tsx still works anyway (the platform binary arrives via
   `optionalDependencies`, the postinstall is only a fallback). Don't tell users to `approve-builds`.
-* Resolve the config path with `path.resolve(process.cwd(), argv ?? "difmp.config.ts")` and pass an
+- Resolve the config path with `path.resolve(process.cwd(), argv ?? "difmp.config.ts")` and pass an
   **absolute** path to `pathToFileURL`.
-* Recommend `difmp.config.ts` but also accept `.mts` / `.js` / `.mjs`.
+- Recommend `difmp.config.ts` but also accept `.mts` / `.js` / `.mjs`.
 
 ---
 
@@ -384,7 +425,7 @@ shebang; you just ship more files. Do **not** hand-roll esbuild + a shebang bann
 
 ```ts
 // tsdown.config.ts — typechecks clean
-import { defineConfig } from "tsdown"
+import { defineConfig } from "tsdown";
 
 export default defineConfig({
   entry: ["src/index.ts", "src/bin.ts"],
@@ -396,9 +437,9 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   shims: false,
-  treeshake: true
+  treeshake: true,
   // `dependencies` + `peerDependencies` are external by default; devDeps get bundled.
-})
+});
 ```
 
 Observed output: `dist/bin.mjs` (mode **0755**, shebang intact), `dist/index.mjs`,
@@ -411,20 +452,25 @@ Either point `bin`/`exports` at `.mjs`, or set `outExtensions: () => ({ js: ".js
 ### 4.2 esbuild (VERIFIED, if you prefer the already-installed tool)
 
 ```ts
-import * as esbuild from "esbuild"
+import * as esbuild from "esbuild";
 await esbuild.build({
   entryPoints: ["src/bin.ts"],
-  bundle: true, platform: "node", target: "node22.12", format: "esm",
-  outdir: "dist", packages: "external", sourcemap: true
-})
+  bundle: true,
+  platform: "node",
+  target: "node22.12",
+  format: "esm",
+  outdir: "dist",
+  packages: "external",
+  sourcemap: true,
+});
 ```
 
-* **Do NOT add `banner: { js: "#!/usr/bin/env node" }`** — esbuild already hoists the shebang from the
+- **Do NOT add `banner: { js: "#!/usr/bin/env node" }`** — esbuild already hoists the shebang from the
   entry source, and you get a **double shebang** (reproduced: two `#!/usr/bin/env node` lines).
-* esbuild emits mode 0644; npm sets +x from `bin` on install, so it works, but `chmod 755` in
+- esbuild emits mode 0644; npm sets +x from `bin` on install, so it works, but `chmod 755` in
   `prepack` if you care.
-* esbuild emits **no `.d.ts`** — run `tsc --emitDeclarationOnly` alongside.
-* `packages: "external"` externalizes bare specifiers only; relative imports are bundled.
+- esbuild emits **no `.d.ts`** — run `tsc --emitDeclarationOnly` alongside.
+- `packages: "external"` externalizes bare specifiers only; relative imports are bundled.
 
 ### 4.3 Deps bundled or external? -> **external**
 
@@ -436,18 +482,18 @@ is impossible (native browser payloads). Only the harness's own `src/` gets bund
 
 ```ts
 // src/assets.ts — VERIFIED from an installed tarball under npm, pnpm, yarn node-modules AND yarn PnP
-import { fileURLToPath } from "node:url"
-const assetsRoot = fileURLToPath(new URL("../assets/", import.meta.url))  // dist/../assets/
+import { fileURLToPath } from "node:url";
+const assetsRoot = fileURLToPath(new URL("../assets/", import.meta.url)); // dist/../assets/
 ```
 
-* `new URL(..., import.meta.url)` survives esbuild and rolldown untouched (verified) — the path is
+- `new URL(..., import.meta.url)` survives esbuild and rolldown untouched (verified) — the path is
   computed at runtime, so keep the **published** `dist/` -> `assets/` relative depth stable.
-* Put `"assets"` in `files` (the tarball listing confirmed `assets/template.html` shipped).
-* **yarn PnP gotcha:** the resolved path is inside a zip, e.g.
+- Put `"assets"` in `files` (the tarball listing confirmed `assets/template.html` shipped).
+- **yarn PnP gotcha:** the resolved path is inside a zip, e.g.
   `/home/ubuntu/.yarn/berry/cache/toy-harness-file-….zip/node_modules/toy-harness/dist/index.js`.
   `fs.readFileSync` works (yarn patches `fs`) — verified. But that path is **not real**: you cannot
   hand it to a static file server that uses `sendfile`, to a child process, to `chromium
-  --load-extension`, or to `page.goto("file://…")`. If the harness serves the UI, **read the bytes and
+--load-extension`, or to `page.goto("file://…")`. If the harness serves the UI, **read the bytes and
   serve from memory**, or copy assets to a temp dir first.
 
 ### 4.5 package.json for the published CLI (verified shape)
@@ -460,13 +506,13 @@ const assetsRoot = fileURLToPath(new URL("../assets/", import.meta.url))  // dis
   "bin": { "harness": "./dist/bin.js" },
   "exports": {
     ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
   },
   "types": "./dist/index.d.ts",
   "files": ["dist", "assets", "README.md"],
   "engines": { "node": ">=22.12.0" },
   "dependencies": { "tsx": "^4.23.13" },
-  "scripts": { "build": "tsdown", "prepack": "npm run build" }
+  "scripts": { "build": "tsdown", "prepack": "npm run build" },
 }
 ```
 
@@ -492,61 +538,65 @@ corepack yarn add ./toy-harness-0.1.0.tgz && corepack yarn toy-harness
 
 Gotchas confirmed:
 
-* **`npm pack` does NOT rewrite `workspace:*`.** Proven side by side on `@toy/cli`:
+- **`npm pack` does NOT rewrite `workspace:*`.** Proven side by side on `@toy/cli`:
   ```
   npm  pack -> "dependencies": { "@toy/core": "workspace:*" }   <- BROKEN tarball
   pnpm pack -> "dependencies": { "@toy/core": "0.1.0" }         <- correct
   ```
   **Always `pnpm pack` / `pnpm publish` for workspace packages.**
-* `files` is authoritative — `dist` and `assets` must both be listed or they silently vanish.
+- `files` is authoritative — `dist` and `assets` must both be listed or they silently vanish.
   `package.json`, `README`, `LICENSE` are always included.
-* `prepack` runs for `npm pack`, `pnpm pack`, and `npm publish`. It does **not** run on
+- `prepack` runs for `npm pack`, `pnpm pack`, and `npm publish`. It does **not** run on
   `npm install` of a git URL in older npm — keep a `prepare` alias if you support git installs.
-* **pnpm strictness:** in a pnpm consumer, `ls node_modules` showed only `toy-harness` — the CLI can
+- **pnpm strictness:** in a pnpm consumer, `ls node_modules` showed only `toy-harness` — the CLI can
   only import what it declares. Any phantom dep (something you `import` but don't list in
   `dependencies`) fails only under pnpm/yarn-PnP, never under npm. Test with pnpm.
-* **yarn defaults to PnP.** Without `nodeLinker: node-modules` in `.yarnrc.yml` you get zip-backed
+- **yarn defaults to PnP.** Without `nodeLinker: node-modules` in `.yarnrc.yml` you get zip-backed
   virtual paths (§4.4). Both linkers ran the CLI successfully here.
-* npm 11 / pnpm 10 block postinstall scripts by default (`allow-scripts` / `approve-builds`) —
+- npm 11 / pnpm 10 block postinstall scripts by default (`allow-scripts` / `approve-builds`) —
   harmless for tsx/esbuild (verified) but will bite anything needing a real postinstall.
-* `npm i ./x.tgz` records `"toy-harness": "file:./x.tgz"` in the consumer's package.json.
+- `npm i ./x.tgz` records `"toy-harness": "file:./x.tgz"` in the consumer's package.json.
 
 ---
 
 ## 6. Glob discovery of `**/*.e2e.md`
 
-**Use `tinyglobby` (already a root devDep, 0.2.17).** `node:fs/promises` `glob` *does* exist and
+**Use `tinyglobby` (already a root devDep, 0.2.17).** `node:fs/promises` `glob` _does_ exist and
 works on Node 24 (verified), but it is still flagged experimental and its `exclude` signature changed
 across 22.x — on our 22.12 floor it is a liability. `fast-glob` is heavier and not installed.
 
 ```ts
 // .recon/tooling/glob.ts — typechecks clean
-import { resolve } from "node:path"
-import { glob, isDynamicPattern } from "tinyglobby"
+import { resolve } from "node:path";
+import { glob, isDynamicPattern } from "tinyglobby";
 
 export const DEFAULT_IGNORE = [
-  "**/node_modules/**", "**/dist/**", "**/.git/**", "**/coverage/**", "**/.difmp-tmp/**"
-] as const
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/.git/**",
+  "**/coverage/**",
+  "**/.difmp-tmp/**",
+] as const;
 
 export const discover = async (
   patterns: ReadonlyArray<string>,
-  opts: { readonly cwd: string; readonly ignore?: ReadonlyArray<string> }
+  opts: { readonly cwd: string; readonly ignore?: ReadonlyArray<string> },
 ): Promise<ReadonlyArray<string>> => {
-  const pats = patterns.length === 0 ? ["**/*.e2e.md"] : patterns
+  const pats = patterns.length === 0 ? ["**/*.e2e.md"] : patterns;
   const files = await glob(pats, {
     cwd: opts.cwd,
     ignore: [...DEFAULT_IGNORE, ...(opts.ignore ?? [])],
     absolute: true,
     dot: false,
     onlyFiles: true,
-    expandDirectories: false,      // IMPORTANT: default is true; `foo` would become `foo/**/*`
-    followSymbolicLinks: false
-  })
-  return files.sort()              // tinyglobby does NOT guarantee order
-}
+    expandDirectories: false, // IMPORTANT: default is true; `foo` would become `foo/**/*`
+    followSymbolicLinks: false,
+  });
+  return files.sort(); // tinyglobby does NOT guarantee order
+};
 
-export const isLiteralPath = (arg: string): boolean => !isDynamicPattern(arg)
-export const toAbs = (cwd: string, arg: string): string => resolve(cwd, arg)
+export const isLiteralPath = (arg: string): boolean => !isDynamicPattern(arg);
+export const toAbs = (cwd: string, arg: string): string => resolve(cwd, arg);
 ```
 
 API (from `dist/index.d.mts`): `glob(patterns, opts) => Promise<string[]>`, `globSync`,
@@ -572,27 +622,33 @@ Document the quotes, and on Windows `cmd` does no expansion at all — always ac
 
 ```ts
 // .recon/tooling/yaml-probe.ts — typechecks clean, behaviour verified by .recon/tooling/yaml-run*.ts
-import { parseDocument, type DocumentOptions, type ParseOptions, type SchemaOptions, type ToJSOptions } from "yaml"
+import {
+  parseDocument,
+  type DocumentOptions,
+  type ParseOptions,
+  type SchemaOptions,
+  type ToJSOptions,
+} from "yaml";
 
 export const SAFE: ParseOptions & DocumentOptions & SchemaOptions & ToJSOptions = {
   schema: "core",
   version: "1.2",
   customTags: [],
-  resolveKnownTags: false,   // <-- THE important one, see below
-  maxAliasCount: 100,        // library default is already 100; lower to ~20 for untrusted input
+  resolveKnownTags: false, // <-- THE important one, see below
+  maxAliasCount: 100, // library default is already 100; lower to ~20 for untrusted input
   strict: true,
   uniqueKeys: true,
   merge: false,
-  prettyErrors: true
-}
+  prettyErrors: true,
+};
 
 export const parseSafe = (src: string): unknown => {
-  if (src.length > 1_000_000) throw new Error("yaml too large")   // no built-in size cap
-  const doc = parseDocument(src, SAFE)
-  if (doc.errors.length > 0) throw new Error(doc.errors[0]!.message)
-  if (doc.warnings.length > 0) throw new Error(doc.warnings[0]!.message)  // tags land HERE, not errors
-  return doc.toJS({ maxAliasCount: 100 })
-}
+  if (src.length > 1_000_000) throw new Error("yaml too large"); // no built-in size cap
+  const doc = parseDocument(src, SAFE);
+  if (doc.errors.length > 0) throw new Error(doc.errors[0]!.message);
+  if (doc.warnings.length > 0) throw new Error(doc.warnings[0]!.message); // tags land HERE, not errors
+  return doc.toJS({ maxAliasCount: 100 });
+};
 ```
 
 ### The surprise: `schema: "core"` alone does **not** disable executable-ish tags
@@ -611,17 +667,17 @@ With `resolveKnownTags: false` both become `TAG_RESOLVE_FAILED` **warnings** and
 
 ### Verified probe results
 
-| input | with `SAFE` |
-|---|---|
-| alias bomb (9^6 expansion) | REJECTED `Excessive alias count indicates a resource exhaustion attack` — *also rejected by plain `parse()`; `maxAliasCount` defaults to 100* |
-| `!!python/object/apply:os.system ['id']` | REJECTED `Unresolved tag: tag:yaml.org,2002:python/object/apply:os.system` (warning `TAG_RESOLVE_FAILED`) |
-| `!Foo {a: 1}` (local tag) | REJECTED `TAG_RESOLVE_FAILED` |
-| `!!timestamp …` / `!!binary …` | REJECTED (only because of `resolveKnownTags:false`) |
-| `t: 2001-12-15` (plain scalar) | OK -> string `"2001-12-15"` |
-| `a: 1` + `a: 2` | REJECTED `Map keys must be unique` (`uniqueKeys: true`) |
-| `<<: *a` with `merge:false` | OK, key stays the literal string `"<<"` — no merge performed |
-| `a: yes` / `b: 0o17` / `c: 012` | OK -> `"yes"` (string), `15`, `12` — YAML 1.2 core, no 1.1 octal/bool coercion |
-| `a: 1\n---\nb: 2` | REJECTED `MULTIPLE_DOCS` (error) — `parseDocument` only takes one doc; use `parseAllDocuments` if you want more |
+| input                                    | with `SAFE`                                                                                                                                   |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| alias bomb (9^6 expansion)               | REJECTED `Excessive alias count indicates a resource exhaustion attack` — _also rejected by plain `parse()`; `maxAliasCount` defaults to 100_ |
+| `!!python/object/apply:os.system ['id']` | REJECTED `Unresolved tag: tag:yaml.org,2002:python/object/apply:os.system` (warning `TAG_RESOLVE_FAILED`)                                     |
+| `!Foo {a: 1}` (local tag)                | REJECTED `TAG_RESOLVE_FAILED`                                                                                                                 |
+| `!!timestamp …` / `!!binary …`           | REJECTED (only because of `resolveKnownTags:false`)                                                                                           |
+| `t: 2001-12-15` (plain scalar)           | OK -> string `"2001-12-15"`                                                                                                                   |
+| `a: 1` + `a: 2`                          | REJECTED `Map keys must be unique` (`uniqueKeys: true`)                                                                                       |
+| `<<: *a` with `merge:false`              | OK, key stays the literal string `"<<"` — no merge performed                                                                                  |
+| `a: yes` / `b: 0o17` / `c: 012`          | OK -> `"yes"` (string), `15`, `12` — YAML 1.2 core, no 1.1 octal/bool coercion                                                                |
+| `a: 1\n---\nb: 2`                        | REJECTED `MULTIPLE_DOCS` (error) — `parseDocument` only takes one doc; use `parseAllDocuments` if you want more                               |
 
 There is **no built-in input-size or depth limit** — cap `src.length` yourself before parsing.
 
@@ -635,7 +691,7 @@ VERIFIED build output with `base: "./"`:
 
 ```html
 <script type="module" crossorigin src="./assets/index-CHK4-ZWY.js"></script>
-<link rel="stylesheet" crossorigin href="./assets/style-jjw9uzxu.css">
+<link rel="stylesheet" crossorigin href="./assets/style-jjw9uzxu.css" />
 ```
 
 Relative — good for serving from any subpath. **But under `file://` Chromium refuses it**:
@@ -645,7 +701,7 @@ Access to script at 'file:///…/a.js' from origin 'null' has been blocked by CO
 net::ERR_FAILED
 ```
 
-So `base:'./'` fixes *hosted* offline use; the standalone report must be **one inlined file**.
+So `base:'./'` fixes _hosted_ offline use; the standalone report must be **one inlined file**.
 
 ### 8.2 **Use `vite-plugin-singlefile` (2.3.3). Do not hand-roll the inliner.**
 
@@ -656,12 +712,12 @@ The plugin gets it right.
 
 ```ts
 // vite.config.ts — the `report` mode output is ONE index.html, verified rendering from file://
-import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
-import { viteSingleFile } from "vite-plugin-singlefile"
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+import { viteSingleFile } from "vite-plugin-singlefile";
 
 export default defineConfig(({ mode }) => {
-  const report = mode === "report"
+  const report = mode === "report";
   return {
     base: "./",
     plugins: report ? [react(), viteSingleFile({ removeViteModuleLoader: true })] : [react()],
@@ -670,10 +726,10 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       target: "es2022",
       cssCodeSplit: false,
-      modulePreload: { polyfill: false }
-    }
-  }
-})
+      modulePreload: { polyfill: false },
+    },
+  };
+});
 ```
 
 ```bash
@@ -693,7 +749,7 @@ zero `src="./` / `href="./` in the output.
 Keep the report app reading from a global and inject at generation time:
 
 ```ts
-const data = (globalThis as { __REPORT__?: ReportData }).__REPORT__ ?? EMPTY
+const data = (globalThis as { __REPORT__?: ReportData }).__REPORT__ ?? EMPTY;
 ```
 
 Generation = read the packaged `index.html`, string-replace a placeholder with
@@ -708,13 +764,14 @@ proved the read path but not the string-injection path (UNVERIFIED: the escaping
 ## 9. GitHub Actions — UNVERIFIED (reasoned, not executed)
 
 `corepack` + `packageManager` vs `pnpm/action-setup@v4`:
-* This repo pins `"packageManager": "pnpm@10.29.3"`. Locally verified:
+
+- This repo pins `"packageManager": "pnpm@10.29.3"`. Locally verified:
   `COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm --version` -> `10.29.3`, and corepack also
   produced `yarn 4.13.0`. Corepack is bundled with Node 24.19.0 here.
-* UNVERIFIED but well-established: corepack is no longer shipped-and-enabled on GitHub runners
+- UNVERIFIED but well-established: corepack is no longer shipped-and-enabled on GitHub runners
   reliably, so **`pnpm/action-setup@v4` is the lower-risk choice**; it reads `packageManager` from
   package.json when you omit its `version` input, giving the same pin.
-* **Ordering matters:** `actions/setup-node@v4` with `cache: pnpm` needs `pnpm` on PATH *already*, so
+- **Ordering matters:** `actions/setup-node@v4` with `cache: pnpm` needs `pnpm` on PATH _already_, so
   `pnpm/action-setup` must run **before** `setup-node`.
 
 ```yaml
@@ -726,7 +783,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4          # reads packageManager from package.json
+      - uses: pnpm/action-setup@v4 # reads packageManager from package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -744,13 +801,13 @@ jobs:
       - if: steps.pw.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
       - if: steps.pw.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium   # OS libs are never cached
+        run: pnpm exec playwright install-deps chromium # OS libs are never cached
 
       - run: pnpm run build
       - run: pnpm run test
 
       - uses: actions/upload-artifact@v4
-        if: always()                        # keep reports for FAILED runs too
+        if: always() # keep reports for FAILED runs too
         with:
           name: harness-report-${{ github.run_id }}
           path: |
@@ -761,14 +818,15 @@ jobs:
 ```
 
 Notes:
-* Cache the **browsers** (`~/.cache/ms-playwright`), never the pnpm store manually — `setup-node`'s
+
+- Cache the **browsers** (`~/.cache/ms-playwright`), never the pnpm store manually — `setup-node`'s
   `cache: pnpm` already handles the store (it reads `pnpm store path`; locally
   `/home/ubuntu/.local/share/pnpm/store/v10`).
-* The browser cache key **must include the playwright version** (via the lockfile hash) or you will
+- The browser cache key **must include the playwright version** (via the lockfile hash) or you will
   restore browsers for the wrong revision.
-* `install --with-deps` needs root; on a cache hit still run `install-deps` because apt libs are not
+- `install --with-deps` needs root; on a cache hit still run `install-deps` because apt libs are not
   in the cached dir.
-* `upload-artifact@v4` refuses duplicate artifact names within a job — suffix with `run_id`/matrix
+- `upload-artifact@v4` refuses duplicate artifact names within a job — suffix with `run_id`/matrix
   values.
 
 ---
@@ -808,15 +866,15 @@ Effect ships its own YAML parser (`Yaml.parse(input: string): unknown`, "based o
 It is tempting (zero extra dependency) but it is a **configuration** parser, not a hardened one.
 Executed comparison:
 
-| input | `Yaml.parse` (effect) | `yaml` pkg with the §7 `SAFE` options |
-|---|---|---|
-| `a: 1` / `a: 2` duplicate key | **throws `Duplicate key 'a' at line 2`** ✅ | throws `Map keys must be unique` ✅ |
-| `!!timestamp …` | returns the **string** `"!!timestamp 2001-…"` — silently wrong data ⚠ | rejected (`TAG_RESOLVE_FAILED`) ✅ |
-| `!Foo {a: 1}` | returns the **string** `"!Foo {a: 1}"` ⚠ | rejected ✅ |
-| `a: 1\n---\nb: 2` (multi-doc) | silently **merges** → `{"a":1,"b":2}` ⚠ | rejected (`MULTIPLE_DOCS`) ✅ |
-| alias bomb (9⁵) | **PARSED in 8 ms → 2.5 MB** — no alias limit at all ❌ | rejected `Excessive alias count…` ✅ |
-| `a: yes` / `b: 012` | `"yes"` / `"012"` (both strings) | `"yes"` / `12` — **they disagree on `012`** |
-| malformed | `SyntaxError: Unexpected indentation of 1 spaces at line 3` | structured `doc.errors[]` |
+| input                         | `Yaml.parse` (effect)                                                 | `yaml` pkg with the §7 `SAFE` options       |
+| ----------------------------- | --------------------------------------------------------------------- | ------------------------------------------- |
+| `a: 1` / `a: 2` duplicate key | **throws `Duplicate key 'a' at line 2`** ✅                           | throws `Map keys must be unique` ✅         |
+| `!!timestamp …`               | returns the **string** `"!!timestamp 2001-…"` — silently wrong data ⚠ | rejected (`TAG_RESOLVE_FAILED`) ✅          |
+| `!Foo {a: 1}`                 | returns the **string** `"!Foo {a: 1}"` ⚠                              | rejected ✅                                 |
+| `a: 1\n---\nb: 2` (multi-doc) | silently **merges** → `{"a":1,"b":2}` ⚠                               | rejected (`MULTIPLE_DOCS`) ✅               |
+| alias bomb (9⁵)               | **PARSED in 8 ms → 2.5 MB** — no alias limit at all ❌                | rejected `Excessive alias count…` ✅        |
+| `a: yes` / `b: 012`           | `"yes"` / `"012"` (both strings)                                      | `"yes"` / `12` — **they disagree on `012`** |
+| malformed                     | `SyntaxError: Unexpected indentation of 1 spaces at line 3`           | structured `doc.errors[]`                   |
 
 **Verdict: keep the `yaml` package** with the §7 `SAFE` options — the spec explicitly demands
 "des limites de taille et d'alias" and "sans tags exécutables", and `Yaml.parse` gives neither.
@@ -825,47 +883,52 @@ has a size limit.
 
 ## §A-L. Frontmatter field → source LINE (the spec requires it, nothing documented it)
 
-Spec §4: *"Les erreurs doivent désigner le fichier, le champ et, lorsque possible, la ligne
-concernée."* `yaml`'s `LineCounter` + node ranges give this, but you must **re-base** the offset
+Spec §4: _"Les erreurs doivent désigner le fichier, le champ et, lorsque possible, la ligne
+concernée."_ `yaml`'s `LineCounter` + node ranges give this, but you must **re-base** the offset
 because the frontmatter starts partway into the `.e2e.md` file. Compiled + executed:
 
 ```ts
-import { LineCounter, isMap, isScalar, parseDocument } from "yaml"
+import { LineCounter, isMap, isScalar, parseDocument } from "yaml";
 
-const m = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(file)
-if (!m) throw new Error("no frontmatter")
-const fmText = m[1]!
-const fmStartLine = file.slice(0, m.index).split("\n").length + 1   // 1-based line of fmText line 1
+const m = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(file);
+if (!m) throw new Error("no frontmatter");
+const fmText = m[1]!;
+const fmStartLine = file.slice(0, m.index).split("\n").length + 1; // 1-based line of fmText line 1
 
-const lc = new LineCounter()
-const doc = parseDocument(fmText, { lineCounter: lc, ...SAFE })     // SAFE from §7
-if (doc.errors.length > 0 || doc.warnings.length > 0) { /* reject, see §7 */ }
+const lc = new LineCounter();
+const doc = parseDocument(fmText, { lineCounter: lc, ...SAFE }); // SAFE from §7
+if (doc.errors.length > 0 || doc.warnings.length > 0) {
+  /* reject, see §7 */
+}
 
 /** absolute (1-based) line/col in the .e2e.md file for a frontmatter KEY */
 const keyPos = (key: string): { line: number; col: number } | undefined => {
-  const c = doc.contents
-  if (!isMap(c)) return undefined
+  const c = doc.contents;
+  if (!isMap(c)) return undefined;
   for (const pair of c.items) {
     if (isScalar(pair.key) && pair.key.value === key && pair.key.range) {
-      const p = lc.linePos(pair.key.range[0])
-      return { line: p.line + fmStartLine - 1, col: p.col }
+      const p = lc.linePos(pair.key.range[0]);
+      return { line: p.line + fmStartLine - 1, col: p.col };
     }
   }
-  return undefined
-}
+  return undefined;
+};
 
 /** …and for its VALUE, for "bad value at line N" */
 const valuePos = (key: string) => {
-  const c = doc.contents
-  if (!isMap(c)) return undefined
+  const c = doc.contents;
+  if (!isMap(c)) return undefined;
   for (const pair of c.items) {
     if (isScalar(pair.key) && pair.key.value === key) {
-      const v = pair.value as { range?: [number, number, number] } | null
-      if (v?.range) { const p = lc.linePos(v.range[0]); return { line: p.line + fmStartLine - 1, col: p.col } }
+      const v = pair.value as { range?: [number, number, number] } | null;
+      if (v?.range) {
+        const p = lc.linePos(v.range[0]);
+        return { line: p.line + fmStartLine - 1, col: p.col };
+      }
     }
   }
-  return undefined
-}
+  return undefined;
+};
 ```
 
 Executed against a real `.e2e.md`:
@@ -879,35 +942,36 @@ data: {"version":1,"id":"project-create","tags":["smoke","projects"],
 ```
 
 Notes:
-* `lineCounter.linePos(offset)` returns **1-based** `{ line, col }`; `node.range` is
+
+- `lineCounter.linePos(offset)` returns **1-based** `{ line, col }`; `node.range` is
   `[start, valueEnd, nodeEnd]` character offsets into the string you parsed.
-* `parseDocument` must receive the `lineCounter` **in its options**; calling `lc.addNewLine` yourself
+- `parseDocument` must receive the `lineCounter` **in its options**; calling `lc.addNewLine` yourself
   is not needed.
-* Schema decode errors give you a **path** (`retry.max`, `steps.0.url` — api-effect-schema.md §11),
+- Schema decode errors give you a **path** (`retry.max`, `steps.0.url` — api-effect-schema.md §11),
   not a line. Join the two: take the first path segment, look it up with `keyPos`, and you get
   `file:line:col` + the full path + the message, which is what the spec asks for.
-* `timeout: 90s` parses to the **string** `"90s"` — see api-effect-core.md §A1: Effect cannot turn
+- `timeout: 90s` parses to the **string** `"90s"` — see api-effect-core.md §A1: Effect cannot turn
   that into a `Duration`. Normalise it yourself.
-* Regex note: the frontmatter split above requires the file to *start* with `---`. Reject a spec
+- Regex note: the frontmatter split above requires the file to _start_ with `---`. Reject a spec
   whose first line is not `---` with a clear error rather than treating the whole file as body.
 
 ## §A-I. `--inputs-file <json>` with preserved JSON types — `Flag.FileSchema`
 
-Spec §4 wants `--input key=value` (always string) *and* `--inputs-file <json>` (typed).
+Spec §4 wants `--input key=value` (always string) _and_ `--inputs-file <json>` (typed).
 Compiled **and run**:
 
 ```ts
-import { Schema } from "effect"
-import { Flag } from "effect/unstable/cli"
+import { Schema } from "effect";
+import { Flag } from "effect/unstable/cli";
 
-const InputValue = Schema.Union([Schema.String, Schema.Number, Schema.Boolean])
-const InputsFile = Schema.Record(Schema.String, InputValue)
+const InputValue = Schema.Union([Schema.String, Schema.Number, Schema.Boolean]);
+const InputsFile = Schema.Record(Schema.String, InputValue);
 
 const inputsFile = Flag.FileSchema("inputs-file", InputsFile, { format: "json" }).pipe(
   Flag.withDescription("JSON file of scenario inputs (types preserved)"),
-  Flag.optional                               // -> Flag<Option<Record<string, string|number|boolean>>>
-)
-const inputKV = Flag.KeyValuePair("input").pipe(Flag.withDefault({} as Record<string, string>))
+  Flag.optional, // -> Flag<Option<Record<string, string|number|boolean>>>
+);
+const inputKV = Flag.KeyValuePair("input").pipe(Flag.withDefault({} as Record<string, string>));
 ```
 
 ```
@@ -915,22 +979,22 @@ $ h --inputs-file /tmp/inputs.json --input a=1
 {"file":{"_id":"Option","_tag":"Some","value":{"projectName":"P1","count":3,"flag":true}},"cli":{"a":"1"}}
 ```
 
-* `{ format: "json" }` is required; the flag reads **and decodes** the file itself — no `fs` call
+- `{ format: "json" }` is required; the flag reads **and decodes** the file itself — no `fs` call
   and no second decode step in your handler.
-* A schema violation (`{"x":{"nested":1}}`) and a missing file both surface as a CLI error →
+- A schema violation (`{"x":{"nested":1}}`) and a missing file both surface as a CLI error →
   help is printed, exit `1` by default / `2` with the api-effect-cli.md §6 teardown. Good: the spec
   wants "configuration invalide" to be exit 2.
-* This enforces "reject non-scalar inputs" at the CLI boundary for free. You still have to reject
+- This enforces "reject non-scalar inputs" at the CLI boundary for free. You still have to reject
   keys **not declared** in config-or-spec yourself (design-contracts §4).
 
 ## §A-T. Repo state re-checked
 
-* `tsconfig.build.json` and `tsconfig.json` **still do not exist** at the root, so
+- `tsconfig.build.json` and `tsconfig.json` **still do not exist** at the root, so
   `pnpm typecheck` (`tsc -b tsconfig.build.json`) fails today. §2.1 tells you what to create.
-* `vite-plugin-singlefile` and `tsdown` are **not installed**. §4 and §8.2 both depend on them —
+- `vite-plugin-singlefile` and `tsdown` are **not installed**. §4 and §8.2 both depend on them —
   add them as devDeps (or fall back to `tsc`-only builds per §4).
-* All package directories from design-contracts §1 exist but are empty:
+- All package directories from design-contracts §1 exist but are empty:
   `packages/{core,browser-playwright,agent-runtime,reporting}`, `apps/{cli,ui}`,
   `examples/{fixture-app,scenarios,support}`.
-* No markdown parser (`marked`/`remark`/`unified`/`micromark`) is installed — see
+- No markdown parser (`marked`/`remark`/`unified`/`micromark`) is installed — see
   api-effect-core.md §A6; hand-roll the body scanner so you keep per-criterion line numbers.

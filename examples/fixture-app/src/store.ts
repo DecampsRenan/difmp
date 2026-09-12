@@ -48,10 +48,7 @@ export class Store {
   readonly #file: string | undefined;
 
   constructor(persistDir?: string | undefined) {
-    this.#file =
-      persistDir === undefined
-        ? undefined
-        : join(persistDir, "fixture-app-store.json");
+    this.#file = persistDir === undefined ? undefined : join(persistDir, "fixture-app-store.json");
     this.#data = this.#load() ?? emptySnapshot();
   }
 
@@ -154,7 +151,7 @@ export class Store {
   listProjects(workspaceId: string): Project[] {
     return this.#data.projects
       .filter((p) => p.workspaceId === workspaceId)
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      .toSorted((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
   /** Authoritative read used by the reserved probe endpoint only. */

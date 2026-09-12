@@ -4,6 +4,7 @@ Source of truth: `node_modules/effect/AGENTS.md`, `node_modules/effect/ai-docs/s
 `node_modules/effect/src/**.ts`. Everything below compiled clean unless marked `UNVERIFIED:`.
 
 Verified with:
+
 ```
 npx tsc -p .recon/tsconfig.core.json     # files: .recon/core.ts, .recon/core2.ts
 # = tsconfig.base.json (strict, exactOptionalPropertyTypes, noUncheckedIndexedAccess,
@@ -21,73 +22,77 @@ Still true, and still the thing to do: **each workspace package that imports `ef
 in its own `package.json`**, or pnpm's isolated store will fail to resolve it from that package.
 
 Also still missing in the repo (will break the advertised scripts):
-* **no `tsconfig.json` and no `tsconfig.build.json` at the root**, yet `package.json` runs
+
+- **no `tsconfig.json` and no `tsconfig.build.json` at the root**, yet `package.json` runs
   `"typecheck": "tsc -b tsconfig.build.json"`. Create the solution file (see api-tooling.md §2.1).
-* `vite-plugin-singlefile` and `tsdown` are **not installed** — add them before relying on
+- `vite-plugin-singlefile` and `tsdown` are **not installed** — add them before relying on
   api-tooling.md §4 / §8.
 
 ## 1. v3 -> v4 renames / removals (observed in the shipped source)
 
-| v3 | v4 |
-|---|---|
-| `Effect.catchAll` | **`Effect.catch`** (`catch_ as catch`) |
-| `Effect.catchAllCause` | `Effect.catchCause` |
-| `Effect.catchAllDefect` | `Effect.catchDefect` |
-| `Effect.catchSome` / `catchSomeCause` | `Effect.catchIf` / `catchFilter`, `catchCauseIf` / `catchCauseFilter` |
-| `Effect.either` | `Effect.result` -> `Result.Result<A, E>` (**`Either` module deleted**, `Result.ts` replaces it) |
-| `Effect.fork` | **gone**. Use `Effect.forkChild` / `forkScoped` / `forkIn` / `forkDetach` |
-| `Effect.forkDaemon` | `Effect.forkDetach` |
-| `Effect.async` / `asyncEffect` | `Effect.callback` |
-| `Effect.timeoutTo` | **`Effect.timeoutOrElse({ duration, orElse })`** (no `timeoutTo`) |
-| `Effect.tapErrorCause` | `Effect.tapCause` |
-| `Context.Tag` / `Effect.Service` | **`Context.Service<Self, Shape>()("id")`** (`Effect.Service` does not exist) |
-| `Context.Tag.of` | `MyService.of(...)` (same), plus `MyService.use(f)` / `useSync(f)` |
-| `Layer.scoped` | **gone** — `Layer.effect` already accepts a scoped Effect and strips `Scope` |
-| `Layer.scopedDiscard` | `Layer.effectDiscard` |
+| v3                                                                       | v4                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Effect.catchAll`                                                        | **`Effect.catch`** (`catch_ as catch`)                                                                                                                                                                                                                          |
+| `Effect.catchAllCause`                                                   | `Effect.catchCause`                                                                                                                                                                                                                                             |
+| `Effect.catchAllDefect`                                                  | `Effect.catchDefect`                                                                                                                                                                                                                                            |
+| `Effect.catchSome` / `catchSomeCause`                                    | `Effect.catchIf` / `catchFilter`, `catchCauseIf` / `catchCauseFilter`                                                                                                                                                                                           |
+| `Effect.either`                                                          | `Effect.result` -> `Result.Result<A, E>` (**`Either` module deleted**, `Result.ts` replaces it)                                                                                                                                                                 |
+| `Effect.fork`                                                            | **gone**. Use `Effect.forkChild` / `forkScoped` / `forkIn` / `forkDetach`                                                                                                                                                                                       |
+| `Effect.forkDaemon`                                                      | `Effect.forkDetach`                                                                                                                                                                                                                                             |
+| `Effect.async` / `asyncEffect`                                           | `Effect.callback`                                                                                                                                                                                                                                               |
+| `Effect.timeoutTo`                                                       | **`Effect.timeoutOrElse({ duration, orElse })`** (no `timeoutTo`)                                                                                                                                                                                               |
+| `Effect.tapErrorCause`                                                   | `Effect.tapCause`                                                                                                                                                                                                                                               |
+| `Context.Tag` / `Effect.Service`                                         | **`Context.Service<Self, Shape>()("id")`** (`Effect.Service` does not exist)                                                                                                                                                                                    |
+| `Context.Tag.of`                                                         | `MyService.of(...)` (same), plus `MyService.use(f)` / `useSync(f)`                                                                                                                                                                                              |
+| `Layer.scoped`                                                           | **gone** — `Layer.effect` already accepts a scoped Effect and strips `Scope`                                                                                                                                                                                    |
+| `Layer.scopedDiscard`                                                    | `Layer.effectDiscard`                                                                                                                                                                                                                                           |
 | `Config.string` / `Config.number` / `Config.boolean` / `Config.redacted` | **Capitalized**: `Config.String`, `Config.Number`, `Config.Boolean`, `Config.Redacted`, `Config.Int`, `Config.Port`, `Config.Duration`, `Config.URL`, `Config.Date`, `Config.Literal(s)`, `Config.Array`, `Config.Record`, `Config.ByteSize`, `Config.LogLevel` |
-| `Data.TaggedError` | prefer **`Schema.TaggedError<Self>()("Tag", fields)`** (`Data` still exists) |
-| `Effect.withConcurrency` | gone — pass `{ concurrency }` per call site |
-| `Queue.shutdown`-only completion | `Queue.end(q)` + `Cause.Done` sentinel in the queue's error type |
-| `Chunk` everywhere | v4 streams/queues use plain `Array` / `NonEmptyReadonlyArray` |
-| `Effect.serviceFunctions` etc. | gone |
+| `Data.TaggedError`                                                       | prefer **`Schema.TaggedError<Self>()("Tag", fields)`** (`Data` still exists)                                                                                                                                                                                    |
+| `Effect.withConcurrency`                                                 | gone — pass `{ concurrency }` per call site                                                                                                                                                                                                                     |
+| `Queue.shutdown`-only completion                                         | `Queue.end(q)` + `Cause.Done` sentinel in the queue's error type                                                                                                                                                                                                |
+| `Chunk` everywhere                                                       | v4 streams/queues use plain `Array` / `NonEmptyReadonlyArray`                                                                                                                                                                                                   |
+| `Effect.serviceFunctions` etc.                                           | gone                                                                                                                                                                                                                                                            |
 
 Also note: `Concurrency = number | "unbounded"` — **no `"inherit"`** (`effect/Types.ts:454`).
 
 ## 2. Effect.gen / Effect.fn / Effect.fnUntraced
 
 ```ts
-import { Effect, Schema } from "effect"
+import { Effect, Schema } from "effect";
 
 export class StepError extends Schema.TaggedError<StepError>()("StepError", {
-  message: Schema.String
+  message: Schema.String,
 }) {}
 
-export const prog = Effect.gen(function*() {
-  yield* Effect.log("hi")
-  return 1
+export const prog = Effect.gen(function* () {
+  yield* Effect.log("hi");
+  return 1;
 }).pipe(
   Effect.catch((e) => Effect.logError(`${e}`)),
-  Effect.withSpan("prog")
-)
+  Effect.withSpan("prog"),
+);
 
 // Effect.fn("name") -> stack frame + tracing span. Extra args act like pipe() steps.
 // DO NOT .pipe() the result of Effect.fn — pass combinators as trailing arguments.
 export const traced = Effect.fn("traced")(
-  function*(n: number): Effect.fn.Return<string, StepError> {
-    if (n < 0) return yield* new StepError({ message: "neg" })   // always `return yield*`
-    return String(n)
+  function* (n: number): Effect.fn.Return<string, StepError> {
+    if (n < 0) return yield* new StepError({ message: "neg" }); // always `return yield*`
+    return String(n);
   },
-  Effect.annotateLogs({ method: "traced" })
-)
+  Effect.annotateLogs({ method: "traced" }),
+);
 
 // no span / no stack capture — library + hot paths
-export const untraced = Effect.fnUntraced(function*(n: number): Effect.fn.Return<number, StepError> {
-  return n
-})
+export const untraced = Effect.fnUntraced(function* (
+  n: number,
+): Effect.fn.Return<number, StepError> {
+  return n;
+});
 
 // non-generator body also works
-export const tracedArrow = Effect.fn("tracedArrow")((n: number) => Effect.succeed(n + 1))
+export const tracedArrow = Effect.fn("tracedArrow")((n: number) => Effect.succeed(n + 1));
 ```
+
 - `Effect.fn.Return<A, E = never, R = never>` is the **return-type annotation** for the generator
   body (needed for generic/parametric fns; inference is otherwise fine).
 - `Effect.fn` signature: `fn.Traced & ((name: string, options?: SpanOptionsNoTrace) => fn.Traced)`.
@@ -98,28 +103,32 @@ export const tracedArrow = Effect.fn("tracedArrow")((n: number) => Effect.succee
 ## 3. Context.Service — the service pattern
 
 ```ts
-import { Context, Effect, Layer } from "effect"
+import { Context, Effect, Layer } from "effect";
 
-export class Browser extends Context.Service<Browser, {
-  open(url: string): Effect.Effect<void, StepError>
-  readonly close: Effect.Effect<void>
-}>()("harness/Browser") {
+export class Browser extends Context.Service<
+  Browser,
+  {
+    open(url: string): Effect.Effect<void, StepError>;
+    readonly close: Effect.Effect<void>;
+  }
+>()("harness/Browser") {
   static readonly layer = Layer.effect(
     Browser,
-    Effect.gen(function*() {
-      const open = Effect.fn("Browser.open")(function*(url: string) {
-        yield* Effect.log(url)
-      })
-      return Browser.of({ open, close: Effect.void })   // Browser.of gives inference + checking
-    })
-  )
+    Effect.gen(function* () {
+      const open = Effect.fn("Browser.open")(function* (url: string) {
+        yield* Effect.log(url);
+      });
+      return Browser.of({ open, close: Effect.void }); // Browser.of gives inference + checking
+    }),
+  );
 }
 
-export type BrowserService = Browser["Service"]                   // the shape type
-export type BrowserShape  = Context.Service.Shape<typeof Browser> // equivalent
-export const useBrowser   = Browser.use((b) => b.close)           // Effect<void, never, Browser>
-export const browserKey: string = Browser.key                     // "harness/Browser"
+export type BrowserService = Browser["Service"]; // the shape type
+export type BrowserShape = Context.Service.Shape<typeof Browser>; // equivalent
+export const useBrowser = Browser.use((b) => b.close); // Effect<void, never, Browser>
+export const browserKey: string = Browser.key; // "harness/Browser"
 ```
+
 - Two-stage call is mandatory for the class form: `Context.Service<Self, Shape>()("id")`.
 - Function-style key (no class): `const Logger2 = Context.Service<{ log: (m: string) => void }>("harness/Logger2")`.
 - `Key` extends `Effect<Shape, never, Identifier>` → `yield* Browser` works directly.
@@ -129,20 +138,23 @@ export const browserKey: string = Browser.key                     // "harness/Br
 ## 4. Context.Reference — config with a default (no layer needed)
 
 ```ts
-import { Context, Duration, Effect } from "effect"
+import { Context, Duration, Effect } from "effect";
 
 export class Headless extends Context.Reference<boolean>("harness/Headless", {
-  defaultValue: () => true
+  defaultValue: () => true,
 }) {}
 
 // const form works too
 export const Timeout = Context.Reference<Duration.Duration>("harness/Timeout", {
-  defaultValue: () => Duration.seconds(30)
-})
+  defaultValue: () => Duration.seconds(30),
+});
 
-const read = Effect.gen(function*() { return yield* Headless })   // R = never (!)
-const overridden = read.pipe(Effect.provideService(Headless, false))
+const read = Effect.gen(function* () {
+  return yield* Headless;
+}); // R = never (!)
+const overridden = read.pipe(Effect.provideService(Headless, false));
 ```
+
 - `Reference<Shape> extends Service<never, Shape>` → **yielding it adds nothing to `R`**.
 - Override with `Effect.provideService` / `Effect.updateService` / `Layer.succeed`.
 - `Clock.Clock` itself is a `Context.Reference<Clock>` — same mechanism.
@@ -167,55 +179,70 @@ Layer.mock(Key, partial)                  // test doubles
 Layer.makeMemoMapUnsafe()                 // share memoization across ManagedRuntimes
 Layer.catchTag / catchCause / tap / tapError / tapCause / orDie / updateService
 ```
-Verified composition:
-```ts
-export const L5 = Browser.layer.pipe(Layer.provide(L1))
-export const L6 = Browser.layer.pipe(Layer.provideMerge(L1))
-export const L8: Effect.Effect<never, never, never> = Layer.launch(L7)
 
-export const L4 = Layer.unwrap(Effect.gen(function*() {
-  const on = yield* Config.Boolean("ON").pipe(Config.withDefault(false))
-  return on ? L1 : L2
-}))
-```
-Background task inside a layer (from `ai-docs/.../20_layer-side-effects.ts`):
+Verified composition:
+
 ```ts
-const BackgroundTask = Layer.effectDiscard(Effect.gen(function*() {
-  yield* loop.pipe(
-    Effect.onInterrupt(() => Effect.logInfo("layer scope closed")),
-    Effect.forkScoped          // dies with the layer's scope
-  )
-}))
-BackgroundTask.pipe(Layer.launch, NodeRuntime.runMain)
+export const L5 = Browser.layer.pipe(Layer.provide(L1));
+export const L6 = Browser.layer.pipe(Layer.provideMerge(L1));
+export const L8: Effect.Effect<never, never, never> = Layer.launch(L7);
+
+export const L4 = Layer.unwrap(
+  Effect.gen(function* () {
+    const on = yield* Config.Boolean("ON").pipe(Config.withDefault(false));
+    return on ? L1 : L2;
+  }),
+);
+```
+
+Background task inside a layer (from `ai-docs/.../20_layer-side-effects.ts`):
+
+```ts
+const BackgroundTask = Layer.effectDiscard(
+  Effect.gen(function* () {
+    yield* loop.pipe(
+      Effect.onInterrupt(() => Effect.logInfo("layer scope closed")),
+      Effect.forkScoped, // dies with the layer's scope
+    );
+  }),
+);
+BackgroundTask.pipe(Layer.launch, NodeRuntime.runMain);
 ```
 
 ## 6. Scope, acquireRelease, finalizers, bounded cleanup
 
 ```ts
-import { Effect, Exit, Scope } from "effect"
+import { Effect, Exit, Scope } from "effect";
 
 export const resource = Effect.acquireRelease(
   Effect.sync(() => ({ id: 1 })),
-  (r, exit) => Effect.log(`release ${r.id} ${Exit.isSuccess(exit)}`)   // release sees the Exit
-)   // Effect<{id:number}, never, Scope>
+  (r, exit) => Effect.log(`release ${r.id} ${Exit.isSuccess(exit)}`), // release sees the Exit
+); // Effect<{id:number}, never, Scope>
 
-export const scopedProg = Effect.gen(function*() {
-  const r = yield* resource
-  yield* Effect.addFinalizer((exit) => Effect.log(`fin ${exit._tag}`))
-  return r
-}).pipe(Effect.scoped)          // Effect.scoped removes Scope from R and runs finalizers LIFO
+export const scopedProg = Effect.gen(function* () {
+  const r = yield* resource;
+  yield* Effect.addFinalizer((exit) => Effect.log(`fin ${exit._tag}`));
+  return r;
+}).pipe(Effect.scoped); // Effect.scoped removes Scope from R and runs finalizers LIFO
 ```
+
 Signatures (`src/Effect.ts`):
+
 ```ts
-acquireRelease: <A,E,R,R2>(acquire: Effect<A,E,R>,
+acquireRelease: <A, E, R, R2>(
+  acquire: Effect<A, E, R>,
   release: (a: A, exit: Exit<unknown, unknown>) => Effect<unknown, never, R2>,
-  options?: { readonly interruptible?: boolean }) => Effect<A, E, R | R2 | Scope>
-addFinalizer: <R>(f: (exit: Exit<unknown, unknown>) => Effect<void, never, R>) => Effect<void, never, R | Scope>
-scoped: <A,E,R>(self: Effect<A,E,R>) => Effect<A, E, Exclude<R, Scope>>
-scopedWith: <A,E,R>(f: (scope: Scope) => Effect<A,E,R>) => Effect<A,E,R>
-scope: Effect<Scope, never, Scope>
+  options?: { readonly interruptible?: boolean },
+) => Effect<A, E, R | R2 | Scope>;
+addFinalizer: <R>(f: (exit: Exit<unknown, unknown>) => Effect<void, never, R>) =>
+  Effect<void, never, R | Scope>;
+scoped: <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, Scope>>;
+scopedWith: <A, E, R>(f: (scope: Scope) => Effect<A, E, R>) => Effect<A, E, R>;
+scope: Effect<Scope, never, Scope>;
 ```
+
 Composition rules:
+
 - Finalizers run in **reverse registration order** when the enclosing `Scope` closes.
 - `Layer.effect` / `Layer.effectDiscard` build inside the **layer's** scope → resources live as long
   as the layer (i.e. until `ManagedRuntime.dispose()` / `Layer.launch` interruption).
@@ -223,20 +250,23 @@ Composition rules:
 - `Effect.ensuring(fin)` / `Effect.onExit(f)` / `Effect.onError(f)` are the non-Scope variants.
 
 **Bounded cleanup** — there is no built-in finalizer deadline; wrap the finalizer yourself:
+
 ```ts
-export const boundedRelease = Effect.acquireRelease(
-  Effect.succeed("res"),
-  () => Effect.sleep("10 seconds").pipe(Effect.timeoutOption("500 millis"), Effect.asVoid)
-)
+export const boundedRelease = Effect.acquireRelease(Effect.succeed("res"), () =>
+  Effect.sleep("10 seconds").pipe(Effect.timeoutOption("500 millis"), Effect.asVoid),
+);
 
 // manual scope, parallel finalizers, bounded close
-export const boundedCleanup = Effect.gen(function*() {
-  const scope = yield* Scope.make("parallel")   // "sequential" (default) | "parallel"
-  yield* Scope.addFinalizer(scope, Effect.sleep("10 seconds").pipe(
-    Effect.timeoutOption("200 millis"), Effect.asVoid))
-  yield* Scope.close(scope, Exit.void)
-})
+export const boundedCleanup = Effect.gen(function* () {
+  const scope = yield* Scope.make("parallel"); // "sequential" (default) | "parallel"
+  yield* Scope.addFinalizer(
+    scope,
+    Effect.sleep("10 seconds").pipe(Effect.timeoutOption("200 millis"), Effect.asVoid),
+  );
+  yield* Scope.close(scope, Exit.void);
+});
 ```
+
 Use `Effect.timeoutOption` (not `timeout`) inside finalizers: release must be `Effect<_, never, _>`.
 Other `Scope` members: `Scope.fork`, `Scope.forkUnsafe`, `Scope.addFinalizerExit`, `Scope.closeUnsafe`,
 `Scope.provide`, `Scope.use`. The key is `Scope.Scope` (a `Context.Service<Scope, Scope>`).
@@ -259,20 +289,23 @@ Effect.exit(mayFail)     // Effect<Exit<number, AError|BError>>
 Effect.result(mayFail)   // Effect<Result<number, AError|BError>>  (Result, not Either)
 Effect.die(new Error("boom"))
 ```
+
 Inspecting a failure:
+
 ```ts
-const exit = yield* Effect.exit(mayFail)
+const exit = yield * Effect.exit(mayFail);
 if (Exit.isFailure(exit)) {
-  const cause: Cause.Cause<AError | BError> = exit.cause
-  Cause.findErrorOption(cause)   // Option<E>
-  Cause.findDefect(cause)        // Result<unknown, Cause<E>>
-  Cause.hasInterrupts(cause)     // true if the fiber was interrupted
-  Cause.hasInterruptsOnly(cause)
-  Cause.pretty(cause)            // string, for reports
-  Cause.prettyErrors(cause)
-  Cause.squash(cause)
+  const cause: Cause.Cause<AError | BError> = exit.cause;
+  Cause.findErrorOption(cause); // Option<E>
+  Cause.findDefect(cause); // Result<unknown, Cause<E>>
+  Cause.hasInterrupts(cause); // true if the fiber was interrupted
+  Cause.hasInterruptsOnly(cause);
+  Cause.pretty(cause); // string, for reports
+  Cause.prettyErrors(cause);
+  Cause.squash(cause);
 }
 ```
+
 - `Cause<E>` in v4 is a **list of `Reason`s** (`Fail<E> | Die | Interrupt`), not a tree.
   `Cause.fromReasons`, `Cause.isFailReason/isDieReason/isInterruptReason`, `Cause.annotate`.
 - Built-in error types live on `Cause`: `Cause.TimeoutError`, `Cause.NoSuchElementError`,
@@ -301,6 +334,7 @@ Effect.timeoutOrElse(eff, { duration: "1 second", orElse: () => Effect.succeed(0
 Effect.race(a, b)  Effect.raceFirst(a, b)  Effect.raceAll([...])  Effect.raceAllFirst([...])
 Fiber.interrupt(fiber)  Fiber.interruptAll(fibers)
 ```
+
 - Durations accept `Duration.Input`: `"2 seconds"`, `1000` (millis), `Duration.seconds(2)`.
 - Timeout **interrupts** the loser. `race` interrupts the loser too.
 - `Effect.abortSignal: Effect<AbortSignal, never, Scope>` — an AbortSignal wired to interruption.
@@ -309,24 +343,25 @@ Fiber.interrupt(fiber)  Fiber.interruptAll(fibers)
 
 ```ts
 // Effect.promise: <A>(evaluate: (signal: AbortSignal) => PromiseLike<A>) => Effect<A>
-export const p1 = Effect.promise((signal) => fetch("http://x", { signal }))
+export const p1 = Effect.promise((signal) => fetch("http://x", { signal }));
 
 // Effect.tryPromise with { try, catch } — `try` also gets the signal
 export const p2 = Effect.tryPromise({
   try: (signal) => fetch("http://x", { signal }),
-  catch: (cause) => new StepError({ message: String(cause) })
-})
+  catch: (cause) => new StepError({ message: String(cause) }),
+});
 
 // thunk form: E = Cause.UnknownError
-export const p3 = Effect.tryPromise(() => Promise.resolve(1))
+export const p3 = Effect.tryPromise(() => Promise.resolve(1));
 
 // callback APIs: register gets (resume, signal) and may return a finalizer Effect
 export const p4 = Effect.callback<number>((resume, signal) => {
-  const t = setTimeout(() => resume(Effect.succeed(1)), 10)
-  signal.addEventListener("abort", () => clearTimeout(t))
-  return Effect.sync(() => clearTimeout(t))
-})
+  const t = setTimeout(() => resume(Effect.succeed(1)), 10);
+  signal.addEventListener("abort", () => clearTimeout(t));
+  return Effect.sync(() => clearTimeout(t));
+});
 ```
+
 The signal is aborted on interruption, but **only cooperating APIs actually stop** — Playwright/fetch
 do, a bare `setTimeout` does not; return a finalizer.
 Also: `Effect.try({ try, catch })` (sync), `Effect.fromNullishOr`, `Effect.fromOption`, `Effect.fromResult`.
@@ -340,15 +375,20 @@ Effect.all([a, b] as const, { concurrency: 2 })                      // tuple / 
 Effect.all({ a, b }, { mode: "result" })                             // mode: "default" | "result"
 Effect.partition(xs, f)   Effect.validate(...)   Effect.replicateEffect(...)
 ```
+
 Forking (there is **no `Effect.fork`**):
+
 ```ts
-const fib: Fiber.Fiber<number, never> = yield* Effect.forkChild(Effect.succeed(1))  // parent awaits
-yield* Fiber.join(fib); yield* Fiber.interrupt(fib); yield* Fiber.awaitAll([fib])
-yield* Effect.forkScoped(Effect.never)             // R gains Scope; dies with the scope
-yield* Effect.forkIn(Effect.never, scope)
-Effect.never.pipe(Effect.forkDetach)               // global scope (ex-forkDaemon)
-Effect.awaitAllChildren(eff)
+const fib: Fiber.Fiber<number, never> = yield * Effect.forkChild(Effect.succeed(1)); // parent awaits
+yield * Fiber.join(fib);
+yield * Fiber.interrupt(fib);
+yield * Fiber.awaitAll([fib]);
+yield * Effect.forkScoped(Effect.never); // R gains Scope; dies with the scope
+yield * Effect.forkIn(Effect.never, scope);
+Effect.never.pipe(Effect.forkDetach); // global scope (ex-forkDaemon)
+Effect.awaitAllChildren(eff);
 ```
+
 All fork APIs take `{ startImmediately?: boolean, uninterruptible?: boolean | "inherit" }` and are
 dual (data-first or data-last). Also: `FiberHandle`, `FiberMap`, `FiberSet`, `Semaphore`,
 `PartitionedSemaphore`, `Pool`, `RcMap`, `RcRef`.
@@ -357,38 +397,51 @@ dual (data-first or data-last). Also: `FiberHandle`, `FiberMap`, `FiberSet`, `Se
 
 ```ts
 // Queue<A, E = never>
-const q = yield* Queue.unbounded<string, Cause.Done>()   // E must include Cause.Done to use end()
-yield* Queue.offer(q, "a");  Queue.offerUnsafe(q, "b");  yield* Queue.offerAll(q, ["c"])
-const one  = yield* Queue.take(q)         // Effect<A, E>
-const many = yield* Queue.takeAll(q)      // NonEmptyArray<A>
-yield* Queue.end(q)                       // completes the queue (fails with Cause.Done)
-const all  = yield* Queue.collect(q)      // drains to Array<A>, strips Done
-Queue.bounded<A>(n) | Queue.sliding<A>(n) | Queue.dropping<A>(n) | Queue.make({ capacity, strategy })
-Queue.fail / failCause / interrupt / shutdown / poll / peek / size / clear / into
+const q = yield * Queue.unbounded<string, Cause.Done>(); // E must include Cause.Done to use end()
+yield * Queue.offer(q, "a");
+Queue.offerUnsafe(q, "b");
+yield * Queue.offerAll(q, ["c"]);
+const one = yield * Queue.take(q); // Effect<A, E>
+const many = yield * Queue.takeAll(q); // NonEmptyArray<A>
+yield * Queue.end(q); // completes the queue (fails with Cause.Done)
+const all = yield * Queue.collect(q); // drains to Array<A>, strips Done
+Queue.bounded<A>(n) |
+  Queue.sliding<A>(n) |
+  Queue.dropping<A>(n) |
+  Queue.make({ capacity, strategy });
+Queue.fail / failCause / interrupt / shutdown / poll / peek / size / clear / into;
 ```
+
 ```ts
 // PubSub
-const pubsub = yield* PubSub.bounded<number>({ capacity: 64, replay: 8 })  // replay buffer!
-yield* PubSub.publish(pubsub, 1); yield* PubSub.publishAll(pubsub, [2,3])
-const stream = Stream.fromPubSub(pubsub)
-const sub = yield* PubSub.subscribe(pubsub)   // Effect<Subscription<A>, never, Scope>
-yield* Effect.addFinalizer(() => PubSub.shutdown(pubsub))
+const pubsub = yield * PubSub.bounded<number>({ capacity: 64, replay: 8 }); // replay buffer!
+yield * PubSub.publish(pubsub, 1);
+yield * PubSub.publishAll(pubsub, [2, 3]);
+const stream = Stream.fromPubSub(pubsub);
+const sub = yield * PubSub.subscribe(pubsub); // Effect<Subscription<A>, never, Scope>
+yield * Effect.addFinalizer(() => PubSub.shutdown(pubsub));
 // also: PubSub.unbounded / dropping / sliding / makeAtomicBounded / makeAtomicUnbounded
 ```
+
 ```ts
 // Deferred<A, E = never>  — await is a FUNCTION, not a property
-const d = yield* Deferred.make<number, StepError>()
-yield* Deferred.succeed(d, 1)
-const v = yield* Deferred.await(d)        // NOT d.await
-yield* Deferred.isDone(d) / poll / fail / failCause / die / interrupt / complete / into
+const d = yield * Deferred.make<number, StepError>();
+yield * Deferred.succeed(d, 1);
+const v = yield * Deferred.await(d); // NOT d.await
+(yield * Deferred.isDone(d)) / poll / fail / failCause / die / interrupt / complete / into;
 ```
+
 ```ts
 // Latch — has BOTH property-style and function-style APIs
-const latch = yield* Latch.make(false)     // open?: boolean
-yield* Latch.open(latch)                   // == latch.open
-yield* latch.await                         // latch.await IS a property here
-yield* Latch.close(latch);  Latch.isOpen(latch);  Latch.whenOpen(eff);  latch.openUnsafe()
+const latch = yield * Latch.make(false); // open?: boolean
+yield * Latch.open(latch); // == latch.open
+yield * latch.await; // latch.await IS a property here
+yield * Latch.close(latch);
+Latch.isOpen(latch);
+Latch.whenOpen(eff);
+latch.openUnsafe();
 ```
+
 ```ts
 // SubscriptionRef
 const ref = yield* SubscriptionRef.make(0)
@@ -396,6 +449,7 @@ yield* SubscriptionRef.update(ref, (n) => n + 1)
 const changes: Stream.Stream<number> = SubscriptionRef.changes(ref)   // current + all updates
 yield* SubscriptionRef.get(ref) / set / modify / getAndUpdate / updateEffect / ...
 ```
+
 Also present: `Ref`, `SynchronizedRef`, `ScopedRef`, `MutableRef`, plus the STM-ish `Tx*` family
 (`TxRef`, `TxQueue`, `TxPubSub`, `TxHashMap`, `TxDeferred`, `TxSemaphore`, `Effect.tx`, `Effect.txRetry`).
 
@@ -415,40 +469,50 @@ Stream.runCollect / runForEach / runDrain / runFold / runHead / runLast / mkStri
 Stream.toReadableStream / toReadableStreamEffect / toAsyncIterable / toQueue / toPubSub
 Stream.onStart / onEnd / onExit / onError / ensuring / interruptWhen / haltWhen / scoped / unwrap
 ```
+
 Verified SSE shape:
+
 ```ts
-export const sseBody: Effect.Effect<ReadableStream<Uint8Array>> = Effect.gen(function*() {
-  const queue = yield* Queue.unbounded<string>()
-  return Stream.toReadableStream(               // DATA-FIRST — see gotcha below
+export const sseBody: Effect.Effect<ReadableStream<Uint8Array>> = Effect.gen(function* () {
+  const queue = yield* Queue.unbounded<string>();
+  return Stream.toReadableStream(
+    // DATA-FIRST — see gotcha below
     Stream.fromQueue(queue).pipe(
       Stream.map((s) => `data: ${s}\n\n`),
       Stream.concat(Stream.make("data: [DONE]\n\n")),
-      Stream.encodeText
-    )
-  )
-})
+      Stream.encodeText,
+    ),
+  );
+});
 ```
+
 **GOTCHA — `Stream.toReadableStream` typing.** It is `dual`, and the data-last overload is
 `<A>(options?) => <E>(self) => ReadableStream<A>`. Writing `.pipe(Stream.toReadableStream)` bare
 infers `ReadableStream<unknown>`. Use the data-first form, or pass the type arg:
+
 ```ts
-const rs: ReadableStream<Uint8Array> = Stream.toReadableStream(Stream.encodeText(s))      // ✅
-const rs2: ReadableStream<string>    = Stream.make("a").pipe(Stream.toReadableStream<string>()) // ✅
-const bad = Stream.make("a").pipe(Stream.encodeText, Stream.toReadableStream) // ❌ ReadableStream<unknown>
+const rs: ReadableStream<Uint8Array> = Stream.toReadableStream(Stream.encodeText(s)); // ✅
+const rs2: ReadableStream<string> = Stream.make("a").pipe(Stream.toReadableStream<string>()); // ✅
+const bad = Stream.make("a").pipe(Stream.encodeText, Stream.toReadableStream); // ❌ ReadableStream<unknown>
 ```
+
 Confirmed by compiling `.recon/core3.ts`: the bare pipe form yields `ReadableStream<unknown>` even
 when the upstream element type is known.
 `Stream.toReadableStreamEffect(s): Effect<ReadableStream<A>, never, R | Scope>` when the stream needs
 services/scope. `Stream.toReadableStreamWith(s, context, options?)` when you have the `Context`.
 
 Queue-driven SSE with explicit termination:
+
 ```ts
-const q = yield* Queue.unbounded<string, Cause.Done>()
-const stream: Stream.Stream<string> = Stream.fromQueue(q)   // Done is stripped from E
-yield* Effect.forkScoped(Effect.gen(function*() {
-  yield* Queue.offer(q, "tick")
-  yield* Queue.end(q)                                        // closes the stream cleanly
-}))
+const q = yield * Queue.unbounded<string, Cause.Done>();
+const stream: Stream.Stream<string> = Stream.fromQueue(q); // Done is stripped from E
+yield *
+  Effect.forkScoped(
+    Effect.gen(function* () {
+      yield* Queue.offer(q, "tick");
+      yield* Queue.end(q); // closes the stream cleanly
+    }),
+  );
 ```
 
 ## 13. Clock / DateTime / durations
@@ -465,6 +529,7 @@ DateTime.makeZoned / nowInCurrentZone (requires DateTime.CurrentTimeZone)
 const [dur, value] = yield* Effect.timed(eff)   // [Duration, A]
 Duration.toMillis(dur); Duration.seconds(2); Duration.millis(500); Duration.format(dur)
 ```
+
 Never call `Date.now()` — use `Clock`/`DateTime` so `TestClock` can drive tests.
 
 ## 14. Running programs
@@ -478,15 +543,23 @@ Effect.runSyncExit(eff)       // Exit<A, E>
 Effect.runCallback(eff, { onExit })
 // *With variants take an explicit Context: runPromiseWith, runForkWith, runSyncWith, ...
 ```
+
 `ManagedRuntime` for non-Effect edges (Playwright hooks, express handlers, CLI):
+
 ```ts
-export const memoMap = Layer.makeMemoMapUnsafe()          // share across runtimes
-export const rt = ManagedRuntime.make(Browser.layer, { memoMap })
-await rt.runPromise(Browser.use((b) => b.close))
-rt.runFork(eff); rt.runSync(eff); rt.runSyncExit(eff); rt.runCallback(eff, { onExit })
-await rt.dispose()      // closes the layer scope + all finalizers
-rt.memoMap; rt.contextEffect; await rt.context()
+export const memoMap = Layer.makeMemoMapUnsafe(); // share across runtimes
+export const rt = ManagedRuntime.make(Browser.layer, { memoMap });
+await rt.runPromise(Browser.use((b) => b.close));
+rt.runFork(eff);
+rt.runSync(eff);
+rt.runSyncExit(eff);
+rt.runCallback(eff, { onExit });
+await rt.dispose(); // closes the layer scope + all finalizers
+rt.memoMap;
+rt.contextEffect;
+await rt.context();
 ```
+
 Process entrypoints: `NodeRuntime.runMain(effect)` from `@effect/platform-node`, or
 `Layer.launch(appLayer).pipe(NodeRuntime.runMain)`.
 VERIFIED by the critic pass: `@effect/platform-node` resolves and
@@ -496,19 +569,20 @@ VERIFIED by the critic pass: `@effect/platform-node` resolves and
 ## 15. Config & Redacted
 
 ```ts
-import { Config, Duration, Redacted } from "effect"
+import { Config, Duration, Redacted } from "effect";
 
-const url  = yield* Config.String("BASE_URL").pipe(Config.withDefault("http://localhost:3000"))
-const key  = yield* Config.Redacted("API_KEY")      // Config<Redacted<string>>
-const port = yield* Config.Port("PORT")
-const n    = yield* Config.Int("N").pipe(Config.withDefault(1))
-const on   = yield* Config.Boolean("ON").pipe(Config.withDefault(false))
-const ttl  = yield* Config.Duration("TTL").pipe(Config.withDefault(Duration.seconds(5)))
-const opt  = yield* Config.option(Config.String("OPT"))            // Config<Option<string>>
-const raw: string = Redacted.value(key)                            // ONLY way to read it
-String(key)        // "<redacted>" — safe in logs/JSON
-const dbHost = Config.nested(Config.String("HOST"), "DB")          // DB_HOST
+const url = yield * Config.String("BASE_URL").pipe(Config.withDefault("http://localhost:3000"));
+const key = yield * Config.Redacted("API_KEY"); // Config<Redacted<string>>
+const port = yield * Config.Port("PORT");
+const n = yield * Config.Int("N").pipe(Config.withDefault(1));
+const on = yield * Config.Boolean("ON").pipe(Config.withDefault(false));
+const ttl = yield * Config.Duration("TTL").pipe(Config.withDefault(Duration.seconds(5)));
+const opt = yield * Config.option(Config.String("OPT")); // Config<Option<string>>
+const raw: string = Redacted.value(key); // ONLY way to read it
+String(key); // "<redacted>" — safe in logs/JSON
+const dbHost = Config.nested(Config.String("HOST"), "DB"); // DB_HOST
 ```
+
 - `Config<T> extends Effect<T, ConfigError>` → `yield*` it directly; no `Effect.config` wrapper.
 - Other constructors: `Config.NonEmptyString`, `Number`, `Finite`, `Literal`, `Literals`, `Array`,
   `Record`, `ByteSize`, `LogLevel`, `URL`, `Date`, `Config.schema(codec, path?)`, `Config.all`,
@@ -532,6 +606,7 @@ const dbHost = Config.nested(Config.String("HOST"), "DB")          // DB_HOST
   `satisfiesErrorType`, `satisfiesServicesType`, and the `Layer.satisfies*` trio.
 
 ## Files compiled for this document
+
 - `/home/ubuntu/apps/difmp/.recon/core.ts` — §2–§14, §15 (clean)
 - `/home/ubuntu/apps/difmp/.recon/core2.ts` — §5 scoped layers, §7 errors, §12 SSE/ReadableStream, §6 bounded cleanup (clean)
 - `/home/ubuntu/apps/difmp/.recon/tsconfig.core.json` — compiles both under `tsconfig.base.json` settings
@@ -558,27 +633,28 @@ Schema.decodeUnknownResult(Schema.DurationFromString)("90s") -> FAIL "Expected a
 `/^(-?\d+(?:\.\d+)?)\s+(nanos?|micros?|millis?|seconds?|minutes?|hours?|days?|weeks?)$/` —
 a **space is mandatory** and the unit must be a full word. Also:
 
-* **`Schema.Duration` is an opaque `declare`** — Type === Encoded === `Duration`. It cannot decode
+- **`Schema.Duration` is an opaque `declare`** — Type === Encoded === `Duration`. It cannot decode
   a string or a number. Do **not** reach for it when decoding frontmatter.
-* `Schema.DurationFromString` decodes only the spaced form; `Schema.DurationFromMillis` decodes a
+- `Schema.DurationFromString` decodes only the spaced form; `Schema.DurationFromMillis` decodes a
   `number`; `Schema.DurationFromNanos` decodes a `bigint`.
 
 Normalise `90s` / `2m` / `1h` yourself before handing anything to Effect (compiled shape):
 
 ```ts
-import { Duration } from "effect"
+import { Duration } from "effect";
 
-const ABBREV = /^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)$/
-const UNIT = { ms: "millis", s: "seconds", m: "minutes", h: "hours", d: "days" } as const
+const ABBREV = /^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)$/;
+const UNIT = { ms: "millis", s: "seconds", m: "minutes", h: "hours", d: "days" } as const;
 
 /** "90s" | "2 m" | "1500ms" | 90000 -> Duration.Input, else undefined */
 export const toDurationInput = (raw: string | number): Duration.Input | undefined => {
-  if (typeof raw === "number") return Number.isFinite(raw) && raw > 0 ? raw : undefined
-  const m = ABBREV.exec(raw.trim())
-  if (m) return `${Number(m[1])} ${UNIT[m[2] as keyof typeof UNIT]}` as Duration.Input
+  if (typeof raw === "number") return Number.isFinite(raw) && raw > 0 ? raw : undefined;
+  const m = ABBREV.exec(raw.trim());
+  if (m) return `${Number(m[1])} ${UNIT[m[2] as keyof typeof UNIT]}` as Duration.Input;
   return Duration.fromInput(raw.trim() as Duration.Input)._tag === "Some"
-    ? (raw.trim() as Duration.Input) : undefined
-}
+    ? (raw.trim() as Duration.Input)
+    : undefined;
+};
 ```
 
 Then `Duration.fromInputUnsafe(toDurationInput(v)!)`, or wrap it in a `Schema.check` so the error
@@ -597,39 +673,47 @@ uuidv4: 2edffc00-d0f9-4bfb-8285-ad26139e53d5   uuidv7: 01a0916d-7a4c-7a4f-be12-1
 ```
 
 ```ts
-import { NodeServices } from "@effect/platform-node"
-import { Crypto, Effect } from "effect"
+import { NodeServices } from "@effect/platform-node";
+import { Crypto, Effect } from "effect";
 
-const toHex = (b: Uint8Array): string => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("")
-const B32 = "abcdefghijklmnopqrstuvwxyz234567"          // RFC4648 lowercase, url-safe, no padding
+const toHex = (b: Uint8Array): string =>
+  Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+const B32 = "abcdefghijklmnopqrstuvwxyz234567"; // RFC4648 lowercase, url-safe, no padding
 const toBase32 = (b: Uint8Array): string => {
-  let bits = 0, acc = 0, out = ""
+  let bits = 0,
+    acc = 0,
+    out = "";
   for (const byte of b) {
-    acc = (acc << 8) | byte; bits += 8
-    while (bits >= 5) { out += B32[(acc >>> (bits - 5)) & 31]; bits -= 5 }
+    acc = (acc << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      out += B32[(acc >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
   }
-  if (bits > 0) out += B32[(acc << (5 - bits)) & 31]
-  return out
-}
+  if (bits > 0) out += B32[(acc << (5 - bits)) & 31];
+  return out;
+};
 
-export const makeRunId = Effect.gen(function*() {
-  const crypto = yield* Crypto.Crypto
-  return `r_${toBase32(yield* crypto.randomBytes(8))}`          // 13 chars, stable length
-})
+export const makeRunId = Effect.gen(function* () {
+  const crypto = yield* Crypto.Crypto;
+  return `r_${toBase32(yield* crypto.randomBytes(8))}`; // 13 chars, stable length
+});
 
-export const sha256Hex = (s: string) => Effect.gen(function*() {
-  const crypto = yield* Crypto.Crypto
-  return toHex(yield* crypto.digest("SHA-256", new TextEncoder().encode(s)))
-})
+export const sha256Hex = (s: string) =>
+  Effect.gen(function* () {
+    const crypto = yield* Crypto.Crypto;
+    return toHex(yield* crypto.digest("SHA-256", new TextEncoder().encode(s)));
+  });
 ```
 
-* Service key: `Crypto.Crypto` (`Context.Service`), **provided by `NodeServices.layer`** — the same
+- Service key: `Crypto.Crypto` (`Context.Service`), **provided by `NodeServices.layer`** — the same
   layer the CLI already needs for `Command.Environment`. Also standalone as `NodeCrypto.layer`.
-* `DigestAlgorithm = "SHA-1" | "SHA-256" | "SHA-384" | "SHA-512"`. Both `randomBytes` and `digest`
+- `DigestAlgorithm = "SHA-1" | "SHA-256" | "SHA-384" | "SHA-512"`. Both `randomBytes` and `digest`
   fail with `PlatformError.PlatformError` — that belongs in your `E`, do not `orDie` it silently.
-* Other members: `randomUUIDv4`, `randomUUIDv7` (monotonic — good for `artifactId` if you drop the
+- Other members: `randomUUIDv4`, `randomUUIDv7` (monotonic — good for `artifactId` if you drop the
   `art_<seq>` scheme), `randomInt`, `randomIntBetween`, `randomShuffle`, `nextDoubleUnsafe`.
-* `Crypto` is a *service*, so tests can swap a deterministic one — which is exactly what
+- `Crypto` is a _service_, so tests can swap a deterministic one — which is exactly what
   "paramètres figés améliorent la traçabilité" in spec §8 needs.
 
 ## A3. Forking a long-lived run from inside a Layer — `Effect.scope` + `forkIn`, not `forkScoped`
@@ -638,31 +722,39 @@ export const sha256Hex = (s: string) => Effect.gen(function*() {
 against a `Effect<void>` field. Capture the layer's own scope at build time instead (compiled + run):
 
 ```ts
-import { Context, Deferred, Effect, Exit, Fiber, Layer, Scope } from "effect"
+import { Context, Deferred, Effect, Exit, Fiber, Layer, Scope } from "effect";
 
-class Runner extends Context.Service<Runner, {
-  readonly start: Effect.Effect<void>
-  readonly cancel: Effect.Effect<boolean>
-  readonly done: Deferred.Deferred<Exit.Exit<string>>
-}>()("harness/Runner") {
-  static readonly layer: Layer.Layer<Runner> = Layer.effect(Runner, Effect.gen(function*() {
-    const scope: Scope.Scope = yield* Effect.scope     // <- the LAYER's scope
-    let slot: Fiber.Fiber<string> | undefined
-    const done = yield* Deferred.make<Exit.Exit<string>>()
-    const work = runAttempt.pipe(
-      Effect.onInterrupt(() => Effect.log("run interrupted -> finalizers running")),
-      Effect.onExit((exit) => Deferred.succeed(done, exit).pipe(Effect.asVoid))
-    )
-    return Runner.of({
-      start: Effect.gen(function*() { slot = yield* Effect.forkIn(work, scope) }),   // R = never
-      cancel: Effect.gen(function*() {
-        if (slot === undefined) return false
-        yield* Fiber.interrupt(slot)        // AWAITS the fiber's finalizers before returning
-        return true
-      }),
-      done
-    })
-  }))
+class Runner extends Context.Service<
+  Runner,
+  {
+    readonly start: Effect.Effect<void>;
+    readonly cancel: Effect.Effect<boolean>;
+    readonly done: Deferred.Deferred<Exit.Exit<string>>;
+  }
+>()("harness/Runner") {
+  static readonly layer: Layer.Layer<Runner> = Layer.effect(
+    Runner,
+    Effect.gen(function* () {
+      const scope: Scope.Scope = yield* Effect.scope; // <- the LAYER's scope
+      let slot: Fiber.Fiber<string> | undefined;
+      const done = yield* Deferred.make<Exit.Exit<string>>();
+      const work = runAttempt.pipe(
+        Effect.onInterrupt(() => Effect.log("run interrupted -> finalizers running")),
+        Effect.onExit((exit) => Deferred.succeed(done, exit).pipe(Effect.asVoid)),
+      );
+      return Runner.of({
+        start: Effect.gen(function* () {
+          slot = yield* Effect.forkIn(work, scope);
+        }), // R = never
+        cancel: Effect.gen(function* () {
+          if (slot === undefined) return false;
+          yield* Fiber.interrupt(slot); // AWAITS the fiber's finalizers before returning
+          return true;
+        }),
+        done,
+      });
+    }),
+  );
 }
 ```
 
@@ -677,17 +769,18 @@ as long as browser/provider teardown lives in finalizers (`Effect.acquireRelease
 Bit me while writing A3. Two unwraps:
 
 ```ts
-const maybe = yield* Deferred.poll(runner.done)         // Option<Effect<Exit<string>>>
-if (Option.isNone(maybe)) return "running"
-const exit: Exit.Exit<string> = yield* maybe.value      // second yield*
+const maybe = yield * Deferred.poll(runner.done); // Option<Effect<Exit<string>>>
+if (Option.isNone(maybe)) return "running";
+const exit: Exit.Exit<string> = yield * maybe.value; // second yield*
 ```
 
 ## A5. `Layer.effect` accepts BOTH shapes (the two cheat-sheets disagreed — both are right)
 
 ```ts
-Layer.effect(Browser, effect)   // 2-arg (api-effect-core.md §3)   -- compiles
-Layer.effect(Browser)(effect)   // curried (api-effect-http-node.md §9) -- also compiles
+Layer.effect(Browser, effect); // 2-arg (api-effect-core.md §3)   -- compiles
+Layer.effect(Browser)(effect); // curried (api-effect-http-node.md §9) -- also compiles
 ```
+
 Verified in `.recon/critic-core.ts`. Pick one and be consistent; the 2-arg form is what AGENTS.md uses.
 
 ## A6. No markdown parser is installed

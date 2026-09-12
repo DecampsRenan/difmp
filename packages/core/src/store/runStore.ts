@@ -1,158 +1,186 @@
-import { Context, DateTime, Effect, Exit, FileSystem, Layer, Path, PubSub, Result, Schema, Semaphore } from "effect"
-import type { PlatformError } from "effect/PlatformError"
-import { StoreError } from "../domain/errors.js"
-import type { HarnessEventInput } from "../domain/events.js"
-import { HarnessEvent } from "../domain/events.js"
-import type { ActionId, ArtifactId, ObservationId, RunId } from "../domain/ids.js"
-import { actionId as makeActionId, artifactId as makeArtifactId, observationId as makeObservationId } from "../domain/ids.js"
-import type { ArtifactInventory, ArtifactRecord, Manifest, RunResult } from "../domain/result.js"
-import type { ScenarioContract } from "../domain/spec.js"
-import { scanJsonl, toJsonlLine } from "./jsonl.js"
-import type { RunLayout } from "./layout.js"
-import { makeRunLayout } from "./layout.js"
+import {
+  Context,
+  DateTime,
+  Effect,
+  Exit,
+  FileSystem,
+  Layer,
+  Path,
+  PubSub,
+  Result,
+  Schema,
+  Semaphore,
+} from "effect";
+import type { PlatformError } from "effect/PlatformError";
+import { StoreError } from "../domain/errors.js";
+import type { HarnessEventInput } from "../domain/events.js";
+import { HarnessEvent } from "../domain/events.js";
+import type { ActionId, ArtifactId, ObservationId, RunId } from "../domain/ids.js";
+import {
+  actionId as makeActionId,
+  artifactId as makeArtifactId,
+  observationId as makeObservationId,
+} from "../domain/ids.js";
+import type { ArtifactInventory, ArtifactRecord, Manifest, RunResult } from "../domain/result.js";
+import type { ScenarioContract } from "../domain/spec.js";
+import { scanJsonl, toJsonlLine } from "./jsonl.js";
+import type { RunLayout } from "./layout.js";
+import { makeRunLayout } from "./layout.js";
 
 const storeError = (operation: string, path: string) => (cause: PlatformError) =>
-  new StoreError({ operation, path, reason: cause.message })
+  new StoreError({ operation, path, reason: cause.message });
 
 interface AttemptCounters {
-  action: number
-  observation: number
-  artifact: number
+  action: number;
+  observation: number;
+  artifact: number;
 }
 
 export interface RunStoreOptions {
-  readonly runId: RunId
-  readonly outputDir: string
+  readonly runId: RunId;
+  readonly outputDir: string;
 }
 
-export class RunStore extends Context.Service<RunStore, {
-  readonly runId: RunId
-  readonly layout: RunLayout
-  /**
-   * Append one event. `seq`, `ts`, `runId` and `schemaVersion` are stamped here, under the same
-   * lock that writes the file, so ordering and strict `seq` monotonicity hold. The journal write
-   * happens BEFORE the live fan-out.
-   */
-  readonly emit: (event: HarnessEventInput) => Effect.Effect<HarnessEvent, StoreError>
-  readonly mintActionId: (attemptId: string) => Effect.Effect<ActionId>
-  readonly mintObservationId: (attemptId: string) => Effect.Effect<ObservationId>
-  readonly mintArtifactId: (attemptId: string) => Effect.Effect<ArtifactId>
-  /** Records the artifact in the inventory AND emits `artifactAvailable`. */
-  readonly recordArtifact: (record: ArtifactRecord) => Effect.Effect<void, StoreError>
-  /** artifactIds known for an attempt — used to reject invented evidence references. */
-  readonly attemptArtifacts: (attemptId: string) => Effect.Effect<ReadonlySet<string>>
-  readonly inventory: Effect.Effect<ArtifactInventory>
-  readonly writeSpecCopy: (content: string) => Effect.Effect<void, StoreError>
-  readonly writeContract: (contract: ScenarioContract) => Effect.Effect<void, StoreError>
-  readonly writeManifest: (manifest: Manifest) => Effect.Effect<void, StoreError>
-  readonly writeResult: (result: RunResult) => Effect.Effect<void, StoreError>
-  /** Atomic replace of an arbitrary file under the run directory (reporters use this). */
-  readonly writeRunFile: (relativePath: string, content: string) => Effect.Effect<void, StoreError>
-  readonly ensureAttemptDirs: (attemptId: string) => Effect.Effect<void, StoreError>
-  /** Live fan-out for the SSE server. The runner never depends on a subscriber existing. */
-  readonly events: PubSub.PubSub<HarnessEvent>
-}>()("@difmp/core/store/RunStore") {
+export class RunStore extends Context.Service<
+  RunStore,
+  {
+    readonly runId: RunId;
+    readonly layout: RunLayout;
+    /**
+     * Append one event. `seq`, `ts`, `runId` and `schemaVersion` are stamped here, under the same
+     * lock that writes the file, so ordering and strict `seq` monotonicity hold. The journal write
+     * happens BEFORE the live fan-out.
+     */
+    readonly emit: (event: HarnessEventInput) => Effect.Effect<HarnessEvent, StoreError>;
+    readonly mintActionId: (attemptId: string) => Effect.Effect<ActionId>;
+    readonly mintObservationId: (attemptId: string) => Effect.Effect<ObservationId>;
+    readonly mintArtifactId: (attemptId: string) => Effect.Effect<ArtifactId>;
+    /** Records the artifact in the inventory AND emits `artifactAvailable`. */
+    readonly recordArtifact: (record: ArtifactRecord) => Effect.Effect<void, StoreError>;
+    /** artifactIds known for an attempt — used to reject invented evidence references. */
+    readonly attemptArtifacts: (attemptId: string) => Effect.Effect<ReadonlySet<string>>;
+    readonly inventory: Effect.Effect<ArtifactInventory>;
+    readonly writeSpecCopy: (content: string) => Effect.Effect<void, StoreError>;
+    readonly writeContract: (contract: ScenarioContract) => Effect.Effect<void, StoreError>;
+    readonly writeManifest: (manifest: Manifest) => Effect.Effect<void, StoreError>;
+    readonly writeResult: (result: RunResult) => Effect.Effect<void, StoreError>;
+    /** Atomic replace of an arbitrary file under the run directory (reporters use this). */
+    readonly writeRunFile: (
+      relativePath: string,
+      content: string,
+    ) => Effect.Effect<void, StoreError>;
+    readonly ensureAttemptDirs: (attemptId: string) => Effect.Effect<void, StoreError>;
+    /** Live fan-out for the SSE server. The runner never depends on a subscriber existing. */
+    readonly events: PubSub.PubSub<HarnessEvent>;
+  }
+>()("@difmp/core/store/RunStore") {
   static readonly layer = (
-    options: RunStoreOptions
+    options: RunStoreOptions,
   ): Layer.Layer<RunStore, StoreError, FileSystem.FileSystem | Path.Path> =>
-    Layer.effect(RunStore, make(options))
+    Layer.effect(RunStore, make(options));
 }
 
 const make = (options: RunStoreOptions) =>
-  Effect.gen(function*() {
-    const fs = yield* FileSystem.FileSystem
-    const path = yield* Path.Path
-    const layout = makeRunLayout(path, options.outputDir, options.runId)
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const layout = makeRunLayout(path, options.outputDir, options.runId);
 
-    yield* fs.makeDirectory(layout.root, { recursive: true }).pipe(
-      Effect.mapError(storeError("makeDirectory", layout.root))
-    )
+    yield* fs
+      .makeDirectory(layout.root, { recursive: true })
+      .pipe(Effect.mapError(storeError("makeDirectory", layout.root)));
 
-    const lock = yield* Semaphore.make(1)
-    const events = yield* PubSub.dropping<HarnessEvent>({ capacity: 1024, replay: 64 })
+    const lock = yield* Semaphore.make(1);
+    const events = yield* PubSub.dropping<HarnessEvent>({ capacity: 1024, replay: 64 });
     // The store is built inside the LAYER's scope, so this finalizer fires when the run is over.
     // Without it a subscriber parked in `PubSub.take` (the SSE fan-out) never receives a
     // termination signal and the process waits on it at shutdown — the hang documented in
     // api-effect-http-node.md §6. Proven by .recon/critic-pubsub3.ts.
-    yield* Effect.addFinalizer(() => PubSub.shutdown(events))
+    yield* Effect.addFinalizer(() => PubSub.shutdown(events));
 
-    let seq = 0
-    const counters = new Map<string, AttemptCounters>()
-    const artifacts: Array<ArtifactRecord> = []
-    let tempCounter = 0
+    let seq = 0;
+    const counters = new Map<string, AttemptCounters>();
+    const artifacts: Array<ArtifactRecord> = [];
+    let tempCounter = 0;
 
     const countersFor = (attemptId: string): AttemptCounters => {
-      const existing = counters.get(attemptId)
-      if (existing !== undefined) return existing
-      const fresh: AttemptCounters = { action: 0, observation: 0, artifact: 0 }
-      counters.set(attemptId, fresh)
-      return fresh
-    }
+      const existing = counters.get(attemptId);
+      if (existing !== undefined) return existing;
+      const fresh: AttemptCounters = { action: 0, observation: 0, artifact: 0 };
+      counters.set(attemptId, fresh);
+      return fresh;
+    };
 
     const atomicWrite = (target: string, content: string) =>
       Effect.suspend(() => {
-        const temp = `${target}.tmp-${++tempCounter}`
-        return Effect.gen(function*() {
-          yield* fs.writeFileString(temp, content).pipe(Effect.mapError(storeError("write", temp)))
-          yield* fs.rename(temp, target).pipe(Effect.mapError(storeError("rename", target)))
+        const temp = `${target}.tmp-${++tempCounter}`;
+        return Effect.gen(function* () {
+          yield* fs.writeFileString(temp, content).pipe(Effect.mapError(storeError("write", temp)));
+          yield* fs.rename(temp, target).pipe(Effect.mapError(storeError("rename", target)));
         }).pipe(
           // The rename IS the commit: until it lands, `<target>.tmp-<n>` holds nothing anyone wants.
           // A failed (or interrupted) write used to leave it behind for good — there is no sweeper,
           // and the run directory is supposed to hold the design-contracts §9 layout and nothing
           // else. Removing it here is the sweeper. A hard process kill still leaves one, because
           // nothing runs then.
-          Effect.onExit((exit) => Exit.isSuccess(exit) ? Effect.void : Effect.ignore(fs.remove(temp)))
-        )
-      })
+          Effect.onExit((exit) =>
+            Exit.isSuccess(exit) ? Effect.void : Effect.ignore(fs.remove(temp)),
+          ),
+        );
+      });
 
     const writeInventory = Effect.suspend(() =>
       atomicWrite(
         layout.artifacts,
-        `${JSON.stringify({ schemaVersion: 1, runId: options.runId, artifacts }, null, 2)}\n`
-      )
-    )
+        `${JSON.stringify({ schemaVersion: 1, runId: options.runId, artifacts }, null, 2)}\n`,
+      ),
+    );
 
     const emit = (input: HarnessEventInput): Effect.Effect<HarnessEvent, StoreError> =>
       lock.withPermits(1)(
-        Effect.gen(function*() {
-          const now = yield* DateTime.now
+        Effect.gen(function* () {
+          const now = yield* DateTime.now;
           const event = {
             schemaVersion: 1,
             seq: ++seq,
             runId: options.runId,
             ts: DateTime.formatIso(now),
-            ...input
-          } as HarnessEvent
+            ...input,
+          } as HarnessEvent;
           // Journal first, live fan-out second — a subscriber can never observe an unjournalled event.
-          yield* fs.writeFileString(layout.events, toJsonlLine(event), { flag: "a" }).pipe(
-            Effect.mapError(storeError("append", layout.events))
-          )
-          yield* PubSub.publish(events, event)
-          return event
-        })
-      )
+          yield* fs
+            .writeFileString(layout.events, toJsonlLine(event), { flag: "a" })
+            .pipe(Effect.mapError(storeError("append", layout.events)));
+          yield* PubSub.publish(events, event);
+          return event;
+        }),
+      );
 
     const recordArtifact = (record: ArtifactRecord) =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         // The push AND the inventory write share ONE permit. With the write outside it, two
         // concurrent `recordArtifact`s could build their JSON snapshots in one order and land
         // their renames in the other, so `artifacts.json` on disk silently lost entries the store
         // still held in memory (.recon/critic-jsonl-race.ts measured 64 on disk vs 100 recorded).
         // `emit` takes the same, non-reentrant permit, so it stays OUTSIDE this block.
-        yield* lock.withPermits(1)(Effect.gen(function*() {
-          artifacts.push(record)
-          // An inventory the disk refused is not an inventory: `attemptArtifacts` (which decides
-          // whether a cited artifactId is admissible) and `inventory` are read back from this
-          // array, so keeping a record whose write failed would let `result.json` cite an id
-          // `artifacts.json` never received. `atomicWrite` renames into place, so a failure leaves
-          // the file exactly as it was — rolling the push back is what keeps the two identical.
-          yield* writeInventory.pipe(Effect.onError(() =>
-            Effect.sync(() => {
-              const at = artifacts.lastIndexOf(record)
-              if (at >= 0) artifacts.splice(at, 1)
-            })
-          ))
-        }))
+        yield* lock.withPermits(1)(
+          Effect.gen(function* () {
+            artifacts.push(record);
+            // An inventory the disk refused is not an inventory: `attemptArtifacts` (which decides
+            // whether a cited artifactId is admissible) and `inventory` are read back from this
+            // array, so keeping a record whose write failed would let `result.json` cite an id
+            // `artifacts.json` never received. `atomicWrite` renames into place, so a failure leaves
+            // the file exactly as it was — rolling the push back is what keeps the two identical.
+            yield* writeInventory.pipe(
+              Effect.onError(() =>
+                Effect.sync(() => {
+                  const at = artifacts.lastIndexOf(record);
+                  if (at >= 0) artifacts.splice(at, 1);
+                }),
+              ),
+            );
+          }),
+        );
         yield* emit({
           type: "artifactAvailable",
           attemptId: record.attemptId,
@@ -161,16 +189,18 @@ const make = (options: RunStoreOptions) =>
           state: record.state,
           ...(record.path === undefined ? {} : { path: record.path }),
           ...(record.reason === undefined ? {} : { reason: record.reason }),
-          ...(record.sourceSeq === undefined ? {} : { sourceSeq: record.sourceSeq })
-        })
-      })
+          ...(record.sourceSeq === undefined ? {} : { sourceSeq: record.sourceSeq }),
+        });
+      });
 
     const mint = <A>(attemptId: string, field: keyof AttemptCounters, render: (n: number) => A) =>
-      lock.withPermits(1)(Effect.sync(() => {
-        const c = countersFor(attemptId)
-        c[field] += 1
-        return render(c[field])
-      }))
+      lock.withPermits(1)(
+        Effect.sync(() => {
+          const c = countersFor(attemptId);
+          c[field] += 1;
+          return render(c[field]);
+        }),
+      );
 
     return RunStore.of({
       runId: options.runId,
@@ -181,75 +211,103 @@ const make = (options: RunStoreOptions) =>
       mintArtifactId: (attemptId) => mint(attemptId, "artifact", makeArtifactId),
       recordArtifact,
       attemptArtifacts: (attemptId) =>
-        Effect.sync(() =>
-          new Set(artifacts.filter((a) => a.attemptId === attemptId && a.state === "present").map((a) => a.artifactId))
+        Effect.sync(
+          () =>
+            new Set(
+              artifacts
+                .filter((a) => a.attemptId === attemptId && a.state === "present")
+                .map((a) => a.artifactId),
+            ),
         ),
-      inventory: Effect.sync(() => ({ schemaVersion: 1 as const, runId: options.runId, artifacts: [...artifacts] })),
+      inventory: Effect.sync(() => ({
+        schemaVersion: 1 as const,
+        runId: options.runId,
+        artifacts: [...artifacts],
+      })),
       writeSpecCopy: (content) => atomicWrite(layout.spec, content),
-      writeContract: (contract) => atomicWrite(layout.contract, `${JSON.stringify(contract, null, 2)}\n`),
-      writeManifest: (manifest) => atomicWrite(layout.manifest, `${JSON.stringify(manifest, null, 2)}\n`),
+      writeContract: (contract) =>
+        atomicWrite(layout.contract, `${JSON.stringify(contract, null, 2)}\n`),
+      writeManifest: (manifest) =>
+        atomicWrite(layout.manifest, `${JSON.stringify(manifest, null, 2)}\n`),
       writeResult: (result) => atomicWrite(layout.result, `${JSON.stringify(result, null, 2)}\n`),
       writeRunFile: (relativePath, content) =>
-        Effect.gen(function*() {
-          const target = path.join(layout.root, relativePath)
-          yield* fs.makeDirectory(path.dirname(target), { recursive: true }).pipe(
-            Effect.mapError(storeError("makeDirectory", target))
-          )
-          yield* atomicWrite(target, content)
+        Effect.gen(function* () {
+          const target = path.join(layout.root, relativePath);
+          yield* fs
+            .makeDirectory(path.dirname(target), { recursive: true })
+            .pipe(Effect.mapError(storeError("makeDirectory", target)));
+          yield* atomicWrite(target, content);
         }),
       ensureAttemptDirs: (attemptId) =>
         Effect.forEach(
           [layout.attemptDir(attemptId), layout.screenshotsDir(attemptId)],
-          (dir) => fs.makeDirectory(dir, { recursive: true }).pipe(Effect.mapError(storeError("makeDirectory", dir))),
-          { discard: true }
+          (dir) =>
+            fs
+              .makeDirectory(dir, { recursive: true })
+              .pipe(Effect.mapError(storeError("makeDirectory", dir))),
+          { discard: true },
         ),
-      events
-    })
-  })
+      events,
+    });
+  });
 
 export interface RunJournal {
-  readonly events: ReadonlyArray<HarnessEvent>
+  readonly events: ReadonlyArray<HarnessEvent>;
   /** The last JSONL line was incomplete: the process was interrupted while writing. */
-  readonly truncatedTail: boolean
+  readonly truncatedTail: boolean;
   /** True only when a `runFinished` event was journalled and nothing is truncated. */
-  readonly finalized: boolean
-  readonly invalid: ReadonlyArray<{ readonly line: number; readonly reason: string }>
-  readonly undecodable: ReadonlyArray<{ readonly seq: number | undefined; readonly reason: string }>
+  readonly finalized: boolean;
+  readonly invalid: ReadonlyArray<{ readonly line: number; readonly reason: string }>;
+  readonly undecodable: ReadonlyArray<{
+    readonly seq: number | undefined;
+    readonly reason: string;
+  }>;
 }
 
-const decodeEvent = Schema.decodeUnknownResult(HarnessEvent)
+const decodeEvent = Schema.decodeUnknownResult(HarnessEvent);
 
 /**
  * Reload a run journal. Tolerates a truncated final line and reports the run as not finalised,
  * exactly as design-contracts §6 requires.
  */
 export const readRunJournal = (
-  eventsPath: string
+  eventsPath: string,
 ): Effect.Effect<RunJournal, StoreError, FileSystem.FileSystem> =>
-  Effect.gen(function*() {
-    const fs = yield* FileSystem.FileSystem
-    const exists = yield* fs.exists(eventsPath).pipe(Effect.mapError(storeError("exists", eventsPath)))
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const exists = yield* fs
+      .exists(eventsPath)
+      .pipe(Effect.mapError(storeError("exists", eventsPath)));
     if (!exists) {
-      return { events: [], truncatedTail: false, finalized: false, invalid: [], undecodable: [] }
+      return { events: [], truncatedTail: false, finalized: false, invalid: [], undecodable: [] };
     }
-    const content = yield* fs.readFileString(eventsPath).pipe(Effect.mapError(storeError("read", eventsPath)))
-    const scan = scanJsonl(content)
-    const events: Array<HarnessEvent> = []
-    const undecodable: Array<{ seq: number | undefined; reason: string }> = []
+    const content = yield* fs
+      .readFileString(eventsPath)
+      .pipe(Effect.mapError(storeError("read", eventsPath)));
+    const scan = scanJsonl(content);
+    const events: Array<HarnessEvent> = [];
+    const undecodable: Array<{ seq: number | undefined; reason: string }> = [];
     for (const record of scan.records) {
-      const decoded = decodeEvent(record)
+      const decoded = decodeEvent(record);
       if (Result.isSuccess(decoded)) {
-        events.push(decoded.success)
+        events.push(decoded.success);
       } else {
-        const seq = typeof record === "object" && record !== null && "seq" in record
-          ? (record as { seq?: unknown }).seq
-          : undefined
+        const seq =
+          typeof record === "object" && record !== null && "seq" in record
+            ? (record as { seq?: unknown }).seq
+            : undefined;
         undecodable.push({
           seq: typeof seq === "number" ? seq : undefined,
-          reason: decoded.failure.message
-        })
+          reason: decoded.failure.message,
+        });
       }
     }
-    const finalized = !scan.truncatedTail && events.some((e) => e.type === "runFinished")
-    return { events, truncatedTail: scan.truncatedTail, finalized, invalid: scan.invalid, undecodable }
-  })
+    const finalized = !scan.truncatedTail && events.some((e) => e.type === "runFinished");
+    return {
+      events,
+      truncatedTail: scan.truncatedTail,
+      finalized,
+      invalid: scan.invalid,
+      undecodable,
+    };
+  });

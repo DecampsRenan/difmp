@@ -10,26 +10,26 @@
  */
 
 export interface SeededWorkspace {
-  readonly workspaceId: string
-  readonly workspaceName: string
-  readonly email: string
+  readonly workspaceId: string;
+  readonly workspaceName: string;
+  readonly email: string;
 }
 
-const byAttempt = new Map<string, SeededWorkspace>()
+const byAttempt = new Map<string, SeededWorkspace>();
 
-const key = (runId: string, attemptId: string): string => `${runId}/${attemptId}`
+const key = (runId: string, attemptId: string): string => `${runId}/${attemptId}`;
 
 export const rememberWorkspace = (
   runId: string,
   attemptId: string,
-  workspace: SeededWorkspace
+  workspace: SeededWorkspace,
 ): void => {
-  byAttempt.set(key(runId, attemptId), workspace)
-}
+  byAttempt.set(key(runId, attemptId), workspace);
+};
 
 export const lookupWorkspace = (runId: string, attemptId: string): SeededWorkspace | undefined =>
-  byAttempt.get(key(runId, attemptId))
+  byAttempt.get(key(runId, attemptId));
 
 export const forgetWorkspace = (runId: string, attemptId: string): void => {
-  byAttempt.delete(key(runId, attemptId))
-}
+  byAttempt.delete(key(runId, attemptId));
+};

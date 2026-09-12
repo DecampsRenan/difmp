@@ -1,19 +1,24 @@
-import type { FixtureCleanupReport, FixtureSession, Registries, StorageStateLike } from "@difmp/core"
-import { FixtureError, FixtureManager, recordingSecrets } from "@difmp/core"
-import { Duration, Effect, Exit, Layer, Option } from "effect"
+import type {
+  FixtureCleanupReport,
+  FixtureSession,
+  Registries,
+  StorageStateLike,
+} from "@difmp/core";
+import { FixtureError, FixtureManager, recordingSecrets } from "@difmp/core";
+import { Duration, Effect, Exit, Layer, Option } from "effect";
 
-type Cleanup = () => Promise<void> | void
+type Cleanup = () => Promise<void> | void;
 
 const mergeStorageState = (
   state: StorageStateLike | undefined,
   cookies: StorageStateLike["cookies"],
-  origins: StorageStateLike["origins"]
+  origins: StorageStateLike["origins"],
 ): StorageStateLike | undefined => {
-  const allCookies = [...(state?.cookies ?? []), ...(cookies ?? [])]
-  const allOrigins = [...(state?.origins ?? []), ...(origins ?? [])]
-  if (allCookies.length === 0 && allOrigins.length === 0 && state === undefined) return undefined
-  return { cookies: allCookies, origins: allOrigins }
-}
+  const allCookies = [...(state?.cookies ?? []), ...(cookies ?? [])];
+  const allOrigins = [...(state?.origins ?? []), ...(origins ?? [])];
+  if (allCookies.length === 0 && allOrigins.length === 0 && state === undefined) return undefined;
+  return { cookies: allCookies, origins: allOrigins };
+};
 
 /**
  * Runs the project's registered fixtures. Names resolve in the registry only — a spec can never
@@ -26,20 +31,25 @@ export const fixtureManagerLayer = (registries: Registries): Layer.Layer<Fixture
     FixtureManager,
     FixtureManager.of({
       setup: (request) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           const fixture = yield* registries.fixtures.lookup(request.fixtureName).pipe(
-            Effect.mapError((error) =>
-              new FixtureError({ fixtureName: request.fixtureName, phase: "setup", reason: error.message })
-            )
-          )
-          const cleanups: Array<Cleanup> = []
+            Effect.mapError(
+              (error) =>
+                new FixtureError({
+                  fixtureName: request.fixtureName,
+                  phase: "setup",
+                  reason: error.message,
+                }),
+            ),
+          );
+          const cleanups: Array<Cleanup> = [];
           // design-contracts §11/§13: the harness can only strip values it was TOLD about.
           // `recordingSecrets` wraps the env accessor and remembers every value the fixture
           // actually read, and those values are reported on the session below. Without this the
           // runner's redactor stayed the identity function, so a secret a fixture read and handed
           // back under `public` landed verbatim in contract.json, events.jsonl, result.json,
           // junit.xml and report.html.
-          const recorder = recordingSecrets((name: string) => process.env[name])
+          const recorder = recordingSecrets((name: string) => process.env[name]);
           const result = yield* Effect.tryPromise({
             // `signal` is aborted when the setup is cancelled or exceeds
             // `budgets.fixtureSetupTimeoutMs`. A fixture that ignores it is merely ABANDONED: a row
@@ -53,17 +63,17 @@ export const fixtureManagerLayer = (registries: Registries): Layer.Layer<Fixture
                 // a known secret, which is what makes §13's redaction real.
                 secrets: recorder.secrets,
                 addCleanup: (fn: Cleanup) => {
-                  cleanups.push(fn)
+                  cleanups.push(fn);
                 },
                 baseUrl: request.baseUrl,
-                signal
+                signal,
               }),
             catch: (cause) =>
               new FixtureError({
                 fixtureName: request.fixtureName,
                 phase: "setup",
-                reason: cause instanceof Error ? cause.message : String(cause)
-              })
+                reason: cause instanceof Error ? cause.message : String(cause),
+              }),
           }).pipe(
             // A setup that did not SUCCEED must still run whatever it managed to acquire.
             // `Effect.tapError` fired on a typed failure only, so interrupting a run during fixture
@@ -71,50 +81,59 @@ export const fixtureManagerLayer = (registries: Registries): Layer.Layer<Fixture
             // above claimed the opposite. `onExit` covers failure AND interruption; finalizers are
             // uninterruptible, so the teardown completes.
             Effect.onExit((exit) =>
-              Exit.isSuccess(exit) ? Effect.void : runCleanups(cleanups, request.cleanupTimeoutMs).pipe(Effect.asVoid)
-            )
-          )
+              Exit.isSuccess(exit)
+                ? Effect.void
+                : runCleanups(cleanups, request.cleanupTimeoutMs).pipe(Effect.asVoid),
+            ),
+          );
 
-          const storageState = mergeStorageState(result.storageState, result.cookies, result.origins)
+          const storageState = mergeStorageState(
+            result.storageState,
+            result.cookies,
+            result.origins,
+          );
           return {
             fixtureName: request.fixtureName,
             publicValues: result.public ?? {},
             secretValues: recorder.values(),
             ...(storageState === undefined ? {} : { storageState }),
-            cleanup: ({ timeoutMs }) => runCleanups(cleanups, timeoutMs)
-          } satisfies FixtureSession
-        })
-    })
-  )
+            cleanup: ({ timeoutMs }) => runCleanups(cleanups, timeoutMs),
+          } satisfies FixtureSession;
+        }),
+    }),
+  );
 
 /** Never fails: problems come back in the report so the runner can journal them. */
-const runCleanups = (cleanups: ReadonlyArray<Cleanup>, timeoutMs: number): Effect.Effect<FixtureCleanupReport> =>
+const runCleanups = (
+  cleanups: ReadonlyArray<Cleanup>,
+  timeoutMs: number,
+): Effect.Effect<FixtureCleanupReport> =>
   Effect.suspend(() => {
-    const errors: Array<string> = []
-    let cleanupsRun = 0
+    const errors: Array<string> = [];
+    let cleanupsRun = 0;
     // Reverse order: the last thing acquired is the first thing released.
     const all = Effect.forEach(
-      [...cleanups].reverse(),
+      [...cleanups].toReversed(),
       (fn) =>
         Effect.tryPromise({
           try: async () => {
-            await fn()
+            await fn();
           },
-          catch: (cause) => (cause instanceof Error ? cause.message : String(cause))
+          catch: (cause) => (cause instanceof Error ? cause.message : String(cause)),
         }).pipe(
           Effect.match({
             onFailure: (reason) => {
-              errors.push(reason)
+              errors.push(reason);
             },
             onSuccess: () => {
-              cleanupsRun += 1
-            }
-          })
+              cleanupsRun += 1;
+            },
+          }),
         ),
-      { discard: true }
-    )
+      { discard: true },
+    );
     return all.pipe(
       Effect.timeoutOption(Duration.millis(Math.max(1, timeoutMs))),
-      Effect.map((finished) => ({ cleanupsRun, timedOut: Option.isNone(finished), errors }))
-    )
-  })
+      Effect.map((finished) => ({ cleanupsRun, timedOut: Option.isNone(finished), errors })),
+    );
+  });

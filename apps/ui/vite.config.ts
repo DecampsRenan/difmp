@@ -1,5 +1,5 @@
-import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 
 /**
  * `base: "./"` so the CLI can mount `dist/` at any path (api-tooling.md §8.1). It is NOT enough for
@@ -14,9 +14,9 @@ export default defineConfig({
     emptyOutDir: true,
     target: "es2022",
     cssCodeSplit: false,
-    modulePreload: { polyfill: false }
+    modulePreload: { polyfill: false },
   },
   server: {
-    host: "127.0.0.1"
-  }
-})
+    host: "127.0.0.1",
+  },
+});

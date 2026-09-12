@@ -1,17 +1,17 @@
-import type { AbsenceBranch, CriterionResult } from "../domain/result.js"
-import { recordDowngrade } from "./evidence.js"
+import type { AbsenceBranch, CriterionResult } from "../domain/result.js";
+import { recordDowngrade } from "./evidence.js";
 
 export interface AbsenceInput {
   /** Did the navigation that preceded the observation actually settle? */
-  readonly navigationSettled: boolean
+  readonly navigationSettled: boolean;
   /** Was the checkpoint the criterion names reached (page loaded, list rendered, settled)? */
-  readonly checkpointReached: boolean
+  readonly checkpointReached: boolean;
 }
 
 export interface AbsenceOutcome {
-  readonly status: "failed" | "inconclusive"
-  readonly branch: AbsenceBranch
-  readonly rationale: string
+  readonly status: "failed" | "inconclusive";
+  readonly branch: AbsenceBranch;
+  readonly rationale: string;
 }
 
 /**
@@ -21,17 +21,18 @@ export interface AbsenceOutcome {
 export const classifyAbsence = (input: AbsenceInput): AbsenceOutcome =>
   input.navigationSettled && input.checkpointReached
     ? {
-      status: "failed",
-      branch: "established-at-checkpoint",
-      rationale: "the element was absent at the checkpoint the criterion names, on a settled page"
-    }
+        status: "failed",
+        branch: "established-at-checkpoint",
+        rationale:
+          "the element was absent at the checkpoint the criterion names, on a settled page",
+      }
     : {
-      status: "inconclusive",
-      branch: "uncertain-navigation",
-      rationale: input.navigationSettled
-        ? "the checkpoint named by the criterion was never reached, so absence proves nothing"
-        : "navigation did not settle, so absence cannot be distinguished from a page that never rendered"
-    }
+        status: "inconclusive",
+        branch: "uncertain-navigation",
+        rationale: input.navigationSettled
+          ? "the checkpoint named by the criterion was never reached, so absence proves nothing"
+          : "navigation did not settle, so absence cannot be distinguished from a page that never rendered",
+      };
 
 /**
  * spec §9 / design-contracts §8, wired into the run rather than left to the evaluator.
@@ -46,20 +47,21 @@ export const classifyAbsence = (input: AbsenceInput): AbsenceOutcome =>
  * downgraded, and the downgrade says why.
  */
 export const enforceAbsenceRule = (input: {
-  readonly result: CriterionResult
-  readonly facts: AbsenceInput
+  readonly result: CriterionResult;
+  readonly facts: AbsenceInput;
 }): CriterionResult => {
-  const claimed = input.result.absence
-  if (claimed === undefined) return input.result
-  const facts: AbsenceInput = claimed === "uncertain-navigation"
-    ? { navigationSettled: false, checkpointReached: false }
-    : input.facts
-  const outcome = classifyAbsence(facts)
-  const result: CriterionResult = { ...input.result, absence: outcome.branch }
-  if (outcome.status === "failed" || result.status !== "failed") return result
+  const claimed = input.result.absence;
+  if (claimed === undefined) return input.result;
+  const facts: AbsenceInput =
+    claimed === "uncertain-navigation"
+      ? { navigationSettled: false, checkpointReached: false }
+      : input.facts;
+  const outcome = classifyAbsence(facts);
+  const result: CriterionResult = { ...input.result, absence: outcome.branch };
+  if (outcome.status === "failed" || result.status !== "failed") return result;
   return recordDowngrade(result, {
     reason: "absence-uncertain-navigation",
     to: "inconclusive",
-    detail: `a missing locator cannot establish a failure here: ${outcome.rationale}`
-  })
-}
+    detail: `a missing locator cannot establish a failure here: ${outcome.rationale}`,
+  });
+};

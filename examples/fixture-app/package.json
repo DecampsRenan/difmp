@@ -2,22 +2,32 @@
   "name": "@difmp/fixture-app",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "Tiny server-rendered Projects app used as the target of the agent-driven E2E harness.",
-  "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./package.json": "./package.json"
+  "bin": {
+    "fixture-app": "./dist/main.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": { "fixture-app": "./dist/main.js" },
-  "files": ["dist", "README.md"],
-  "engines": { "node": ">=22.12.0" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "tsc -b tsconfig.json",
     "start": "node dist/main.js",
     "clean": "rm -rf dist"
   },
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {},
+  "engines": {
+    "node": ">=22.12.0"
+  }
 }

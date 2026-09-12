@@ -1,46 +1,48 @@
-import type { ConfigOverrides, ProviderName, ReporterName, ResolvedConfig } from "@difmp/core"
-import { isSensitiveKey } from "@difmp/core"
-import { Effect, Option } from "effect"
-import { UsageError } from "./errors.js"
-import { reporterNames } from "./project.js"
+import type { ConfigOverrides, ProviderName, ReporterName, ResolvedConfig } from "@difmp/core";
+import { isSensitiveKey } from "@difmp/core";
+import { Effect, Option } from "effect";
+import { UsageError } from "./errors.js";
+import { reporterNames } from "./project.js";
 
 export interface OverrideFlags {
-  readonly output: Option.Option<string>
-  readonly provider: Option.Option<ProviderName>
-  readonly model: Option.Option<string>
-  readonly baseUrl: Option.Option<string>
-  readonly maxActions: Option.Option<number>
-  readonly reporter: ReadonlyArray<string>
+  readonly output: Option.Option<string>;
+  readonly provider: Option.Option<ProviderName>;
+  readonly model: Option.Option<string>;
+  readonly baseUrl: Option.Option<string>;
+  readonly maxActions: Option.Option<number>;
+  readonly reporter: ReadonlyArray<string>;
 }
 
-const validateReporters = (values: ReadonlyArray<string>): Effect.Effect<ReadonlyArray<ReporterName>, UsageError> => {
-  const unknown = values.filter((value) => !reporterNames.includes(value as ReporterName))
+const validateReporters = (
+  values: ReadonlyArray<string>,
+): Effect.Effect<ReadonlyArray<ReporterName>, UsageError> => {
+  const unknown = values.filter((value) => !reporterNames.includes(value as ReporterName));
   if (unknown.length > 0) {
     return Effect.fail(
       new UsageError({
-        message: `--reporter ${unknown.join(", ")}: unknown reporter (available: ${reporterNames.join(", ")})`
-      })
-    )
+        message: `--reporter ${unknown.join(", ")}: unknown reporter (available: ${reporterNames.join(", ")})`,
+      }),
+    );
   }
-  return Effect.succeed([...new Set(values)] as ReadonlyArray<ReporterName>)
-}
+  return Effect.succeed([...new Set(values)] as ReadonlyArray<ReporterName>);
+};
 
 /**
  * CLI execution options override `difmp.config.ts`. Only the flags actually supplied become
  * overrides — an absent flag leaves the file's value (or the built-in default) alone.
  */
 export const toOverrides = (flags: OverrideFlags): Effect.Effect<ConfigOverrides, UsageError> =>
-  Effect.gen(function*() {
-    const reporters = yield* validateReporters(flags.reporter)
+  Effect.gen(function* () {
+    const reporters = yield* validateReporters(flags.reporter);
     return {
       ...(Option.isSome(flags.output) ? { outputDir: flags.output.value } : {}),
       ...(Option.isSome(flags.provider) ? { provider: flags.provider.value } : {}),
       ...(Option.isSome(flags.model) ? { model: flags.model.value } : {}),
       ...(Option.isSome(flags.baseUrl) ? { baseUrl: flags.baseUrl.value } : {}),
       ...(Option.isSome(flags.maxActions) ? { maxActions: flags.maxActions.value } : {}),
-      ...(reporters.length === 0 ? {} : { reporters })
-    }
-  })
+      ...(reporters.length === 0 ? {} : { reporters }),
+    };
+  });
 
 /**
  * Whether a KEY looks like a credential. The rule lives in `@difmp/core` (`isSensitiveKey`), so
@@ -49,7 +51,7 @@ export const toOverrides = (flags: OverrideFlags): Effect.Effect<ConfigOverrides
  * `maxTokens` and `verifierReserveTokens` are printed while `token`, `sessionToken` and `apiKey`
  * are not.
  */
-export const looksSensitive = (key: string): boolean => isSensitiveKey(key)
+export const looksSensitive = (key: string): boolean => isSensitiveKey(key);
 
 /**
  * Never print a value whose key looks like a credential, whatever the project put in the config.
@@ -57,43 +59,43 @@ export const looksSensitive = (key: string): boolean => isSensitiveKey(key)
  * but a project can still put something sensitive in `inputs` or `providerOptions` by mistake.
  */
 export const redactSensitive = (
-  options: Readonly<Record<string, unknown>>
+  options: Readonly<Record<string, unknown>>,
 ): Readonly<Record<string, unknown>> => {
-  const out: Record<string, unknown> = {}
+  const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(options)) {
-    out[key] = looksSensitive(key) ? "[redacted]" : value
+    out[key] = looksSensitive(key) ? "[redacted]" : value;
   }
-  return out
-}
+  return out;
+};
 
 /**
  * The resolved, non-sensitive configuration, printed before launch (spec §8). Secrets live in
  * environment variables and never appear here — `apiKeyEnvVar` names a variable, not a value.
  */
 export const describeConfig = (options: {
-  readonly config: ResolvedConfig
-  readonly source: string
-  readonly outputDir: string
-  readonly specs: ReadonlyArray<string>
+  readonly config: ResolvedConfig;
+  readonly source: string;
+  readonly outputDir: string;
+  readonly specs: ReadonlyArray<string>;
 }): ReadonlyArray<string> => {
-  const { config } = options
-  const lines: Array<string> = ["Resolved configuration"]
-  const row = (label: string, value: string) => lines.push(`  ${label.padEnd(16)}${value}`)
-  row("config", options.source)
-  row("baseUrl", config.baseUrl)
-  row("allowedOrigins", config.allowedOrigins.join(", "))
-  row("provider", config.provider)
-  row("model", config.model ?? "(provider default — none set)")
-  row("providerOptions", JSON.stringify(redactSensitive(config.providerOptions)))
-  row("maxActions", `${config.maxActions} (indicative only)`)
-  row("budgets", JSON.stringify(config.budgets))
-  row("capture", JSON.stringify(config.capture))
-  row("outputDir", options.outputDir)
-  row("reporters", config.reporters.join(", "))
-  row("inputs", JSON.stringify(redactSensitive(config.inputs)))
-  row("include", JSON.stringify(config.include))
-  row("exclude", JSON.stringify(config.exclude))
-  row("scenarios", `${options.specs.length}`)
-  for (const spec of options.specs) lines.push(`                  ${spec}`)
-  return lines
-}
+  const { config } = options;
+  const lines: Array<string> = ["Resolved configuration"];
+  const row = (label: string, value: string) => lines.push(`  ${label.padEnd(16)}${value}`);
+  row("config", options.source);
+  row("baseUrl", config.baseUrl);
+  row("allowedOrigins", config.allowedOrigins.join(", "));
+  row("provider", config.provider);
+  row("model", config.model ?? "(provider default — none set)");
+  row("providerOptions", JSON.stringify(redactSensitive(config.providerOptions)));
+  row("maxActions", `${config.maxActions} (indicative only)`);
+  row("budgets", JSON.stringify(config.budgets));
+  row("capture", JSON.stringify(config.capture));
+  row("outputDir", options.outputDir);
+  row("reporters", config.reporters.join(", "));
+  row("inputs", JSON.stringify(redactSensitive(config.inputs)));
+  row("include", JSON.stringify(config.include));
+  row("exclude", JSON.stringify(config.exclude));
+  row("scenarios", `${options.specs.length}`);
+  for (const spec of options.specs) lines.push(`                  ${spec}`);
+  return lines;
+};

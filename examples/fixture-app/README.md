@@ -65,13 +65,13 @@ context.
 
 ## Pages and routes
 
-| Route | Notes |
-| --- | --- |
-| `GET /` | Login page when unauthenticated; workspace home when authenticated. |
-| `POST /login` | Form-encoded `email` + `password`; sets `sid`; 401 + error alert on failure. |
-| `GET /logout` | Clears the session. |
-| `GET /api/projects` | `{ projects: [...] }` for the caller's workspace. 401 if signed out. |
-| `POST /api/projects` | `{ name }` → `201` + the project. 400 on empty name, 401 if signed out. |
+| Route                | Notes                                                                        |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `GET /`              | Login page when unauthenticated; workspace home when authenticated.          |
+| `POST /login`        | Form-encoded `email` + `password`; sets `sid`; 401 + error alert on failure. |
+| `GET /logout`        | Clears the session.                                                          |
+| `GET /api/projects`  | `{ projects: [...] }` for the caller's workspace. 401 if signed out.         |
+| `POST /api/projects` | `{ name }` → `201` + the project. 400 on empty name, 401 if signed out.      |
 
 The home page's create form submits with `fetch` and appends the new project to the list
 **client-side, without a full reload** — that is what makes the `false-success` variant meaningful.
@@ -86,12 +86,12 @@ Selected per server instance by the `variant` option, or by the `FIXTURE_APP_VAR
 variable. **Precedence:** explicit option → env var → `"healthy"`. An unknown env value throws
 instead of silently falling back.
 
-| Variant | Behaviour |
-| --- | --- |
-| `healthy` | Everything works. Create persists, reload shows it, exactly one entry. |
-| `create-500` | `POST /api/projects` always answers `500` with `{ error: { code, message } }`. Nothing is persisted; the page shows an error alert quoting the HTTP status. |
+| Variant         | Behaviour                                                                                                                                                                                                                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `healthy`       | Everything works. Create persists, reload shows it, exactly one entry.                                                                                                                                                                               |
+| `create-500`    | `POST /api/projects` always answers `500` with `{ error: { code, message } }`. Nothing is persisted; the page shows an error alert quoting the HTTP status.                                                                                          |
 | `false-success` | `POST /api/projects` answers `201` with a plausible project object that is **never** written to the store. The UI appends it optimistically, so it is indistinguishable from `healthy` until the page is reloaded — after which the project is gone. |
-| `alt-layout` | Functionally identical to `healthy`, different shape: the form lives behind a "New project" toggle that reveals a dialog, the list is a `<table>` instead of a `<ul>`, and the wording changes ("Name of the project" / "Add project"). No defect. |
+| `alt-layout`    | Functionally identical to `healthy`, different shape: the form lives behind a "New project" toggle that reveals a dialog, the list is a `<table>` instead of a `<ul>`, and the wording changes ("Name of the project" / "Add project"). No defect.   |
 
 ## Test-only endpoints (guarded)
 
@@ -107,8 +107,14 @@ Creates an isolated workspace + user + session without going through the UI. Opt
 `{ workspaceName?, email?, password?, projects?: string[] }`. Returns:
 
 ```json
-{ "workspaceId": "...", "workspaceName": "...", "userId": "...",
-  "email": "...", "password": "...", "sessionToken": "..." }
+{
+  "workspaceId": "...",
+  "workspaceName": "...",
+  "userId": "...",
+  "email": "...",
+  "password": "...",
+  "sessionToken": "..."
+}
 ```
 
 ### `GET /__probe/projects?workspaceId=...&name=...`

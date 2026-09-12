@@ -1,9 +1,10 @@
 # Demonstrator CI for the agent-driven E2E harness (spec §12).
 #
 # WHAT RUNS ON EVERY PUSH AND PULL REQUEST — and nothing else does:
-#   typecheck -> the harness's own Vitest suites -> the packaged CLI installed into consumer
-#   projects (npm / pnpm / Yarn, ESM and CommonJS) -> the example scenarios executed through that
-#   distributed CLI with the SCRIPTED adapter against the local demo app.
+#   formatting and lint (oxfmt, oxlint), in a separate parallel job that needs no browser;
+#   and, independently: typecheck -> the harness's own Vitest suites -> the packaged CLI installed
+#   into consumer projects (npm / pnpm / Yarn, ESM and CommonJS) -> the example scenarios executed
+#   through that distributed CLI with the SCRIPTED adapter against the local demo app.
 #
 # No API key, no network service and no secret is required to contribute: everything above is
 # deterministic and offline. The real-model smoke test is a SEPARATE, opt-in job at the bottom.
@@ -22,22 +23,36 @@
 #
 # WHAT WAS ACTUALLY VERIFIED, AND WHAT WAS NOT. Every `run:` step's command was executed locally,
 # on Node 24.19.0 / pnpm 10.29.3, exactly as written: `pnpm install --frozen-lockfile`,
-# `pnpm run typecheck`, `pnpm run build`, `pnpm --filter @difmp/fixture-app build`,
+# `pnpm run format:check` and `pnpm exec oxlint --format=github` (both clean, 0 errors and 0
+# warnings, on the tree that introduced them), `pnpm run typecheck`, `pnpm run build`, `pnpm --filter @difmp/fixture-app build`,
 # `pnpm run test`, `apps/cli/scripts/consumer-smoke/run.sh` (the step below passes `npm pnpm yarn`
 # = 6 cells; adding `yarn1` gives the 8 cells the README quotes — 24/24 assertions in each),
 # `apps/cli/scripts/ci/run-examples.sh` (healthy and alt-layout, 3 scenarios each, exit 0 through
 # the tarball's binary), and both `rsync` collection commands.
 #
-# THIS WORKFLOW HAS NOW RUN ONCE ON A GITHUB RUNNER, AND IT FAILED: run 34653238470 (push of
-# `8da6e6f`, 2026-09-11T22:16Z, 4m17s). Everything through `pnpm run test` passed there. The
-# packaging step failed because the runner's consumer installs resolve **pnpm 12.4.1**, which turns
-# an unapproved dependency build into an error — `ERR_PNPM_IGNORED_BUILDS · Ignored build scripts:
-# esbuild@0.28.2` (esbuild arrives transitively through `tsx`); the npm and Yarn cells passed 24/24
-# there, both pnpm cells reported INSTALL FAILED. Locally pnpm 10.29.3 only warns, which is why the
-# matrix is green here. `pnpm add --allow-build=esbuild` exits 0 under both pnpm versions.
-# STILL UNVERIFIED on a runner, because the job stopped before them or they only exist there: the
-# example-scenarios step, the `actions/cache` hit branch, and the `secrets.ANTHROPIC_API_KEY` path
-# of the optional job — no Anthropic call was made.
+# RUNNER HISTORY. This workflow failed its first two runs on a GitHub runner, both times at the
+# packaging step and both times for the same reason: runs 34653238470 (push of `8da6e6f`,
+# 2026-09-11T22:16Z) and 34687483497 (push of `96d0bfa`, 2026-09-12T10:04Z). Everything through
+# `pnpm run test` passed on both; the npm and Yarn cells passed 24/24; both pnpm cells reported
+# INSTALL FAILED with `ERR_PNPM_IGNORED_BUILDS · Ignored build scripts: esbuild@0.28.2`.
+#
+# The cause is a pnpm VERSION difference, not a difference in the package. esbuild arrives
+# transitively through `tsx`; pnpm 10 prints the skipped build script and exits 0, pnpm >= 12 turns
+# it into an error and exits 1. The consumer projects live outside this workspace with no
+# `packageManager` field, and `corepack enable` (needed for the Yarn cell) makes `pnpm` a shim that
+# then resolves the latest — 12.4.1 — so the runner's consumers use a different pnpm from the
+# workspace's pinned 10.29.3. That is why the matrix was green locally and red there.
+#
+# FIXED by having the pnpm cells install with `--allow-build=esbuild`, which is the remedy the
+# README already prescribes to users. Reproduced and verified locally before the change rather than
+# inferred: `pnpm@12 add <tgz>` exits 1 with that exact error, `pnpm@12 add --allow-build=esbuild
+# <tgz>` exits 0, the same flag exits 0 on pnpm 10.29.3, and the installed binary runs in both.
+# `run.sh <dir> pnpm` then passes 24/24 on both the ESM and CommonJS cells.
+#
+# STILL UNVERIFIED on a runner, because the job has never got past packaging or because they only
+# exist there: the example-scenarios step, the `actions/cache` hit branch, and the
+# `secrets.ANTHROPIC_API_KEY` path of the optional job — no Anthropic call has been made.
+# The `quality` job below HAS passed on a runner (34687483497).
 
 name: ci
 
@@ -68,6 +83,36 @@ env:
   NODE_VERSION: "24.19.0"
 
 jobs:
+  # The cheapest gate, and deliberately its own job: it needs no Chromium, no build and no demo
+  # app, so it answers in about a minute and runs in parallel with everything below rather than
+  # holding it up. `oxlint --format=github` emits workflow annotations, so findings land on the
+  # diff in a pull request instead of only in the log.
+  #
+  # These are the same two commands `lefthook.yml` runs on pre-push. They exist here as well
+  # because hooks are bypassable — `--no-verify`, an edit through the GitHub web UI, or simply a
+  # clone where `pnpm install` never ran the hook installer. This job is the copy that cannot be
+  # skipped.
+  quality:
+    name: format and lint (oxfmt, oxlint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # lefthook's postinstall installs git hooks; it detects $CI and no-ops here.
+      - run: pnpm install --frozen-lockfile
+
+      - name: Formatting (oxfmt --check)
+        run: pnpm run format:check
+
+      - name: Lint (oxlint)
+        run: pnpm exec oxlint --format=github
+
   difmp:
     name: typecheck, tests, packaging, example scenarios
     runs-on: ubuntu-latest

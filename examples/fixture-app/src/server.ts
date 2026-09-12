@@ -221,11 +221,7 @@ export const createFixtureServer = (deps: ServerDeps): Server => {
 
         // Variant 2: the write is always refused, with network-visible evidence.
         if (variant === "create-500") {
-          sendJson(
-            res,
-            500,
-            errorBody("project_create_failed", "The project could not be saved."),
-          );
+          sendJson(res, 500, errorBody("project_create_failed", "The project could not be saved."));
           return;
         }
 

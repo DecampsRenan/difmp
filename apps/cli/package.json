@@ -1,27 +1,24 @@
 {
   "name": "difmp",
   "version": "0.1.0",
-  "type": "module",
   "description": "Agent-driven end-to-end test harness: run *.e2e.md scenarios from any project",
   "bin": {
     "difmp": "./dist/bin/difmp.js"
   },
+  "files": [
+    "dist",
+    "assets",
+    "README.md"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "assets",
-    "README.md"
-  ],
-  "engines": {
-    "node": ">=22.12.0"
   },
   "scripts": {
     "build": "node scripts/copy-ui.mjs && rm -rf dist tsconfig.tsbuildinfo && tsc -b tsconfig.json",
@@ -32,13 +29,13 @@
     "prepack": "npm run build:bundle"
   },
   "dependencies": {
-    "effect": "4.0.0-rc.113",
-    "@effect/platform-node": "4.0.0-rc.113",
     "@effect/ai-anthropic": "4.0.0-rc.113",
+    "@effect/platform-node": "4.0.0-rc.113",
+    "effect": "4.0.0-rc.113",
     "playwright": "1.63.0",
+    "tinyglobby": "^0.2.17",
     "tsx": "^4.23.13",
-    "yaml": "^2.9.0",
-    "tinyglobby": "^0.2.17"
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@difmp/agent-runtime": "workspace:*",
@@ -47,5 +44,8 @@
     "@difmp/reporting": "workspace:*",
     "tsdown": "^0.23.0",
     "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

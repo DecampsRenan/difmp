@@ -1,4 +1,4 @@
-import { Runtime, Schema } from "effect"
+import { Runtime, Schema } from "effect";
 
 /**
  * Exit codes (design-contracts §12, spec §12):
@@ -9,29 +9,32 @@ import { Runtime, Schema } from "effect"
  * the runtime from logging the cause a second time on top of our own rendered message.
  */
 export class UsageError extends Schema.TaggedError<UsageError>()("UsageError", {
-  message: Schema.String
+  message: Schema.String,
 }) {
-  override readonly [Runtime.errorExitCode] = 2
-  override readonly [Runtime.errorReported] = false
+  override readonly [Runtime.errorExitCode] = 2;
+  override readonly [Runtime.errorReported] = false;
 }
 
 /** An execution error: the harness itself could not complete the work. Exit 2. */
 export class ExecutionError extends Schema.TaggedError<ExecutionError>()("ExecutionError", {
-  message: Schema.String
+  message: Schema.String,
 }) {
-  override readonly [Runtime.errorExitCode] = 2
-  override readonly [Runtime.errorReported] = false
+  override readonly [Runtime.errorExitCode] = 2;
+  override readonly [Runtime.errorReported] = false;
 }
 
 /** A product verdict: at least one scenario is `failed` or `inconclusive`. Exit 1. */
-export class ScenariosNotPassing extends Schema.TaggedError<ScenariosNotPassing>()("ScenariosNotPassing", {
-  failed: Schema.Int,
-  inconclusive: Schema.Int
-}) {
-  override readonly [Runtime.errorExitCode] = 1
-  override readonly [Runtime.errorReported] = false
+export class ScenariosNotPassing extends Schema.TaggedError<ScenariosNotPassing>()(
+  "ScenariosNotPassing",
+  {
+    failed: Schema.Int,
+    inconclusive: Schema.Int,
+  },
+) {
+  override readonly [Runtime.errorExitCode] = 1;
+  override readonly [Runtime.errorReported] = false;
   override get message(): string {
-    return `${this.failed} failed, ${this.inconclusive} inconclusive`
+    return `${this.failed} failed, ${this.inconclusive} inconclusive`;
   }
 }
 
@@ -41,13 +44,13 @@ export class ScenariosNotPassing extends Schema.TaggedError<ScenariosNotPassing>
  * carries the same code for a cancellation that came in over HTTP.
  */
 export class Cancelled extends Schema.TaggedError<Cancelled>()("Cancelled", {
-  reason: Schema.String
+  reason: Schema.String,
 }) {
-  override readonly [Runtime.errorExitCode] = 130
-  override readonly [Runtime.errorReported] = false
+  override readonly [Runtime.errorExitCode] = 130;
+  override readonly [Runtime.errorReported] = false;
   override get message(): string {
-    return `cancelled: ${this.reason}`
+    return `cancelled: ${this.reason}`;
   }
 }
 
-export type CliError = UsageError | ExecutionError | ScenariosNotPassing | Cancelled
+export type CliError = UsageError | ExecutionError | ScenariosNotPassing | Cancelled;

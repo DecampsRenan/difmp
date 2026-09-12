@@ -15,40 +15,55 @@ Every ```ts block below was compiled with
 ## 0. Imports
 
 ```ts
-import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { Cause, Console, Effect, Exit, Layer, Option, Runtime, Schema, Stdio } from "effect"
+import { NodeRuntime, NodeServices } from "@effect/platform-node";
+import { Cause, Console, Effect, Exit, Layer, Option, Runtime, Schema, Stdio } from "effect";
 import {
-  Argument, CliConfig, CliError, CliOutput, Command, Completions,
-  Flag, GlobalFlag, HelpDoc, Param, Primitive, Prompt
-} from "effect/unstable/cli"
+  Argument,
+  CliConfig,
+  CliError,
+  CliOutput,
+  Command,
+  Completions,
+  Flag,
+  GlobalFlag,
+  HelpDoc,
+  Param,
+  Primitive,
+  Prompt,
+} from "effect/unstable/cli";
 ```
 
 There is **no** `@effect/cli` package in v4. Everything lives under the `effect` package at
-`effect/unstable/cli` (single entry point; `effect/unstable/cli/Command` is *not* an export path).
+`effect/unstable/cli` (single entry point; `effect/unstable/cli/Command` is _not_ an export path).
 
 ## 1. Command
 
 ```ts
-interface Command<in out Name extends string, in Input, out ContextInput = {}, out E = never, out R = never>
-  extends Effect.Effect<ContextInput, never, CommandContext<Name>> {}
+interface Command<
+  in out Name extends string,
+  in Input,
+  out ContextInput = {},
+  out E = never,
+  out R = never,
+> extends Effect.Effect<ContextInput, never, CommandContext<Name>> {}
 ```
 
-A `Command` **is itself an Effect** that yields the *parent's* parsed input — that is how a
+A `Command` **is itself an Effect** that yields the _parent's_ parsed input — that is how a
 subcommand reads parent flags: `const root = yield* harness`.
 
-| function | signature (curried form) |
-|---|---|
-| `Command.make` | `(name)` / `(name, config)` / `(name, config, handler)` |
-| `Command.withHandler` | `<A,R,E>(handler: (value: A) => Effect<void,E,R>) => (self) => Command<Name,A,ContextInput,E,...>` |
-| `Command.withSubcommands` | `<Subs extends ReadonlyArray<Command.SubcommandEntry>>(subs) => (self) => Command<Name, Simplify<Input \| ContextInput>, ContextInput, E \| SubE, R \| SubR>` |
-| `Command.withSharedFlags` | `(flags: Command.FlagConfig) => (self) => Command<Name, Input & Infer<F>, ContextInput & Infer<F>, E, R>` |
-| `Command.withGlobalFlags` | `(flags: ReadonlyArray<GlobalFlag.GlobalFlag<any>>)` |
-| `Command.withDescription` / `withShortDescription` / `withAlias` / `withExamples` / `unlisted` / `annotate` / `annotateMerge` / `withMetavar`(params) | metadata |
-| `Command.provide` / `provideSync` / `provideEffect` / `provideEffectDiscard` | give the *handler* services; `provideEffect(key, effect \| (input) => effect)` can depend on parsed input |
-| `Command.run` | runner using `Stdio` args |
-| `Command.runWith` | runner with an explicit `ReadonlyArray<string>` |
-| `Command.wizard` | interactive wizard |
-| `Command.isCommand` | guard |
+| function                                                                                                                                              | signature (curried form)                                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Command.make`                                                                                                                                        | `(name)` / `(name, config)` / `(name, config, handler)`                                                                                                       |
+| `Command.withHandler`                                                                                                                                 | `<A,R,E>(handler: (value: A) => Effect<void,E,R>) => (self) => Command<Name,A,ContextInput,E,...>`                                                            |
+| `Command.withSubcommands`                                                                                                                             | `<Subs extends ReadonlyArray<Command.SubcommandEntry>>(subs) => (self) => Command<Name, Simplify<Input \| ContextInput>, ContextInput, E \| SubE, R \| SubR>` |
+| `Command.withSharedFlags`                                                                                                                             | `(flags: Command.FlagConfig) => (self) => Command<Name, Input & Infer<F>, ContextInput & Infer<F>, E, R>`                                                     |
+| `Command.withGlobalFlags`                                                                                                                             | `(flags: ReadonlyArray<GlobalFlag.GlobalFlag<any>>)`                                                                                                          |
+| `Command.withDescription` / `withShortDescription` / `withAlias` / `withExamples` / `unlisted` / `annotate` / `annotateMerge` / `withMetavar`(params) | metadata                                                                                                                                                      |
+| `Command.provide` / `provideSync` / `provideEffect` / `provideEffectDiscard`                                                                          | give the _handler_ services; `provideEffect(key, effect \| (input) => effect)` can depend on parsed input                                                     |
+| `Command.run`                                                                                                                                         | runner using `Stdio` args                                                                                                                                     |
+| `Command.runWith`                                                                                                                                     | runner with an explicit `ReadonlyArray<string>`                                                                                                               |
+| `Command.wizard`                                                                                                                                      | interactive wizard                                                                                                                                            |
+| `Command.isCommand`                                                                                                                                   | guard                                                                                                                                                         |
 
 `Command.Config` values may be a `Param`, a nested object, or an array of those. Inference helper:
 `Command.Command.Config.Infer<typeof config>` (note the doubled `Command.Command` — `Command` is both
@@ -102,12 +117,9 @@ Flag.atLeast(n) / Flag.atMost(n) / Flag.between(min,max)   -> Flag<ReadonlyArray
 **There is no `Flag.repeated` and no `Flag.variadic`.** Use `Flag.atLeast(0)`:
 
 ```ts
-import { Flag } from "effect/unstable/cli"
+import { Flag } from "effect/unstable/cli";
 // --reporter json --reporter html  ->  ReadonlyArray<string>
-const reporters = Flag.String("reporter").pipe(
-  Flag.withAlias("r"),
-  Flag.atLeast(0)
-)
+const reporters = Flag.String("reporter").pipe(Flag.withAlias("r"), Flag.atLeast(0));
 ```
 
 `Param.variadic(param, { min?, max? })` is the underlying primitive and works for either kind, but
@@ -119,12 +131,12 @@ const reporters = Flag.String("reporter").pipe(
 `--input k=v` needs. Both `--input a=1 --input b=2` and `--input=a=1 --input=b=2` work.
 
 ```ts
-import { Flag } from "effect/unstable/cli"
+import { Flag } from "effect/unstable/cli";
 const inputKV = Flag.KeyValuePair("input").pipe(
   Flag.withAlias("i"),
   Flag.withDescription("Scenario input, repeatable: --input key=value"),
-  Flag.withDefault({} as Record<string, string>) // KeyValuePair requires >=1 pair otherwise
-)
+  Flag.withDefault({} as Record<string, string>), // KeyValuePair requires >=1 pair otherwise
+);
 ```
 
 ## 3. Argument (positionals)
@@ -140,10 +152,10 @@ Combinators: `optional`, `withDefault`, `withDescription`, `withMetavar`, `withS
 `Argument.variadic` is `dual`, so **both** of these are valid (the ai-docs use both spellings):
 
 ```ts
-import { Argument } from "effect/unstable/cli"
-const anyPaths  = Argument.String("paths").pipe(Argument.variadic)        // no parens
-const somePaths = Argument.String("paths").pipe(Argument.variadic())      // parens
-const bounded   = Argument.String("paths").pipe(Argument.variadic({ min: 1, max: 3 }))
+import { Argument } from "effect/unstable/cli";
+const anyPaths = Argument.String("paths").pipe(Argument.variadic); // no parens
+const somePaths = Argument.String("paths").pipe(Argument.variadic()); // parens
+const bounded = Argument.String("paths").pipe(Argument.variadic({ min: 1, max: 3 }));
 ```
 
 `min: 0` (the default) renders as `[<paths...>]` and is optional. Violations surface as
@@ -159,7 +171,7 @@ only treats the first positional token as a subcommand if it matches a subcomman
 (`internal/parser.ts: resolveFirstValue`); otherwise, **if the parent declares positional
 arguments**, it is collected as a positional and the parent's own handler runs.
 
-Recipe: give the root the *same* config as `run`, and reuse the handler.
+Recipe: give the root the _same_ config as `run`, and reuse the handler.
 
 ```ts
 const runConfig = { paths, input: inputKV, reporter: reporters /* ... */ }
@@ -178,12 +190,12 @@ Verified: `harness 'e2e/**/*.yaml' a.yaml -i user=bob -r json` runs the root han
 
 - A typo'd subcommand is silently swallowed as a positional: `harness rnu` → `paths === ["rnu"]`,
   exit 0, **no "did you mean" suggestion**. `UnknownSubcommand` is only raised when the parent has
-  *no* positional args (`toImpl(command).config.arguments.length > 0` gate). If you want typo
+  _no_ positional args (`toImpl(command).config.arguments.length > 0` gate). If you want typo
   detection you must validate the glob list yourself in the handler.
 - A file literally named `run`/`list`/`validate`/`report` in argv position 1 is taken as the
   subcommand. Users must write `difmp ./run` or `difmp -- run`.
 - Duplicating the config means duplicating flag definitions; that is fine (they are separate
-  `Command`s), but a *shared* flag on the root that is also declared locally on a subcommand throws
+  `Command`s), but a _shared_ flag on the root that is also declared locally on a subcommand throws
   at construction time (`checkForDuplicateFlags`).
 - There is **no** `Command.withDefaultSubcommand` / `defaultCommand` API. This recipe is the only
   supported way.
@@ -212,19 +224,19 @@ GlobalFlag.BuiltIns = [Help, Version, Wizard, Completions, LogLevel]
 Drop the ones you do not want:
 
 ```ts
-const configLayer = CliConfig.layer({ builtIns: [GlobalFlag.Help, GlobalFlag.Version] })
+const configLayer = CliConfig.layer({ builtIns: [GlobalFlag.Help, GlobalFlag.Version] });
 ```
 
 Custom global flags:
 
 ```ts
 const NoColor = GlobalFlag.Setting("no-color")({
-  flag: Flag.Boolean("no-color").pipe(Flag.withDefault(false))
-})   // readable in a handler with `yield* NoColor`
+  flag: Flag.Boolean("no-color").pipe(Flag.withDefault(false)),
+}); // readable in a handler with `yield* NoColor`
 const PrintPath = GlobalFlag.Action({
   flag: Flag.Boolean("print-path").pipe(Flag.withDefault(false)),
-  run: (_value, ctx) => Console.log(ctx.commandPath.join(" "))  // Action short-circuits, then exits
-})
+  run: (_value, ctx) => Console.log(ctx.commandPath.join(" ")), // Action short-circuits, then exits
+});
 // attach with Command.withGlobalFlags([NoColor, PrintPath])
 ```
 
@@ -243,9 +255,9 @@ USAGE: harness <subcommand> [flags] [<paths...>]
 Help is printed with `Console.log`; errors with `Console.error`. Formatting is a swappable service:
 
 ```ts
-CliOutput.Formatter                                  // Context.Reference<Formatter>
-CliOutput.defaultFormatter({ colors: false })        // deterministic, ANSI-free
-CliOutput.layer(formatter)                           // Layer.Layer<never>
+CliOutput.Formatter; // Context.Reference<Formatter>
+CliOutput.defaultFormatter({ colors: false }); // deterministic, ANSI-free
+CliOutput.layer(formatter); // Layer.Layer<never>
 ```
 
 ## 6. Runner + exit codes
@@ -269,19 +281,21 @@ always printed**.
 `NodeRuntime.runMain(effect, { disableErrorReporting?, teardown? })` (dual: also
 `.pipe(NodeRuntime.runMain(opts))`). `Runtime.defaultTeardown` rules:
 
-| situation | code |
-|---|---|
-| success | `0` |
-| `Cause.hasInterruptsOnly` (SIGINT / SIGTERM) | `130` |
+| situation                                                    | code        |
+| ------------------------------------------------------------ | ----------- |
+| success                                                      | `0`         |
+| `Cause.hasInterruptsOnly` (SIGINT / SIGTERM)                 | `130`       |
 | failure with `[Runtime.errorExitCode]` on the squashed error | that number |
-| any other failure | `1` |
+| any other failure                                            | `1`         |
 
 Control a code by putting the marker on your error class:
 
 ```ts
-class UsageError extends Schema.TaggedError<UsageError>()("UsageError", { message: Schema.String }) {
-  readonly [Runtime.errorExitCode] = 2
-  readonly [Runtime.errorReported] = false   // suppress the automatic Effect.logError(cause)
+class UsageError extends Schema.TaggedError<UsageError>()("UsageError", {
+  message: Schema.String,
+}) {
+  readonly [Runtime.errorExitCode] = 2;
+  readonly [Runtime.errorReported] = false; // suppress the automatic Effect.logError(cause)
 }
 ```
 
@@ -292,15 +306,15 @@ UnknownSubcommand, …) is wrapped in `ShowHelp`, so out of the box a bad invoca
 
 ```ts
 const teardown: Runtime.Teardown = (exit, onExit) => {
-  if (Exit.isSuccess(exit)) return onExit(0)
-  if (Cause.hasInterruptsOnly(exit.cause)) return onExit(130)
-  const err = Cause.squash(exit.cause)
+  if (Exit.isSuccess(exit)) return onExit(0);
+  if (Cause.hasInterruptsOnly(exit.cause)) return onExit(130);
+  const err = Cause.squash(exit.cause);
   if (CliError.isCliError(err)) {
-    if (err._tag === "ShowHelp") return onExit(err.errors.length > 0 ? 2 : 0)
-    if (err._tag !== "UserError") return onExit(2)
+    if (err._tag === "ShowHelp") return onExit(err.errors.length > 0 ? 2 : 0);
+    if (err._tag !== "UserError") return onExit(2);
   }
-  return onExit(Runtime.getErrorExitCode(err) ?? 1)
-}
+  return onExit(Runtime.getErrorExitCode(err) ?? 1);
+};
 ```
 
 Verified exit codes with this teardown: `--help` 0, `--version` 0, good run 0, `--nope` 2,
@@ -313,11 +327,22 @@ missing required arg 2, `UsageError` 2, `FailedRun` 1.
 interrupts-only, so `defaultTeardown` yields `130`. Finalizers run first. Verified end-to-end:
 
 ```ts
-const root = Command.make("sleeper", {}, Effect.fnUntraced(function*() {
-  yield* Console.log("working")
-  yield* Effect.sleep("30 seconds")
-}, Effect.onInterrupt(() => Console.log("interrupted, cleaning up"))))
-root.pipe(Command.run({ version: "1.0.0" }), Effect.provide(NodeServices.layer), NodeRuntime.runMain)
+const root = Command.make(
+  "sleeper",
+  {},
+  Effect.fnUntraced(
+    function* () {
+      yield* Console.log("working");
+      yield* Effect.sleep("30 seconds");
+    },
+    Effect.onInterrupt(() => Console.log("interrupted, cleaning up")),
+  ),
+);
+root.pipe(
+  Command.run({ version: "1.0.0" }),
+  Effect.provide(NodeServices.layer),
+  NodeRuntime.runMain,
+);
 // $ kill -INT <pid>  ->  prints "interrupted, cleaning up", exit 130
 ```
 
@@ -350,28 +375,31 @@ re-failed with `[errorReported] = false`.
 ## 8. Testing a CLI in-process (capture stdout/stderr + exit code)
 
 ```ts
-const TestLayer = Layer.provideMerge(Stdio.layerTest({}), NodeServices.layer) // layerTest must be ON TOP
+const TestLayer = Layer.provideMerge(Stdio.layerTest({}), NodeServices.layer); // layerTest must be ON TOP
 const exec = (argv: ReadonlyArray<string>) =>
   Effect.suspend(() => {
-    const stdout: Array<string> = []
-    const stderr: Array<string> = []
+    const stdout: Array<string> = [];
+    const stderr: Array<string> = [];
     const testConsole: Console.Console = Object.assign(Object.create(globalThis.console), {
       log: (...a: ReadonlyArray<unknown>) => stdout.push(a.join(" ")),
-      error: (...a: ReadonlyArray<unknown>) => stderr.push(a.join(" "))
-    })
+      error: (...a: ReadonlyArray<unknown>) => stderr.push(a.join(" ")),
+    });
     return Command.runWith(root, { version: "1.0.0" })(argv).pipe(
       Effect.provideService(Console.Console, testConsole),
       Effect.provide(CliOutput.layer(CliOutput.defaultFormatter({ colors: false }))),
       Effect.exit,
       Effect.map((exit) => ({
-        code: Exit.isSuccess(exit) ? 0
-          : Cause.hasInterruptsOnly(exit.cause) ? 130
-          : Runtime.getErrorExitCode(Cause.squash(exit.cause)) ?? 1,
-        stdout, stderr
+        code: Exit.isSuccess(exit)
+          ? 0
+          : Cause.hasInterruptsOnly(exit.cause)
+            ? 130
+            : (Runtime.getErrorExitCode(Cause.squash(exit.cause)) ?? 1),
+        stdout,
+        stderr,
       })),
-      Effect.provide(TestLayer)
-    )
-  })
+      Effect.provide(TestLayer),
+    );
+  });
 ```
 
 Verified output: `{ code: 0, stdout: ['{"paths":["a.ts"],"reporter":["json"]}'] }`, and for
@@ -384,42 +412,42 @@ is the capture point. `Stdio.layerTest({ args })` only feeds `Command.run`'s arg
 `.recon/cli-harness.ts` — compiles clean and was run for every case below.
 
 ```ts
-import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { Cause, Console, Effect, Exit, Option, Runtime, Schema } from "effect"
-import { Argument, CliConfig, CliError, Command, Flag } from "effect/unstable/cli"
+import { NodeRuntime, NodeServices } from "@effect/platform-node";
+import { Cause, Console, Effect, Exit, Option, Runtime, Schema } from "effect";
+import { Argument, CliConfig, CliError, Command, Flag } from "effect/unstable/cli";
 
 // --- custom exit-code errors -------------------------------------------------
 class UsageError extends Schema.TaggedError<UsageError>()("UsageError", {
-  message: Schema.String
+  message: Schema.String,
 }) {
-  readonly [Runtime.errorExitCode] = 2
-  readonly [Runtime.errorReported] = false
+  readonly [Runtime.errorExitCode] = 2;
+  readonly [Runtime.errorReported] = false;
 }
 
 class FailedRun extends Schema.TaggedError<FailedRun>()("FailedRun", {
-  failed: Schema.Number
+  failed: Schema.Number,
 }) {
-  readonly [Runtime.errorExitCode] = 1
-  readonly [Runtime.errorReported] = false
+  readonly [Runtime.errorExitCode] = 1;
+  readonly [Runtime.errorReported] = false;
 }
 
 // --- reusable params ---------------------------------------------------------
 const inputKV = Flag.KeyValuePair("input").pipe(
   Flag.withAlias("i"),
   Flag.withDescription("Scenario input, repeatable: --input key=value"),
-  Flag.withDefault({} as Record<string, string>)
-)
+  Flag.withDefault({} as Record<string, string>),
+);
 
 const reporters = Flag.String("reporter").pipe(
   Flag.withAlias("r"),
   Flag.withDescription("Reporter, repeatable"),
-  Flag.atLeast(0)
-)
+  Flag.atLeast(0),
+);
 
 const paths = Argument.String("paths").pipe(
   Argument.withDescription("Scenario file globs"),
-  Argument.variadic()
-)
+  Argument.variadic(),
+);
 
 const runConfig = {
   paths,
@@ -427,88 +455,103 @@ const runConfig = {
   reporter: reporters,
   headless: Flag.Boolean("headless").pipe(Flag.withDefault(true)),
   concurrency: Flag.Int("concurrency").pipe(Flag.withDefault(1)),
-  outDir: Flag.Path("out-dir", { mustExist: false }).pipe(Flag.optional)
-}
+  outDir: Flag.Path("out-dir", { mustExist: false }).pipe(Flag.optional),
+};
 
-const verbose = Flag.Boolean("verbose").pipe(Flag.withAlias("v"), Flag.withDefault(false))
+const verbose = Flag.Boolean("verbose").pipe(Flag.withAlias("v"), Flag.withDefault(false));
 
-type RunInput = Command.Command.Config.Infer<typeof runConfig> & { readonly verbose: boolean }
+type RunInput = Command.Command.Config.Infer<typeof runConfig> & { readonly verbose: boolean };
 
-const runHandler = Effect.fnUntraced(function*(cfg: RunInput) {
-  if (cfg.verbose) yield* Console.log("verbose on")
-  if (cfg.concurrency < 1) return yield* new UsageError({ message: "bad --concurrency" })
-  yield* Console.log(JSON.stringify({
-    paths: cfg.paths,
-    input: cfg.input,
-    reporter: cfg.reporter,
-    headless: cfg.headless,
-    outDir: Option.getOrNull(cfg.outDir)
-  }))
-  const failed = 0
-  if (failed > 0) return yield* new FailedRun({ failed })
-})
+const runHandler = Effect.fnUntraced(function* (cfg: RunInput) {
+  if (cfg.verbose) yield* Console.log("verbose on");
+  if (cfg.concurrency < 1) return yield* new UsageError({ message: "bad --concurrency" });
+  yield* Console.log(
+    JSON.stringify({
+      paths: cfg.paths,
+      input: cfg.input,
+      reporter: cfg.reporter,
+      headless: cfg.headless,
+      outDir: Option.getOrNull(cfg.outDir),
+    }),
+  );
+  const failed = 0;
+  if (failed > 0) return yield* new FailedRun({ failed });
+});
 
 // --- root command: own config == `run` config, so bare `difmp <globs>` works
 const harness = Command.make("harness", runConfig).pipe(
   Command.withSharedFlags({ verbose }),
   Command.withDescription("Agentic E2E harness"),
-  Command.withHandler(runHandler)
-)
+  Command.withHandler(runHandler),
+);
 
 const run = Command.make("run", runConfig, (cfg) =>
-  Effect.flatMap(harness, (root) => runHandler({ ...cfg, verbose: root.verbose }))).pipe(
-    Command.withDescription("Run scenarios"),
-    Command.withExamples([
-      { command: "difmp run 'e2e/**/*.yaml' -i user=bob -r json", description: "Run" }
-    ])
-  )
+  Effect.flatMap(harness, (root) => runHandler({ ...cfg, verbose: root.verbose })),
+).pipe(
+  Command.withDescription("Run scenarios"),
+  Command.withExamples([
+    { command: "difmp run 'e2e/**/*.yaml' -i user=bob -r json", description: "Run" },
+  ]),
+);
 
-const list = Command.make("list", {
-  paths,
-  json: Flag.Boolean("json").pipe(Flag.withDefault(false))
-}, Effect.fnUntraced(function*(cfg) {
-  const root = yield* harness
-  if (root.verbose) yield* Console.log("verbose on")
-  yield* Console.log(cfg.json ? JSON.stringify(cfg.paths) : cfg.paths.join("\n"))
-})).pipe(Command.withAlias("ls"), Command.withDescription("List scenarios"))
+const list = Command.make(
+  "list",
+  {
+    paths,
+    json: Flag.Boolean("json").pipe(Flag.withDefault(false)),
+  },
+  Effect.fnUntraced(function* (cfg) {
+    const root = yield* harness;
+    if (root.verbose) yield* Console.log("verbose on");
+    yield* Console.log(cfg.json ? JSON.stringify(cfg.paths) : cfg.paths.join("\n"));
+  }),
+).pipe(Command.withAlias("ls"), Command.withDescription("List scenarios"));
 
-const validate = Command.make("validate", {
-  paths,
-  strict: Flag.Boolean("strict").pipe(Flag.withDefault(false))
-}, Effect.fnUntraced(function*(cfg) {
-  if (cfg.strict && cfg.paths.length === 0) {
-    return yield* new UsageError({ message: "no scenarios matched" })
-  }
-  yield* Console.log("ok")
-})).pipe(Command.withDescription("Validate scenario files"))
+const validate = Command.make(
+  "validate",
+  {
+    paths,
+    strict: Flag.Boolean("strict").pipe(Flag.withDefault(false)),
+  },
+  Effect.fnUntraced(function* (cfg) {
+    if (cfg.strict && cfg.paths.length === 0) {
+      return yield* new UsageError({ message: "no scenarios matched" });
+    }
+    yield* Console.log("ok");
+  }),
+).pipe(Command.withDescription("Validate scenario files"));
 
-const report = Command.make("report", {
-  from: Argument.Directory("from", { mustExist: true }),
-  format: Flag.Literals("format", ["html", "json", "junit"]).pipe(Flag.withDefault("html"))
-}, Effect.fnUntraced(function*(cfg) {
-  yield* Console.log(`${cfg.format} <- ${cfg.from}`)
-})).pipe(Command.withDescription("Render a report"))
+const report = Command.make(
+  "report",
+  {
+    from: Argument.Directory("from", { mustExist: true }),
+    format: Flag.Literals("format", ["html", "json", "junit"]).pipe(Flag.withDefault("html")),
+  },
+  Effect.fnUntraced(function* (cfg) {
+    yield* Console.log(`${cfg.format} <- ${cfg.from}`);
+  }),
+).pipe(Command.withDescription("Render a report"));
 
-const cli = harness.pipe(Command.withSubcommands([run, list, validate, report]))
+const cli = harness.pipe(Command.withSubcommands([run, list, validate, report]));
 
 // --- runner + exit codes -----------------------------------------------------
 const teardown: Runtime.Teardown = (exit, onExit) => {
-  if (Exit.isSuccess(exit)) return onExit(0)
-  if (Cause.hasInterruptsOnly(exit.cause)) return onExit(130)
-  const err = Cause.squash(exit.cause)
+  if (Exit.isSuccess(exit)) return onExit(0);
+  if (Cause.hasInterruptsOnly(exit.cause)) return onExit(130);
+  const err = Cause.squash(exit.cause);
   if (CliError.isCliError(err)) {
-    if (err._tag === "ShowHelp") return onExit(err.errors.length > 0 ? 2 : 0)
-    if (err._tag !== "UserError") return onExit(2)
+    if (err._tag === "ShowHelp") return onExit(err.errors.length > 0 ? 2 : 0);
+    if (err._tag !== "UserError") return onExit(2);
   }
-  return onExit(Runtime.getErrorExitCode(err) ?? 1)
-}
+  return onExit(Runtime.getErrorExitCode(err) ?? 1);
+};
 
 cli.pipe(
   Command.run({ version: "0.1.0" }),
   Effect.provide(NodeServices.layer),
   Effect.provide(CliConfig.layer({})),
-  NodeRuntime.runMain({ teardown })
-)
+  NodeRuntime.runMain({ teardown }),
+);
 ```
 
 Observed runs:

@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config"
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
@@ -8,15 +8,15 @@ export default defineConfig({
         test: {
           name: "unit",
           include: ["packages/*/test/**/*.test.ts"],
-          environment: "node"
-        }
+          environment: "node",
+        },
       },
       // The CLI suite keeps its own config (it launches a real Chromium, so it disables file
       // parallelism and raises the timeouts). Referencing it here means `npx vitest run` — and the
       // CI job that mirrors it — covers the harness's own tests in ONE command.
-      "apps/cli/vitest.config.ts"
+      "apps/cli/vitest.config.ts",
     ],
     globals: false,
-    passWithNoTests: true
-  }
-})
+    passWithNoTests: true,
+  },
+});

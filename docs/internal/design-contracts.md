@@ -16,17 +16,17 @@ API facts live in the sibling `api-*.md` cheat-sheets — read the ones for your
 
 ## 1. Package ownership (do not write outside your lane)
 
-| package | name | owns |
-| --- | --- | --- |
-| `packages/core` | `@difmp/core` | schemas, spec loader, interpolation, config, registries, policy/budgets, events, RunStore, runner |
-| `packages/browser-playwright` | `@difmp/browser-playwright` | `BrowserDriver` impl, observation/aria refs, evidence capture |
-| `packages/agent-runtime` | `@difmp/agent-runtime` | `ModelProvider` iface, Anthropic adapter, scripted adapter, agent loop, `Verifier` impls |
-| `packages/reporting` | `@difmp/reporting` | JSON/JUnit/standalone-HTML reporters |
-| `apps/cli` | `difmp` | commands, layer assembly, SSE server, console reporter, exit codes, packaging |
-| `apps/ui` | `@difmp/ui` | React live UI (built to static assets consumed by the CLI) |
-| `examples/fixture-app` | `@difmp/fixture-app` | demo app + variants + probe endpoint |
-| `examples/scenarios` | — | `*.e2e.md` demo specs |
-| `examples/support` | `@difmp/example-support` | demo `difmp.config.ts`, fixtures, TS checks, scripted-adapter scripts |
+| package                       | name                        | owns                                                                                              |
+| ----------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
+| `packages/core`               | `@difmp/core`               | schemas, spec loader, interpolation, config, registries, policy/budgets, events, RunStore, runner |
+| `packages/browser-playwright` | `@difmp/browser-playwright` | `BrowserDriver` impl, observation/aria refs, evidence capture                                     |
+| `packages/agent-runtime`      | `@difmp/agent-runtime`      | `ModelProvider` iface, Anthropic adapter, scripted adapter, agent loop, `Verifier` impls          |
+| `packages/reporting`          | `@difmp/reporting`          | JSON/JUnit/standalone-HTML reporters                                                              |
+| `apps/cli`                    | `difmp`                     | commands, layer assembly, SSE server, console reporter, exit codes, packaging                     |
+| `apps/ui`                     | `@difmp/ui`                 | React live UI (built to static assets consumed by the CLI)                                        |
+| `examples/fixture-app`        | `@difmp/fixture-app`        | demo app + variants + probe endpoint                                                              |
+| `examples/scenarios`          | —                           | `*.e2e.md` demo specs                                                                             |
+| `examples/support`            | `@difmp/example-support`    | demo `difmp.config.ts`, fixtures, TS checks, scripted-adapter scripts                             |
 
 `@difmp/core` must NOT depend on React, Playwright, or any model SDK. Driver/provider/verifier
 are `Context.Service` interfaces declared in core and implemented in the other packages.
@@ -49,48 +49,47 @@ public entrypoint only (`@difmp/core`), never deep `src/` paths.
 ## 3. `difmp.config.ts`
 
 ```ts
-import { defineConfig } from "@difmp/core"   // re-exported by the CLI package too
+import { defineConfig } from "@difmp/core"; // re-exported by the CLI package too
 
 export default defineConfig({
   // discovery
-  include: ["**/*.e2e.md"],                 // default
-  exclude: ["**/node_modules/**", "**/runs/**", "**/dist/**"],  // always merged in
+  include: ["**/*.e2e.md"], // default
+  exclude: ["**/node_modules/**", "**/runs/**", "**/dist/**"], // always merged in
   // target
   baseUrl: "http://127.0.0.1:3000",
-  allowedOrigins: ["http://127.0.0.1:3000"],   // navigation policy; baseUrl origin always allowed
+  allowedOrigins: ["http://127.0.0.1:3000"], // navigation policy; baseUrl origin always allowed
   // data
-  inputs: { projectName: "Project {{ run.id }}" },   // project-level defaults (lowest priority)
+  inputs: { projectName: "Project {{ run.id }}" }, // project-level defaults (lowest priority)
   // registries — names referenced by specs resolve HERE, never as import paths
   fixtures: { "authenticated-workspace": myFixture },
-  checks:   { "project-unique-in-storage": myCheck },
-  scripts:  { "healthy": myScriptFactory },   // scripted adapter only — see §11
+  checks: { "project-unique-in-storage": myCheck },
+  scripts: { healthy: myScriptFactory }, // scripted adapter only — see §11
   // model
   provider: "scripted" | "anthropic",
-  model: "claude-sonnet-5",                   // provider-specific id, never hardcoded in core
-  providerOptions: { maxTokens: 2048, temperature: 0,
-                     script: "healthy" },     // scripted adapter: names an entry of `scripts`
+  model: "claude-sonnet-5", // provider-specific id, never hardcoded in core
+  providerOptions: { maxTokens: 2048, temperature: 0, script: "healthy" }, // scripted adapter: names an entry of `scripts`
   // guidance vs budgets  (SEPARATE — see §7)
-  maxActions: 25,                             // INDICATIVE ONLY
+  maxActions: 25, // INDICATIVE ONLY
   budgets: {
     attemptTimeoutMs: 120_000,
     operationTimeoutMs: 15_000,
     maxModelCalls: 40,
     maxTokens: 200_000,
-    verifierReserveTokens: 20_000,            // a POOL for the final evaluation — see §7
-    fixtureSetupTimeoutMs: 60_000,            // bounds EVERYTHING before the browser opens
+    verifierReserveTokens: 20_000, // a POOL for the final evaluation — see §7
+    fixtureSetupTimeoutMs: 60_000, // bounds EVERYTHING before the browser opens
     fixtureCleanupTimeoutMs: 15_000,
-    maxIdleTurns: 3,                          // consecutive model turns with no tool call
-    maxEvidenceRequests: 1,                   // "needs more evidence" answers per criterion
+    maxIdleTurns: 3, // consecutive model turns with no tool call
+    maxEvidenceRequests: 1, // "needs more evidence" answers per criterion
   },
   capture: {
-    trace: "on" | "off",                      // default "on"
-    video: "on" | "off",                      // default "off"
-    screenshots: "checkpoints" | "every-action" | "off",   // default "checkpoints"
-    retainTraceOn: "all" | "failure",         // default "all"
+    trace: "on" | "off", // default "on"
+    video: "on" | "off", // default "off"
+    screenshots: "checkpoints" | "every-action" | "off", // default "checkpoints"
+    retainTraceOn: "all" | "failure", // default "all"
   },
   outputDir: "runs",
   reporters: ["console"],
-})
+});
 ```
 
 `fixtures`, `checks` and `scripts` hold FUNCTIONS: they are stripped before validation, never reach
@@ -131,24 +130,30 @@ the whole paragraph block is one criterion.
 
 ```ts
 interface ScenarioContract {
-  schemaVersion: 1
-  specPath: string           // relative to the config root
-  id: string
-  tags: string[]
-  fixtureName?: string
-  body: string               // interpolated Markdown body
+  schemaVersion: 1;
+  specPath: string; // relative to the config root
+  id: string;
+  tags: string[];
+  fixtureName?: string;
+  body: string; // interpolated Markdown body
   criteria: Array<{
-    id: string               // "c1"
-    text: string             // interpolated, VERBATIM contract text
-    sourceText: string       // pre-interpolation
-    line: number; column: number
-    method: "model" | "code"
-    checkName?: string       // when method === "code"
-  }>
-  inputs: Record<string, string|number|boolean>   // resolved
-  maxActions: number
-  budgets: Budgets
-  hashes: { spec: string; contract: string; criteria: Record<string,string>; prompts: Record<string,string> }
+    id: string; // "c1"
+    text: string; // interpolated, VERBATIM contract text
+    sourceText: string; // pre-interpolation
+    line: number;
+    column: number;
+    method: "model" | "code";
+    checkName?: string; // when method === "code"
+  }>;
+  inputs: Record<string, string | number | boolean>; // resolved
+  maxActions: number;
+  budgets: Budgets;
+  hashes: {
+    spec: string;
+    contract: string;
+    criteria: Record<string, string>;
+    prompts: Record<string, string>;
+  };
 }
 ```
 
@@ -169,17 +174,17 @@ config or spec are REJECTED. `--input k=v` always yields a string; `--inputs-fil
 
 ## 5. Agent tools (Schema-validated in and out)
 
-| tool | params | notes |
-| --- | --- | --- |
-| `observe` | `{}` | returns `{ observationId, url, title, snapshot, elements[] }` |
-| `navigate` | `{ url, intent? }` | rejected unless origin ∈ allowedOrigins |
-| `click` | `{ observationId, ref, intent? }` | |
-| `fill` | `{ observationId, ref, value, intent? }` | |
-| `press` | `{ observationId?, ref?, key, intent? }` | |
-| `scroll` | `{ direction: "up"\|"down", amount?, intent? }` | |
-| `screenshot` | `{ label?, fullPage? }` | mints an artifact |
-| `check` | `{ criterionId, note? }` | triggers evidence collection + evaluation; agent supplies NO verdict |
-| `finish` | `{ summary? }` | triggers FINAL verification; never sufficient for success |
+| tool         | params                                          | notes                                                                |
+| ------------ | ----------------------------------------------- | -------------------------------------------------------------------- |
+| `observe`    | `{}`                                            | returns `{ observationId, url, title, snapshot, elements[] }`        |
+| `navigate`   | `{ url, intent? }`                              | rejected unless origin ∈ allowedOrigins                              |
+| `click`      | `{ observationId, ref, intent? }`               |                                                                      |
+| `fill`       | `{ observationId, ref, value, intent? }`        |                                                                      |
+| `press`      | `{ observationId?, ref?, key, intent? }`        |                                                                      |
+| `scroll`     | `{ direction: "up"\|"down", amount?, intent? }` |                                                                      |
+| `screenshot` | `{ label?, fullPage? }`                         | mints an artifact                                                    |
+| `check`      | `{ criterionId, note? }`                        | triggers evidence collection + evaluation; agent supplies NO verdict |
+| `finish`     | `{ summary? }`                                  | triggers FINAL verification; never sufficient for success            |
 
 Stale/ambiguous `observationId`/`ref` ⇒ a typed tool ERROR result telling the agent to re-observe.
 The action still counts. It must NOT fall back to clicking a different element.
@@ -223,8 +228,8 @@ no approval is required. A run that passes in 40 actions is `passed`.
 Blocking budgets are the separate, configurable ones in §3 `budgets`. Exhausting one ends the loop
 and yields `inconclusive` (not `failed`) **for every criterion it stopped the run from concluding**,
 with no late actions or requests permitted afterwards. A run whose criteria had all already resolved
-when the budget fired keeps its verdict — spec §9 says a blocking budget is exhausted *before a
-conclusion could be reached*, and `aggregate.ts` implements that reading: the budget is not itself a
+when the budget fired keeps its verdict — spec §9 says a blocking budget is exhausted _before a
+conclusion could be reached_, and `aggregate.ts` implements that reading: the budget is not itself a
 verdict.
 The agent is TOLD these budgets in its system prompt, next to the indicative threshold and
 explicitly distinguished from it (spec §6 step 5).
@@ -236,13 +241,13 @@ exhausting it emits `budgetExhausted` with a matching `BudgetKind`
 (`attemptTimeout` · `operationTimeout` · `fixtureSetupTimeout` · `maxModelCalls` · `maxTokens` ·
 `maxIdleTurns`). Two limits used to be hardcoded and are now declared:
 
-* `fixtureSetupTimeoutMs` bounds everything that happens before the attempt body — inputs, fixture
+- `fixtureSetupTimeoutMs` bounds everything that happens before the attempt body — inputs, fixture
   setup, contract freeze. `attemptTimeoutMs` wraps the attempt only, so without this a fixture that
   never returns hung the run forever.
-* `maxIdleTurns` ends the browsing loop after N consecutive model turns that called no tool.
+- `maxIdleTurns` ends the browsing loop after N consecutive model turns that called no tool.
   `progressStalled` is still EMITTED (spec §7), and the budget is what ends the loop; the run is
   `inconclusive`, never `failed`.
-* `maxEvidenceRequests` caps how many times ONE criterion may come back as "needs more evidence"
+- `maxEvidenceRequests` caps how many times ONE criterion may come back as "needs more evidence"
   before the verifier settles for `inconclusive`.
 
 **Late work after a budget is exhausted — the exact rule.** "No late actions or requests" binds the
@@ -287,29 +292,42 @@ tokens are still counted in `maxTokens` accounting and reported as `model.verifi
 
 ```ts
 interface CriterionResult {
-  criterionId: string; criterionHash: string
-  status: "pending" | "passed" | "failed" | "inconclusive" | "error"
-  method: "model" | "code"
-  evaluator: { kind: "model"; provider: string; model: string } | { kind: "scripted-model" } | { kind: "code"; checkName: string }
-  expected: string; observed: string
-  evidence: string[]          // artifactIds, MUST exist, belong to this attempt AND be persisted
-  limitations?: string
-  absence?: "uncertain-navigation" | "established-at-checkpoint"
+  criterionId: string;
+  criterionHash: string;
+  status: "pending" | "passed" | "failed" | "inconclusive" | "error";
+  method: "model" | "code";
+  evaluator:
+    | { kind: "model"; provider: string; model: string }
+    | { kind: "scripted-model" }
+    | { kind: "code"; checkName: string };
+  expected: string;
+  observed: string;
+  evidence: string[]; // artifactIds, MUST exist, belong to this attempt AND be persisted
+  limitations?: string;
+  absence?: "uncertain-navigation" | "established-at-checkpoint";
   // Every status the HARNESS imposed on the evaluator's answer, in order. A report that shows
   // `inconclusive` must be able to name the rule that refused to conclude.
   downgrades?: Array<{
-    reason: "rejected-evidence" | "absence-uncertain-navigation" | "evidence-persistence-failed"
-          | "verdict-already-decided"
-    from: CriterionStatus; to: CriterionStatus; detail: string
-  }>
+    reason:
+      | "rejected-evidence"
+      | "absence-uncertain-navigation"
+      | "evidence-persistence-failed"
+      | "verdict-already-decided";
+    from: CriterionStatus;
+    to: CriterionStatus;
+    detail: string;
+  }>;
   // Later evaluations of an already decided criterion, kept as observations (see re-check rule).
   reChecks?: Array<{
-    status: CriterionStatus; observed: string; evidence: string[]
-    requestedBy: "agent" | "runner"; evaluatedAtSeq: number
-    applied: boolean            // true only when it replaced the recorded verdict
-    note: string
-  }>
-  evaluatedAtSeq: number
+    status: CriterionStatus;
+    observed: string;
+    evidence: string[];
+    requestedBy: "agent" | "runner";
+    evaluatedAtSeq: number;
+    applied: boolean; // true only when it replaced the recorded verdict
+    note: string;
+  }>;
+  evaluatedAtSeq: number;
 }
 ```
 
@@ -330,7 +348,7 @@ failure to persist mandatory evidence → `error`; else any criterion `failed` �
 else any criterion not resolved → `inconclusive`; else `passed`.
 Individual criterion statuses are preserved in `result.json` even when the aggregate is `error`.
 There is **no optional criterion**: nothing in §4's `ScenarioContract.criteria` marks one, the spec
-never introduces the notion, and `policy/aggregate.ts` fails the run on *any* `failed` criterion.
+never introduces the notion, and `policy/aggregate.ts` fails the run on _any_ `failed` criterion.
 "Mandatory evidence" (below) is a different concept and is unaffected.
 
 **Absence rule**: a locator missing after uncertain navigation ⇒ `inconclusive`. A locator
@@ -376,6 +394,7 @@ runs/<run-id>/
   artifacts.json   # inventory: every expected artifact with state present|missing|failed + reason
   attempts/<attempt-id>/{trace.zip,screenshots/,video.webm,console.jsonl,network.jsonl}
 ```
+
 Result files are written by atomic replace (temp file + rename); a write that fails removes its own
 temp file, so the directory only ever holds the layout above. Missing optional artifacts are listed
 in `artifacts.json` with a reason — a capture failure is never hidden.
@@ -405,24 +424,25 @@ ran.
 
 ```ts
 interface ModelProvider {
-  readonly id: string                       // "anthropic" | "scripted"
-  readonly modelId: string
+  readonly id: string; // "anthropic" | "scripted"
+  readonly modelId: string;
   generate(req: {
-    role: "browser" | "verifier"
-    prompt: Prompt                          // conversation so far
-    tools?: ToolDefinition[]                // JSON-Schema derived from Effect Schema
-    responseSchema?: Schema                 // verifier: structured object
-    signal?: AbortSignal
-  }): Effect<ProviderResponse, ProviderError>
+    role: "browser" | "verifier";
+    prompt: Prompt; // conversation so far
+    tools?: ToolDefinition[]; // JSON-Schema derived from Effect Schema
+    responseSchema?: Schema; // verifier: structured object
+    signal?: AbortSignal;
+  }): Effect<ProviderResponse, ProviderError>;
 }
 interface ProviderResponse {
-  text?: string
-  toolCalls: Array<{ id: string; name: string; params: unknown }>
-  object?: unknown
-  usage?: { inputTokens?: number; outputTokens?: number }
-  finishReason?: string
+  text?: string;
+  toolCalls: Array<{ id: string; name: string; params: unknown }>;
+  object?: unknown;
+  usage?: { inputTokens?: number; outputTokens?: number };
+  finishReason?: string;
 }
 ```
+
 Tool calls are returned to the harness, NEVER auto-executed by the provider. The harness validates
 params with Schema and applies policy before execution. Interruption must abort the in-flight HTTP
 request where the provider allows it, and close resources so no late action lands.
@@ -468,16 +488,23 @@ cleanup left to run it back. Pass it to every `fetch`/query you make.
 `operationTimeoutMs` has fired, an outstanding call is interrupted and its promise rejects. An
 abandoned check can therefore never journal `artifactAvailable` after `runFinished`, nor mutate
 `artifacts.json` after `result.json` has been written.
+
 ### Scripted-adapter scripts (`scripts`, resolved by name only)
 
 ```ts
 type ScriptFactory = (ctx: {
-  runId: string; attemptId: string
-  scenarioId: string; specPath: string
-  baseUrl: string
-  inputs: Record<string, string|number|boolean>   // resolved, `{{ run.id }}` already substituted
-  criterionIds: ReadonlyArray<string>             // source order — a script asks for `check` by id
-}) => { agent: AgentScript; verdicts?: VerdictScript; defaultUsage?: { inputTokens, outputTokens } }
+  runId: string;
+  attemptId: string;
+  scenarioId: string;
+  specPath: string;
+  baseUrl: string;
+  inputs: Record<string, string | number | boolean>; // resolved, `{{ run.id }}` already substituted
+  criterionIds: ReadonlyArray<string>; // source order — a script asks for `check` by id
+}) => {
+  agent: AgentScript;
+  verdicts?: VerdictScript;
+  defaultUsage?: { inputTokens; outputTokens };
+};
 ```
 
 A FACTORY, not a finished script: a deterministic walkthrough has to type the value the run will
@@ -509,14 +536,14 @@ Never emit a green `skipped` for an indeterminate result.
 artifacts keep the pre-rename identifiers so `difmp report` replays a run archived before the rename
 and so a CI job that already parses these keys keeps working:
 
-| where | name | source |
-| --- | --- | --- |
-| `manifest.json` | `harnessVersion` (the CLI's own version) | `apps/cli/src/version.ts` |
-| `junit.xml` | `<testsuites name="harness">` and `<testsuite … hostname="harness">` | `packages/reporting/src/junit.ts` |
-| `junit.xml` | the whole `harness.*` property namespace — `harness.runId`, `harness.status`, `harness.specPath`, `harness.contractHash`, `harness.provider`, `harness.model`, `harness.adapter`, `harness.finalized`, `harness.actions.<attemptId>`, `harness.artifacts.{present,missing,failed}` | same |
-| SSE `/api/events` | the frame type `harness` wrapping each raw event | `apps/cli/src/server/bus.ts` |
-| `@difmp/core` API | `HarnessEvent`, `HarnessEventType`, `harnessEventTypes`, `HarnessConfigData`, `HarnessUserConfig` | `core/domain/events.ts`, `core/config/index.ts` |
-| `difmp` API | the three types `HarnessEvent` / `HarnessConfigData` / `HarnessUserConfig` re-exported from core, plus `harnessVersion`, `renderHarnessEvent`, `makeHarnessFrameEncoder` | `apps/cli/src/index.ts` |
+| where             | name                                                                                                                                                                                                                                                                               | source                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `manifest.json`   | `harnessVersion` (the CLI's own version)                                                                                                                                                                                                                                           | `apps/cli/src/version.ts`                       |
+| `junit.xml`       | `<testsuites name="harness">` and `<testsuite … hostname="harness">`                                                                                                                                                                                                               | `packages/reporting/src/junit.ts`               |
+| `junit.xml`       | the whole `harness.*` property namespace — `harness.runId`, `harness.status`, `harness.specPath`, `harness.contractHash`, `harness.provider`, `harness.model`, `harness.adapter`, `harness.finalized`, `harness.actions.<attemptId>`, `harness.artifacts.{present,missing,failed}` | same                                            |
+| SSE `/api/events` | the frame type `harness` wrapping each raw event                                                                                                                                                                                                                                   | `apps/cli/src/server/bus.ts`                    |
+| `@difmp/core` API | `HarnessEvent`, `HarnessEventType`, `harnessEventTypes`, `HarnessConfigData`, `HarnessUserConfig`                                                                                                                                                                                  | `core/domain/events.ts`, `core/config/index.ts` |
+| `difmp` API       | the three types `HarnessEvent` / `HarnessConfigData` / `HarnessUserConfig` re-exported from core, plus `harnessVersion`, `renderHarnessEvent`, `makeHarnessFrameEncoder`                                                                                                           | `apps/cli/src/index.ts`                         |
 
 Those are the surviving uses of the old name in **data the tool writes and in the API it exports**.
 Everywhere else "harness" is only the common noun for this kind of tool. Two things are explicitly
@@ -532,11 +559,11 @@ isolation — document that too.
 
 **What "known secret" means, concretely** (`packages/core/src/policy/redact.ts`):
 
-* the secret VALUES a fixture read through `ctx.secrets`, which the `FixtureManager` reports back on
+- the secret VALUES a fixture read through `ctx.secrets`, which the `FixtureManager` reports back on
   `FixtureSession.secretValues` — the harness can only redact what it was told about. Core exports
   `recordingSecrets(read)` for exactly this: wrap the env accessor, hand `secrets` to the fixture,
   return `values()` on the session;
-* every string parked under a sensitive key (`secret`, `token`, `password`, `apiKey`, `authorization`,
+- every string parked under a sensitive key (`secret`, `token`, `password`, `apiKey`, `authorization`,
   `cookie`, `sessionId`, …) anywhere inside `providerOptions`.
 
 `sanitizeConfig` blanks those values (`[redacted]`, the key itself stays visible) before the config
@@ -565,7 +592,7 @@ list. Each row names the section above that is authoritative and the code that i
    SDK", and the scripted and Anthropic adapters share the whole loop, prompt plumbing, usage
    accounting and tool typing — only the `LanguageModel` layer differs. §10 is kept because the
    runner needs three things the `LanguageModel` shape does not carry: `role: "browser" |
-   "verifier"` (which budget accounting and the journal both key on), an explicit `AbortSignal` for
+"verifier"` (which budget accounting and the journal both key on), an explicit `AbortSignal` for
    the cancellation race, and a `ProviderResponse` whose `toolCalls` arrive in wire shape for the
    harness to validate. One interface, one implementation (`makeLanguageModelProvider`), both
    providers. `packages/core/src/services/model.ts`; rationale in `../architecture.md` §2.
@@ -621,20 +648,25 @@ path. Every URL the app uses is RELATIVE to the page, and the CLI may override t
 one script tag before the bundle:
 
 ```html
-<script>globalThis.__DIFMP_UI__ = {
-  eventsUrl: "events", cancelUrl: "cancel", contractUrl: "contract", artifactBaseUrl: "artifacts/",
-  pricing: { currency: "USD", inputPerMillionTokens: 3, outputPerMillionTokens: 15 }  // OPTIONAL
-}</script>
+<script>
+  globalThis.__DIFMP_UI__ = {
+    eventsUrl: "events",
+    cancelUrl: "cancel",
+    contractUrl: "contract",
+    artifactBaseUrl: "artifacts/",
+    pricing: { currency: "USD", inputPerMillionTokens: 3, outputPerMillionTokens: 15 }, // OPTIONAL
+  };
+</script>
 ```
 
-| route | method | contract |
-| --- | --- | --- |
-| `eventsUrl` | GET | `text/event-stream`. One frame per journal line: `id: <seq>`, `event: <event.type>`, `data: <the full HarnessEvent as JSON>`. MUST honour `Last-Event-ID` **and** a `?lastEventId=<seq>` query parameter (see below) and replay from the journal. Send `retry:` to set the client's reconnect delay. |
-| `cancelUrl` | POST | JSON body `{ reason: string }`. Any 2xx is treated as accepted; the UI then waits for `cancellationRequested` in the stream. |
-| `contractUrl` | GET | `contract.json` (`ScenarioContract`). |
-| `artifactBaseUrl` | GET | serves `ArtifactRecord.path` values, which are relative to the run directory. |
+| route             | method | contract                                                                                                                                                                                                                                                                                             |
+| ----------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eventsUrl`       | GET    | `text/event-stream`. One frame per journal line: `id: <seq>`, `event: <event.type>`, `data: <the full HarnessEvent as JSON>`. MUST honour `Last-Event-ID` **and** a `?lastEventId=<seq>` query parameter (see below) and replay from the journal. Send `retry:` to set the client's reconnect delay. |
+| `cancelUrl`       | POST   | JSON body `{ reason: string }`. Any 2xx is treated as accepted; the UI then waits for `cancellationRequested` in the stream.                                                                                                                                                                         |
+| `contractUrl`     | GET    | `contract.json` (`ScenarioContract`).                                                                                                                                                                                                                                                                |
+| `artifactBaseUrl` | GET    | serves `ArtifactRecord.path` values, which are relative to the run directory.                                                                                                                                                                                                                        |
 
-**Why the query parameter too.** `EventSource` sends `Last-Event-ID` on the reconnects *it* drives,
+**Why the query parameter too.** `EventSource` sends `Last-Event-ID` on the reconnects _it_ drives,
 but the header cannot be set from script. When the browser gives up (readyState `CLOSED`) the UI
 opens a fresh `EventSource` and can only carry the cursor in the URL. Support both; they mean the
 same thing.
@@ -644,11 +676,12 @@ same thing.
 `seq >= cursor` produces one absorbed duplicate, not a duplicated row.
 
 **Open gap — `contractFrozen` carries criterion ids only (§6).** §11 of the spec requires the live
-view to show each criterion's *text* and its `model` vs `code` *method* from the moment the contract
+view to show each criterion's _text_ and its `model` vs `code` _method_ from the moment the contract
 is frozen, i.e. before any `verificationFinished`. The UI therefore fetches `contractUrl`. Two ways
 to close this properly, pick one:
-* keep the fetch and make `contractUrl` a required CLI route (what `apps/ui` implements today), or
-* widen `ContractFrozenEvent` with `criteria: Array<{ id, text, method, checkName? }>` — the UI
+
+- keep the fetch and make `contractUrl` a required CLI route (what `apps/ui` implements today), or
+- widen `ContractFrozenEvent` with `criteria: Array<{ id, text, method, checkName? }>` — the UI
   already reads that field when present and prefers it over the fetch.
 
 `pricing` is absent by default and there is no price table anywhere in core, so **cost renders as

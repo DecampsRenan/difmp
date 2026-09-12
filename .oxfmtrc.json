@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+
+  // oxfmt's defaults are what we want (printWidth 100, 2-space indent, semicolons,
+  // double quotes, trailing commas, LF, final newline), so only the exclusions are listed.
+  //
+  // `.gitignore` is honoured automatically, which already covers `dist/`, `.recon/`,
+  // `coverage/`, `runs/` and `apps/cli/assets/ui/`.
+  "ignorePatterns": [
+    // Scenario files are the product's INPUT format, parsed by @difmp/core. Markdown
+    // normalisation (`*` -> `-` bullets, `*em*` -> `_em_`, table padding) rewrites bytes the
+    // parser and its golden tests assert on.
+    "**/*.e2e.md",
+
+    // Golden fixtures must stay byte-exact: the tests compare against them.
+    "**/test/fixtures/**",
+
+    // A captured run of the real harness. It is evidence of what difmp actually emitted;
+    // reformatting it would make it evidence of something else.
+    "docs/example-run/**",
+
+    // Generated, and not ours to format.
+    "pnpm-lock.yaml"
+  ]
+}

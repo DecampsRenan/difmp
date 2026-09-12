@@ -1,7 +1,9 @@
-import { Effect, Schema } from "effect"
+import { Effect, Schema } from "effect";
 
 const positiveInt = (defaultValue: number) =>
-  Schema.Int.check(Schema.isGreaterThan(0)).pipe(Schema.withDecodingDefaultKey(Effect.succeed(defaultValue)))
+  Schema.Int.check(Schema.isGreaterThan(0)).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(defaultValue)),
+  );
 
 export const defaultBudgets = {
   attemptTimeoutMs: 120_000,
@@ -12,8 +14,8 @@ export const defaultBudgets = {
   fixtureSetupTimeoutMs: 60_000,
   fixtureCleanupTimeoutMs: 15_000,
   maxIdleTurns: 3,
-  maxEvidenceRequests: 1
-} as const
+  maxEvidenceRequests: 1,
+} as const;
 
 /**
  * The BLOCKING guard rails. Distinct from `maxActions`, which is indicative and lives on the
@@ -36,7 +38,7 @@ export const Budgets = Schema.Struct({
    * the run's total spend can exceed `maxTokens` by that overshoot plus the reserve.
    */
   verifierReserveTokens: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).pipe(
-    Schema.withDecodingDefaultKey(Effect.succeed(defaultBudgets.verifierReserveTokens))
+    Schema.withDecodingDefaultKey(Effect.succeed(defaultBudgets.verifierReserveTokens)),
   ),
   /**
    * Bounds EVERYTHING the fixture does before the browser opens. `attemptTimeoutMs` only wraps the
@@ -58,14 +60,16 @@ export const Budgets = Schema.Struct({
    * on a single criterion.
    */
   maxEvidenceRequests: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).pipe(
-    Schema.withDecodingDefaultKey(Effect.succeed(defaultBudgets.maxEvidenceRequests))
+    Schema.withDecodingDefaultKey(Effect.succeed(defaultBudgets.maxEvidenceRequests)),
+  ),
+})
+  .check(
+    Schema.makeFilter((b) =>
+      b.verifierReserveTokens < b.maxTokens
+        ? undefined
+        : [{ path: ["verifierReserveTokens"], issue: "must be smaller than maxTokens" }],
+    ),
   )
-}).check(
-  Schema.makeFilter((b) =>
-    b.verifierReserveTokens < b.maxTokens
-      ? undefined
-      : [{ path: ["verifierReserveTokens"], issue: "must be smaller than maxTokens" }]
-  )
-).annotate({ identifier: "Budgets" })
+  .annotate({ identifier: "Budgets" });
 
-export type Budgets = typeof Budgets["Type"]
+export type Budgets = (typeof Budgets)["Type"];
