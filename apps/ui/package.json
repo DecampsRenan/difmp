@@ -7,7 +7,8 @@
     "build": "vite build",
     "dev": "vite",
     "clean": "rm -rf dist dist-types *.tsbuildinfo",
-    "typecheck": "tsc -b tsconfig.json"
+    "typecheck": "tsc -b tsconfig.json",
+    "typecheck:test": "tsc -p tsconfig.test.json"
   },
   "dependencies": {
     "react": "^19.3.0",

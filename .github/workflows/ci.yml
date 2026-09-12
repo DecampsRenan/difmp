@@ -2,8 +2,8 @@
 #
 # WHAT RUNS ON EVERY PUSH AND PULL REQUEST — and nothing else does:
 #   formatting and lint (oxfmt, oxlint), in a separate parallel job that needs no browser;
-#   the UI component suite (`apps/ui`, Vitest under jsdom), in a second parallel job that needs no
-#   browser either;
+#   the UI component suite (`apps/ui`, Vitest under jsdom) preceded by a typecheck of that suite's
+#   own sources and tests, in a second parallel job that needs no browser either;
 #   and, independently: typecheck -> the harness's own Vitest suites -> the packaged CLI installed
 #   into consumer projects (npm / pnpm / Yarn, ESM and CommonJS) -> the example scenarios executed
 #   through that distributed CLI with the SCRIPTED adapter against the local demo app.
@@ -40,6 +40,15 @@
 # both install-time differences between a local pnpm and the runner's. The same commands were run
 # locally first, on Node 24.19.0 / pnpm 10.29.3, with the same result and identical across three
 # consecutive runs and with each test file run on its own.
+#
+# The `Typecheck the UI suite` step was added after that run and has NOT yet executed on a runner.
+# It was run locally, on the same Node and pnpm, exit 0 in 4.4s. It exists because nothing else in
+# this file reads `apps/ui/tsconfig.test.json`: the suite's own tests were typechecked by no
+# command at all until now, and three fixture values naming constants that do not exist in the
+# domain (`role: "agent"`, `code: "not-found"`, `stage: "act"`) reached a green Vitest run before
+# it was wired up. `packages/core/tsconfig.test.json` was in the same state and is deleted rather
+# than wired: it does not pass as written, and making it pass means putting it on the project
+# references, which is a change to the build graph and not this one.
 #
 # The same suite ALSO runs inside `pnpm run test` in the `difmp` job, because the root
 # `vitest.config.ts` now lists `apps/ui/vitest.config.ts` as a project. The overlap is deliberate
@@ -145,7 +154,9 @@ jobs:
   # can be a failure from another package.
   #
   # It overlaps with `pnpm run test` in `difmp` on purpose — see the header: one local command
-  # there, fast feedback here. Measured at 43s end to end on a runner, install included.
+  # there, fast feedback here. Measured at 43s end to end on a runner, install included — before
+  # the typecheck step below, which is 4.4s locally on a cold cache and has not yet been timed on
+  # a runner.
   ui:
     name: UI component suite (Vitest, jsdom)
     runs-on: ubuntu-latest
@@ -161,6 +172,14 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # Vitest transpiles, it does not typecheck, so a test file can be green and still build its
+      # fixtures out of values the domain has no name for. This step is the only thing that reads
+      # `apps/ui/tsconfig.test.json`, which covers `test/**` as well as `src/**` — without it the
+      # config would assert nothing outside an editor. It runs BEFORE the suite: a type error there
+      # means the tests below are not trustworthy, whatever colour they come back.
+      - name: Typecheck the UI suite (tsconfig.test.json)
+        run: pnpm --filter @difmp/ui run typecheck:test
 
       - name: UI component suite (Vitest)
         run: pnpm run test:ui

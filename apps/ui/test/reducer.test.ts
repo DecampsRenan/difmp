@@ -129,10 +129,11 @@ describe("runReducer — it never writes into the state it was handed", () => {
 /**
  * One event of EVERY type, keyed by that type so the list cannot quietly fall behind the union.
  *
- * Two guards, because they fail in different places. The mapped type is a compile error the moment
- * a member is added to `HarnessEvent` — but `apps/ui/tsconfig.test.json` is outside the build graph
- * and no CI job invokes it today, so that error only reaches whoever opens the file in an editor.
- * The runtime check against `harnessEventTypes` below is the one that fails a test run.
+ * Two guards, because they fail in different places and at different times. The mapped type is a
+ * compile error the moment a member is added to `HarnessEvent`, reported by an editor and by the
+ * `Typecheck the UI suite` step in CI, which is the only thing that reads
+ * `apps/ui/tsconfig.test.json`. The runtime check against `harnessEventTypes` below is the one
+ * that fails a Vitest run, here and inside `pnpm run test`, with no typecheck in sight.
  *
  * The payloads are deliberately dull: this suite is about what the reducer WRITES, not what it
  * renders, and every field that shapes a rendered string is already pinned by the component suites.
