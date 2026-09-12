@@ -1,9 +1,10 @@
 # Demonstrator CI for the agent-driven E2E harness (spec §12).
 #
 # WHAT RUNS ON EVERY PUSH AND PULL REQUEST — and nothing else does:
-#   typecheck -> the harness's own Vitest suites -> the packaged CLI installed into consumer
-#   projects (npm / pnpm / Yarn, ESM and CommonJS) -> the example scenarios executed through that
-#   distributed CLI with the SCRIPTED adapter against the local demo app.
+#   formatting and lint (oxfmt, oxlint), in a separate parallel job that needs no browser;
+#   and, independently: typecheck -> the harness's own Vitest suites -> the packaged CLI installed
+#   into consumer projects (npm / pnpm / Yarn, ESM and CommonJS) -> the example scenarios executed
+#   through that distributed CLI with the SCRIPTED adapter against the local demo app.
 #
 # No API key, no network service and no secret is required to contribute: everything above is
 # deterministic and offline. The real-model smoke test is a SEPARATE, opt-in job at the bottom.
@@ -22,7 +23,8 @@
 #
 # WHAT WAS ACTUALLY VERIFIED, AND WHAT WAS NOT. Every `run:` step's command was executed locally,
 # on Node 24.19.0 / pnpm 10.29.3, exactly as written: `pnpm install --frozen-lockfile`,
-# `pnpm run typecheck`, `pnpm run build`, `pnpm --filter @difmp/fixture-app build`,
+# `pnpm run format:check` and `pnpm exec oxlint --format=github` (both clean, 0 errors and 0
+# warnings, on the tree that introduced them), `pnpm run typecheck`, `pnpm run build`, `pnpm --filter @difmp/fixture-app build`,
 # `pnpm run test`, `apps/cli/scripts/consumer-smoke/run.sh` (the step below passes `npm pnpm yarn`
 # = 6 cells; adding `yarn1` gives the 8 cells the README quotes — 24/24 assertions in each),
 # `apps/cli/scripts/ci/run-examples.sh` (healthy and alt-layout, 3 scenarios each, exit 0 through
@@ -68,6 +70,36 @@ env:
   NODE_VERSION: "24.19.0"
 
 jobs:
+  # The cheapest gate, and deliberately its own job: it needs no Chromium, no build and no demo
+  # app, so it answers in about a minute and runs in parallel with everything below rather than
+  # holding it up. `oxlint --format=github` emits workflow annotations, so findings land on the
+  # diff in a pull request instead of only in the log.
+  #
+  # These are the same two commands `lefthook.yml` runs on pre-push. They exist here as well
+  # because hooks are bypassable — `--no-verify`, an edit through the GitHub web UI, or simply a
+  # clone where `pnpm install` never ran the hook installer. This job is the copy that cannot be
+  # skipped.
+  quality:
+    name: format and lint (oxfmt, oxlint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # lefthook's postinstall installs git hooks; it detects $CI and no-ops here.
+      - run: pnpm install --frozen-lockfile
+
+      - name: Formatting (oxfmt --check)
+        run: pnpm run format:check
+
+      - name: Lint (oxlint)
+        run: pnpm exec oxlint --format=github
+
   difmp:
     name: typecheck, tests, packaging, example scenarios
     runs-on: ubuntu-latest

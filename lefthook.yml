@@ -1,0 +1,56 @@
+# Git hooks for difmp. Installed automatically by lefthook's postinstall on `pnpm install`
+# (skipped on CI, which has no hooks to run); `pnpm exec lefthook install` re-installs by hand.
+#
+# The split is deliberate: pre-commit only ever looks at what you staged and fixes it in place, so
+# it stays fast enough to not be resented. Everything that has to see the WHOLE repository — and
+# is therefore too slow per commit — waits for pre-push.
+#
+# `pnpm exec lefthook run pre-commit` / `pre-push` runs either of them without a git operation.
+# `LEFTHOOK=0 git commit …` skips them for one command, `git commit --no-verify` likewise.
+#
+# CAVEAT, and it is not a small one: on a DETACHED HEAD lefthook cannot work out the push range,
+# so every pre-push job below is skipped with "no matching push files" — a silent pass, not a
+# failure. Verified on lefthook 2.1.12, both through a real `git push` and through
+# `lefthook run pre-push`. On a branch all three jobs run (~5s). Nothing here is a substitute for
+# the checks in .github/workflows/ci.yml, which is the only place they cannot be bypassed.
+
+# `parallel: false` is load-bearing in both hooks below: the jobs write to the same files, and
+# two formatters racing on one file is how you get a half-written source tree.
+
+pre-commit:
+  parallel: false
+  jobs:
+    # Lint first, format second. Lint fixes rewrite code (a spread here, an import removed there)
+    # with no regard for line width, so the formatter has to be the one that gets the last word.
+    # Unfixable errors stop the commit; warnings are printed and do not.
+    - name: oxlint
+      glob: "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
+      run: pnpm exec oxlint --fix --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+
+    - name: oxfmt
+      glob: "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,json,jsonc,css,html,md,yaml,yml}"
+      run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+
+# `--no-error-on-unmatched-pattern` above is not belt-and-braces: both tools exit non-zero when
+# every path they were handed is excluded by their config (oxfmt 2, oxlint 1). Staging only
+# `*.e2e.md` scenario fixtures — which .oxfmtrc.json deliberately excludes — would otherwise fail
+# the commit with "Expected at least one target file".
+
+pre-push:
+  parallel: false
+  jobs:
+    # No `{staged_files}` here: the whole tree, every time. A file can reach this point without
+    # ever having passed pre-commit (`--no-verify`, a rebase, an edit through the GitHub UI, a
+    # merge), and a config change can make previously-clean files dirty without touching them.
+    - name: oxfmt
+      run: pnpm exec oxfmt --check .
+
+    - name: oxlint
+      run: pnpm exec oxlint
+
+    # `tsc -b tsconfig.build.json` across all eight project references — the compile step. This is
+    # the same command CI runs; it is here so the round trip is seconds instead of minutes.
+    - name: typecheck
+      run: pnpm run typecheck

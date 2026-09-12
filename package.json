@@ -2,16 +2,21 @@
   "name": "difmp-workspace",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.29.3",
-  "engines": {
-    "node": ">=22.12.0"
-  },
   "scripts": {
     "build": "pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" run build",
     "typecheck": "tsc -b tsconfig.build.json",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
     "test": "vitest run",
     "test:packaging": "bash apps/cli/scripts/consumer-smoke/run.sh",
     "test:examples": "bash apps/cli/scripts/ci/run-examples.sh"
+  },
+  "dependencies": {
+    "@effect/ai-anthropic": "4.0.0-rc.113",
+    "@effect/platform-node": "4.0.0-rc.113",
+    "effect": "4.0.0-rc.113"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.0-rc.113",
@@ -19,6 +24,9 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "lefthook": "^2.1.12",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0",
     "playwright": "1.63.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
@@ -31,9 +39,8 @@
     "vitest": "^5.0.0",
     "yaml": "^2.9.0"
   },
-  "dependencies": {
-    "@effect/ai-anthropic": "4.0.0-rc.113",
-    "@effect/platform-node": "4.0.0-rc.113",
-    "effect": "4.0.0-rc.113"
-  }
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@10.29.3"
 }
