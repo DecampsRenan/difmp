@@ -54,26 +54,29 @@ component behave", the other is slow and answers "does it work in a browser, end
 ## How it finds the CLI
 
 Every URL is **relative to the page** (`base: "./"`), so the CLI may mount the bundle at any path.
-The CLI overrides the four endpoints by injecting one script tag before the bundle:
+The CLI overrides the endpoints by injecting one script tag before the bundle:
 
 ```html
 <script id="difmp-ui-runtime">
   globalThis.__DIFMP_UI__ = {
-    eventsUrl: "/api/ui/events",
+    eventsUrl: "/api/events",
     cancelUrl: "/api/cancel",
+    closeUrl: "/api/close",
     contractUrl: "/api/contract",
     artifactBaseUrl: "/api/artifacts/",
   };
 </script>
 ```
 
-`pricing` is an optional fifth field. It is absent by default and there is no price table anywhere in
+`pricing` is optional. It is absent by default and there is no price table anywhere in
 the harness, so **cost renders as the literal string `unavailable`** — never an estimate, never `0`.
 
 ## What it shows, and where each part comes from
 
-The SSE stream carries raw `HarnessEvent`s, one frame per journal line, `id:` = the event `seq`. The
-criteria, however, have to be visible with their **text** and their `model` / `code` **method** from
+The CLI injects its suite stream: one monotonic SSE cursor wraps scenario lifecycle messages and raw
+`HarnessEvent`s. The dashboard retains one reducer model per run, shows completed/running/pending
+suite progress, and lets the user select an earlier run without losing its timeline. The criteria
+have to be visible with their **text** and their `model` / `code` **method** from
 the moment the contract is frozen — before any verification has happened — and `contractFrozen`
 carries ids only. So the app fetches `contractUrl` on that event. It also reads a `criteria` field on
 `contractFrozen` and prefers it when present, so widening that event later closes the gap without a
@@ -84,8 +87,9 @@ against the indicative threshold, the blocking budgets, the artifact list and th
 
 ## Resume
 
-`seq` increases by 1 per run, so the reducer applies an event iff `seq > lastSeq` — exact, and
-tolerant of a server that replays inclusively (one absorbed duplicate, not a duplicated row).
+The outer suite `seq` increases by 1 for the whole invocation, so reconnecting during the transition
+between scenarios cannot confuse two identical per-run sequence numbers. Each retained run still
+deduplicates its inner journal with the same `seq > lastSeq` rule.
 
 Reconnection is handled twice on purpose. `EventSource` sends `Last-Event-ID` on the reconnects _it_
 drives, but that header cannot be set from script; when the browser gives up (`readyState === CLOSED`)
@@ -105,3 +109,7 @@ no duplicates.
 The Cancel button POSTs `{ reason }` to `cancelUrl`. Any 2xx means accepted; the app then waits for
 `cancellationRequested` in the stream rather than assuming. The run's finalizers still run, the
 evidence is still settled, and the CLI exits `130`.
+
+After `cliFinished`, an interactive TTY keeps serving the completed suite until **Close dashboard**
+is pressed (or the process is interrupted). Non-TTY and CI invocations never wait for input: they
+exit after writing the standalone `report.html` files.

@@ -140,6 +140,15 @@ or `press` names an `observationId` and a `ref` from it. A model navigating by r
 name is doing what a user does, and a snapshot is one or two orders of magnitude smaller than the
 DOM.
 
+Screenshots follow a separate binary path. Playwright writes each PNG for the run artifact and
+returns the same bytes in its `CaptureOutcome`; the runner retains those bytes only in the in-memory
+`EvidenceItem`. The verifier pairs the screenshot's `artifactId` label with a provider-neutral image
+part, and the shared provider adapter maps that part to `effect/unstable/ai`'s native file input
+(Anthropic serialises it as a base64 image content block). If a browser implementation reports a
+present screenshot without non-empty pixels, the verifier excludes that artifact from both its
+prompt and verdict-validation allow-list, so a textual label can never masquerade as inspected
+visual evidence.
+
 Two constraints come with it, and both are enforced:
 
 - **A ref is valid only against the most recent ai-mode snapshot in its frame.** So exactly one

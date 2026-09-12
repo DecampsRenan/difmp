@@ -96,10 +96,15 @@ export interface RunBus {
   readonly subscribeHarness: Effect.Effect<Subscription<HarnessEvent>, never, Scope.Scope>;
   readonly subscriberCount: () => number;
   readonly currentRun: () => CurrentRun | undefined;
+  /** Lookup retained runs so the dashboard can inspect artifacts from an earlier scenario. */
+  readonly runById: (runId: string) => CurrentRun | undefined;
   readonly startRun: (run: CurrentRun) => Effect.Effect<void>;
   /** A dashboard cancel request. Completing the deferred asks the runner to stop cleanly. */
   readonly requestCancel: (reason: string) => Effect.Effect<boolean>;
   readonly cancellation: Deferred.Deferred<string>;
+  /** Completed when the user dismisses an interactive, completed dashboard. */
+  readonly dashboardClose: Deferred.Deferred<void>;
+  readonly requestDashboardClose: Effect.Effect<boolean>;
   /** Ends every open stream so connected clients see a clean close instead of a dropped socket. */
   readonly close: Effect.Effect<void>;
 }
@@ -113,8 +118,10 @@ export const makeRunBus = (options: RunBusOptions = {}): Effect.Effect<RunBus> =
   Effect.gen(function* () {
     const capacity = options.clientCapacity ?? 512;
     const cancellation = yield* Deferred.make<string>();
+    const dashboardClose = yield* Deferred.make<void>();
     let seq = 0;
     let current: CurrentRun | undefined;
+    const runs = new Map<string, CurrentRun>();
 
     const ui = yield* makeChannel<UiMessage>((m) => m.seq, capacity);
     const harness = yield* makeChannel<HarnessEvent>((e) => e.seq, capacity);
@@ -132,15 +139,19 @@ export const makeRunBus = (options: RunBusOptions = {}): Effect.Effect<RunBus> =
       subscribeHarness: harness.subscribe,
       subscriberCount: () => ui.subscriberCount() + harness.subscriberCount(),
       currentRun: () => current,
+      runById: (runId) => runs.get(runId),
       startRun: (run) =>
         Effect.suspend(() => {
           current = run;
+          runs.set(run.runId, run);
           // The UI's cursor is the run's own `seq`, which restarts at 1 for every scenario.
           harness.reset();
           return publish("scenarioStarted", { specPath: run.specPath, runId: run.runId });
         }),
       requestCancel: (reason) => Deferred.succeed(cancellation, reason),
       cancellation,
+      dashboardClose,
+      requestDashboardClose: Deferred.succeed(dashboardClose, undefined),
       close: Effect.andThen(ui.close, harness.close),
     };
   });

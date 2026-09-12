@@ -6,6 +6,7 @@
     { "path": "packages/agent-runtime" },
     { "path": "packages/reporting" },
     { "path": "apps/cli" },
+    { "path": "apps/cli/tsconfig.examples.json" },
     { "path": "apps/ui" },
     { "path": "examples/fixture-app" },
     { "path": "examples/support" }

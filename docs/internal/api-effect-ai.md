@@ -406,8 +406,7 @@ Runtime model selection:
 ```ts
 export const withRuntimeModel = Effect.gen(function* () {
   const id = yield* Config.String("AGENT_MODEL").pipe(Config.withDefault("claude-sonnet-4-5"));
-  const model = yield* AnthropicLanguageModel.model(id, { max_tokens: 8192, temperature: 0 })
-    .captureRequirements;
+  const model = yield* AnthropicLanguageModel.model(id, { max_tokens: 8192 }).captureRequirements;
   const provider = yield* Effect.provide(Effect.service(Model.ProviderName), model); // "anthropic"
   const name = yield* Effect.provide(Effect.service(Model.ModelName), model); // the id
   return { model, provider, name };
@@ -429,6 +428,10 @@ minus messages/output_config/tools/tool_choice/stream>` — so `max_tokens`, `te
 `max_tokens` is **not required**: it defaults to the model's `maxOutputTokens`
 (64000 for sonnet/opus/haiku-4-5, 32000 for opus-4-1, 8192 for 3-5-haiku, 4096 for claude-3-*, 128000 for
 unrecognized ids). Set it explicitly for cost control.
+
+The schema exposes `temperature`, `top_p` and `top_k`, but the current Claude Sonnet 5 API rejects
+them when explicitly set. Omit all three for `claude-sonnet-5` and its dated ids; difmp's Anthropic
+preflight enforces that model-specific rule before browser acquisition.
 
 `AnthropicConfig.AnthropicConfig` / `AnthropicConfig.withClientTransform` let you transform requests
 (e.g. add headers) at the client level. Provider-defined tools: `AnthropicTool.*` (bash, computer, text editor,

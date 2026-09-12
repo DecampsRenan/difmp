@@ -1,8 +1,10 @@
 import { Effect } from "effect";
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, parse, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { importConfigModule } from "./configModule.js";
 import { UsageError } from "./errors.js";
+
+export { importConfigModule } from "./configModule.js";
 
 const extensions: ReadonlyArray<string> = ["ts", "mts", "mjs", "js"];
 
@@ -16,48 +18,6 @@ export const configBaseNames: ReadonlyArray<string> = ["difmp.config"];
 export const configFileNames: ReadonlyArray<string> = configBaseNames.flatMap((base) =>
   extensions.map((ext) => `${base}.${ext}`),
 );
-
-const isTs = (p: string): boolean => /\.(m|c)?ts$/.test(p);
-
-/**
- * tsx transpiles ESM->CJS when the consumer package is CJS, producing
- * `{ default: { default: cfg, __esModule: true } }`. Unwrap exactly that shape (api-tooling.md §3.1).
- */
-const pickDefault = (mod: Record<string, unknown>): unknown => {
-  const d = mod["default"];
-  if (
-    d !== null &&
-    typeof d === "object" &&
-    (d as { __esModule?: unknown })["__esModule"] === true
-  ) {
-    return (d as { default?: unknown })["default"];
-  }
-  return d;
-};
-
-/**
- * Load the consumer's config module as TRUSTED project code. Bare `import()` first (Node >= 22.18
- * strips types natively and it costs nothing), falling back to tsx's `tsImport`, which also covers
- * non-erasable TypeScript and CommonJS-typed consumers.
- */
-export const importConfigModule = async (absPath: string): Promise<unknown> => {
-  const url = pathToFileURL(absPath).href;
-  let mod: Record<string, unknown>;
-  try {
-    mod = (await import(url)) as Record<string, unknown>;
-  } catch (err) {
-    if (!isTs(absPath)) throw err;
-    const { tsImport } = await import("tsx/esm/api");
-    mod = (await tsImport(url, import.meta.url)) as Record<string, unknown>;
-  }
-  const cfg = pickDefault(mod);
-  if (cfg === undefined) {
-    throw new Error(
-      `${absPath}: no default export — a difmp config must \`export default defineConfig({...})\``,
-    );
-  }
-  return cfg;
-};
 
 /** Walk up from `cwd` looking for a config file. Returns `undefined` when the project has none. */
 export const findConfigUpwards = (cwd: string): string | undefined => {

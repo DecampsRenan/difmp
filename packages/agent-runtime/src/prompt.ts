@@ -38,6 +38,14 @@ const userMessage = (parts: ReadonlyArray<PromptPart>): MessageEncoded | undefin
   const content: Array<Prompt.UserMessagePartEncoded> = [];
   for (const part of parts) {
     if (part.type === "text") content.push({ type: "text", text: part.text });
+    else if (part.type === "image") {
+      content.push({
+        type: "file",
+        mediaType: part.mediaType,
+        data: part.data,
+        ...(part.fileName === undefined ? {} : { fileName: part.fileName }),
+      });
+    }
   }
   return content.length === 0 ? undefined : { role: "user", content };
 };
@@ -46,7 +54,14 @@ const assistantMessage = (parts: ReadonlyArray<PromptPart>): MessageEncoded | un
   const content: Array<Prompt.AssistantMessagePartEncoded> = [];
   for (const part of parts) {
     if (part.type === "text") content.push({ type: "text", text: part.text });
-    else if (part.type === "toolCall") {
+    else if (part.type === "image") {
+      content.push({
+        type: "file",
+        mediaType: part.mediaType,
+        data: part.data,
+        ...(part.fileName === undefined ? {} : { fileName: part.fileName }),
+      });
+    } else if (part.type === "toolCall") {
       content.push({ type: "tool-call", id: part.id, name: part.name, params: part.params });
     }
   }
@@ -122,7 +137,16 @@ export const fromAiPrompt = (prompt: Prompt.Prompt): HarnessPrompt => ({
     } else {
       for (const part of content) {
         if (part.type === "text") parts.push({ type: "text", text: part.text });
-        else if (part.type === "tool-call") {
+        else if (part.type === "file" && part.mediaType.startsWith("image/")) {
+          if (part.data instanceof Uint8Array) {
+            parts.push({
+              type: "image",
+              mediaType: part.mediaType,
+              data: part.data,
+              ...(part.fileName === undefined ? {} : { fileName: part.fileName }),
+            });
+          }
+        } else if (part.type === "tool-call") {
           parts.push({ type: "toolCall", id: part.id, name: part.name, params: part.params });
         }
       }

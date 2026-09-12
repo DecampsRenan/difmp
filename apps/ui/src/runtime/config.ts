@@ -4,10 +4,12 @@
  * `globalThis.__DIFMP_UI__ = { ... }` in a script tag before the bundle.
  */
 export interface UiRuntimeConfig {
-  /** SSE stream of `HarnessEvent`s, `id:` = event `seq`. Must honour `Last-Event-ID`. */
+  /** SSE stream; the CLI supplies suite envelopes with one invocation-wide cursor. */
   readonly eventsUrl: string;
   /** POST here to request cancellation. */
   readonly cancelUrl: string;
+  /** Optional because standalone/dev embeddings do not own the process serving them. */
+  readonly closeUrl?: string;
   /** GET the frozen `contract.json` (criterion text + method). */
   readonly contractUrl: string;
   /** Base for artifact paths recorded in `artifactAvailable.path` (relative to the run directory). */
@@ -57,6 +59,9 @@ export const readRuntimeConfig = (): UiRuntimeConfig => {
     cancelUrl: str(raw["cancelUrl"], defaults.cancelUrl),
     contractUrl: str(raw["contractUrl"], defaults.contractUrl),
     artifactBaseUrl: str(raw["artifactBaseUrl"], defaults.artifactBaseUrl),
+    ...(typeof raw["closeUrl"] === "string" && raw["closeUrl"].length > 0
+      ? { closeUrl: raw["closeUrl"] }
+      : {}),
   };
   return pricing === undefined ? base : { ...base, pricing };
 };

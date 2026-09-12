@@ -144,8 +144,14 @@ export const runHandler = (
             completed: results.length,
             total: selection.specs.length,
           });
-          // Give open SSE connections a beat to flush the final frames before the scope closes.
-          yield* Effect.sleep("150 millis");
+          if (keepDashboardOpen()) {
+            yield* sink.note(
+              "Dashboard complete — close it in the page or press Ctrl-C to stop serving.",
+            );
+            yield* Deferred.await(bus.dashboardClose);
+          }
+          // Let the close endpoint and final SSE frame leave Node's response buffers.
+          yield* Effect.sleep("100 millis");
           yield* bus.close;
         }
       }),
@@ -155,6 +161,24 @@ export const runHandler = (
     if (mode.json) yield* sink.out(renderJsonDocument(harnessVersion, outcomes));
 
     return yield* exitFor(results);
+  });
+
+/** A pipe/CI must terminate unattended; its generated report is the durable post-run UI. */
+export const shouldKeepDashboardOpen = (environment: {
+  readonly stdinIsTTY: boolean;
+  readonly stdoutIsTTY: boolean;
+  readonly ci?: string;
+}): boolean => {
+  const ci = environment.ci?.trim().toLowerCase();
+  const inCi = ci !== undefined && ci !== "" && ci !== "false" && ci !== "0";
+  return environment.stdinIsTTY && environment.stdoutIsTTY && !inCi;
+};
+
+const keepDashboardOpen = (): boolean =>
+  shouldKeepDashboardOpen({
+    stdinIsTTY: process.stdin.isTTY === true,
+    stdoutIsTTY: process.stdout.isTTY === true,
+    ...(process.env["CI"] === undefined ? {} : { ci: process.env["CI"] }),
   });
 
 /** A dashboard cancellation stops the whole invocation: remaining scenarios are not started. */

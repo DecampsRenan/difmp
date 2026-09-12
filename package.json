@@ -1,6 +1,7 @@
 {
   "name": "difmp-workspace",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" run build",

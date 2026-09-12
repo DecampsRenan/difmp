@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "examples",
+    "outDir": "dist/examples",
+    "tsBuildInfoFile": "dist/examples/tsconfig.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "difmp": ["./src/index.ts"],
+      "difmp/scripted": ["./src/scripted.ts"]
+    }
+  },
+  "include": ["examples/custom-scripted/**/*.ts"],
+  "references": [{ "path": "." }]
+}

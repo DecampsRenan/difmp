@@ -203,6 +203,21 @@ describe("SSE resume from Last-Event-ID", () => {
     expect(body.reason).toBe("from a test");
   });
 
+  it("POST /api/close releases a completed interactive dashboard", async () => {
+    const body = await withServer(({ bus, url }) =>
+      Effect.gen(function* () {
+        const response = yield* Effect.promise(() => fetch(`${url}api/close`, { method: "POST" }));
+        const closed = yield* Deferred.await(bus.dashboardClose);
+        return {
+          status: response.status,
+          json: yield* Effect.promise(() => response.json() as Promise<{ accepted: boolean }>),
+          closed,
+        };
+      }),
+    );
+    expect(body).toEqual({ status: 202, json: { accepted: true }, closed: undefined });
+  });
+
   it("serves the dashboard and a state snapshot with no client attached", async () => {
     const result = await withServer(({ url }) =>
       Effect.promise(async () => {
@@ -360,6 +375,34 @@ describe("endpoints the live UI consumes", () => {
       expect(result.escape).toBe(404);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("retains earlier runs for contract and artifact inspection", async () => {
+    const first = mkdtempSync(join(tmpdir(), "difmp-first-run-"));
+    const second = mkdtempSync(join(tmpdir(), "difmp-second-run-"));
+    try {
+      writeFileSync(join(first, "contract.json"), JSON.stringify({ id: "first" }), "utf8");
+      writeFileSync(join(first, "evidence.txt"), "from first", "utf8");
+      writeFileSync(join(second, "contract.json"), JSON.stringify({ id: "second" }), "utf8");
+      const result = await withServer(({ bus, url }) =>
+        Effect.gen(function* () {
+          yield* bus.startRun({ runId: "r_first", directory: first, specPath: "first" });
+          yield* bus.startRun({ runId: "r_second", directory: second, specPath: "second" });
+          const contract = yield* Effect.promise(() => fetch(`${url}api/contract?runId=r_first`));
+          const artifact = yield* Effect.promise(() =>
+            fetch(`${url}api/artifacts/evidence.txt?runId=r_first`),
+          );
+          return {
+            contract: yield* Effect.promise(() => contract.json() as Promise<{ id: string }>),
+            artifact: yield* Effect.promise(() => artifact.text()),
+          };
+        }),
+      );
+      expect(result).toEqual({ contract: { id: "first" }, artifact: "from first" });
+    } finally {
+      rmSync(first, { recursive: true, force: true });
+      rmSync(second, { recursive: true, force: true });
     }
   });
 

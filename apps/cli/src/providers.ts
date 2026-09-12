@@ -7,8 +7,9 @@ import type {
 } from "@difmp/core";
 import { formatSchemaError, ModelProvider } from "@difmp/core";
 import {
+  anthropicOptionsFromConfig,
   anthropicAdapterId,
-  anthropicModelProviderLayerFromConfig,
+  anthropicModelProviderLayer,
   happyPathScript,
   prematureFinishScript,
   scriptedAdapterId,
@@ -47,6 +48,56 @@ export type ScriptedProviderOptions = (typeof ScriptedProviderOptions)["Type"];
 // Anthropic options must still be usable with `--provider scripted`.
 const decodeScriptedOptions = Schema.decodeUnknownEffect(ScriptedProviderOptions);
 
+const scriptedOptionsFromConfig = (
+  config: ResolvedConfig,
+): Effect.Effect<ScriptedProviderOptions, UsageError> =>
+  decodeScriptedOptions(config.providerOptions).pipe(
+    Effect.mapError(
+      (error) =>
+        new UsageError({
+          message: formatSchemaError(error, {
+            source: "providerOptions",
+            summary: "invalid scripted provider options",
+          }),
+        }),
+    ),
+  );
+
+/**
+ * Validate the provider prerequisites that do not require a run id, a browser or a model call.
+ * Script factories are intentionally not invoked: validation checks the selected name, while the
+ * factory itself remains run-scoped because its context contains generated ids and resolved inputs.
+ */
+export const validateProviderConfig = (
+  config: ResolvedConfig,
+  registries: Registries,
+): Effect.Effect<void, UsageError> =>
+  Effect.gen(function* () {
+    if (config.provider === "anthropic") {
+      yield* anthropicOptionsFromConfig(config).pipe(
+        Effect.mapError((error) => new UsageError({ message: error.message })),
+      );
+      return;
+    }
+
+    const options = yield* scriptedOptionsFromConfig(config);
+    if (options.script === undefined) return;
+    const registry = registries.scripts;
+    if (registry === undefined) {
+      return yield* Effect.fail(
+        new UsageError({
+          message: `providerOptions.script: script "${options.script}" is not registered in difmp.config.ts`,
+        }),
+      );
+    }
+    yield* registry.lookup(options.script).pipe(
+      Effect.mapError(
+        (error) => new UsageError({ message: `providerOptions.script: ${error.message}` }),
+      ),
+      Effect.asVoid,
+    );
+  });
+
 /** Everything a script factory needs that only exists once the run id is minted. */
 export interface ScriptedRunContext {
   readonly runId: string;
@@ -68,17 +119,7 @@ export const scriptFor = (
   context?: ScriptedRunContext,
 ): Effect.Effect<ScriptedProviderScript, UsageError> =>
   Effect.gen(function* () {
-    const options = yield* decodeScriptedOptions(config.providerOptions).pipe(
-      Effect.mapError(
-        (error) =>
-          new UsageError({
-            message: formatSchemaError(error, {
-              source: "providerOptions",
-              summary: "invalid scripted provider options",
-            }),
-          }),
-      ),
-    );
+    const options = yield* scriptedOptionsFromConfig(config);
     const criterionIds = spec.criteria.map((c) => c.id);
 
     if (options.script !== undefined) {
@@ -171,8 +212,11 @@ export const modelProviderFor = (
 ): Effect.Effect<ProviderChoice, UsageError> =>
   Effect.gen(function* () {
     if (config.provider === "anthropic") {
+      const options = yield* anthropicOptionsFromConfig(config).pipe(
+        Effect.mapError((error) => new UsageError({ message: error.message })),
+      );
       return {
-        layer: anthropicModelProviderLayerFromConfig(config).pipe(
+        layer: anthropicModelProviderLayer(options).pipe(
           Layer.catchCause((cause) =>
             Layer.effect(
               ModelProvider,

@@ -15,6 +15,13 @@ export class ProviderError extends Schema.TaggedError<ProviderError>()("Provider
 export type PromptPart =
   | { readonly type: "text"; readonly text: string }
   | {
+      /** Binary image input. Providers must encode this as a native multimodal prompt part. */
+      readonly type: "image";
+      readonly mediaType: string;
+      readonly data: Uint8Array;
+      readonly fileName?: string;
+    }
+  | {
       readonly type: "toolCall";
       readonly id: string;
       readonly name: string;

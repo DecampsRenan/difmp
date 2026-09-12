@@ -36,10 +36,15 @@ export const Header = (props: {
   readonly onCancel: () => void;
   readonly onReconnect: () => void;
   readonly elapsedMs: number;
+  /** A completed historical run can be selected while the rest of the suite is still running. */
+  readonly suiteRunning?: boolean;
+  readonly suiteFinished?: boolean;
+  readonly onCloseDashboard?: () => void;
 }) => {
   const { model } = props;
   const finished = model.status !== "running";
-  const cancelDisabled = finished || props.cancel.pending || props.cancel.requested;
+  const cancelDisabled =
+    (finished && props.suiteRunning !== true) || props.cancel.pending || props.cancel.requested;
 
   return (
     <header className="app-head">
@@ -115,10 +120,22 @@ export const Header = (props: {
             ? "Cancelling…"
             : props.cancel.requested
               ? "Cancellation requested"
-              : finished
+              : finished && props.suiteRunning !== true
                 ? "Run finished"
-                : "Cancel the run"}
+                : props.suiteRunning === true
+                  ? "Cancel the suite"
+                  : "Cancel the run"}
         </button>
+        {props.suiteFinished === true && props.onCloseDashboard !== undefined ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={props.onCloseDashboard}
+            data-testid="close-dashboard-button"
+          >
+            Close dashboard
+          </button>
+        ) : null}
       </div>
 
       {props.cancel.error === undefined ? null : (

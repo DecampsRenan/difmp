@@ -226,6 +226,11 @@ describe("artifactHref — accepted paths", () => {
       "http://127.0.0.1:4173/out/artifacts/trace.zip",
     );
   });
+
+  it("addresses an artifact in a retained run without trusting the artifact path", () => {
+    const href = artifactHref("/api/artifacts/", "screenshots/shot.png", "r_first");
+    expect(href).toBe(`${pageOrigin}/api/artifacts/screenshots/shot.png?runId=r_first`);
+  });
 });
 
 describe("artifactHref — the base itself", () => {

@@ -9,7 +9,8 @@
 #   through that distributed CLI with the SCRIPTED adapter against the local demo app.
 #
 # No API key, no network service and no secret is required to contribute: everything above is
-# deterministic and offline. The real-model smoke test is a SEPARATE, opt-in job at the bottom.
+# deterministic and offline. The real-provider smoke test is a SEPARATE scheduled/opt-in job at the
+# bottom and is the only job allowed to make paid API calls.
 #
 # EXTERNAL SYSTEM DEPENDENCIES (all installed by the steps below, none of them hosted services):
 #   * Chromium at the revision pinned by the repository's Playwright version (1.63.0), plus the
@@ -93,6 +94,10 @@ name: ci
 on:
   push:
   pull_request:
+  schedule:
+    # Weekly drift detector for the documented provider/model contract. Scheduled workflows run
+    # from the default branch and can read the repository's ANTHROPIC_API_KEY secret.
+    - cron: "17 6 * * 1"
   workflow_dispatch:
     inputs:
       real_model:
@@ -271,29 +276,27 @@ jobs:
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------------------------
-  # OPTIONAL, EXPLICITLY ENABLED, NOT REQUIRED TO CONTRIBUTE (spec §12 and §13).
+  # SCHEDULED OR EXPLICITLY ENABLED, NEVER REQUIRED TO CONTRIBUTE (spec §12 and §13).
   #
-  # It never runs on push or pull_request: only a manual dispatch with `real_model: true`, and it
-  # is `continue-on-error`, so its verdict is reported SEPARATELY and can never block a merge or a
-  # contributor without an API key. A scripted run is evidence about the harness; this job is the
-  # only thing that says anything about a model's ability to navigate, and it says it on its own.
+  # It never runs on push or pull_request: only the weekly schedule or a manual dispatch with
+  # `real_model: true`. Its three narrow probes are the only paid calls in CI. A scheduled failure
+  # stays visible instead of being converted to green, but can never block a contributor's PR.
   # ---------------------------------------------------------------------------------------------
   real-model-smoke:
-    name: real-model smoke test (optional, opt-in)
-    if: github.event_name == 'workflow_dispatch' && inputs.real_model
+    name: Anthropic provider contract (scheduled / opt-in)
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.real_model)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    continue-on-error: true
+    timeout-minutes: 10
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      DIFMP_PROVIDER: anthropic
-      DIFMP_MODEL: ${{ inputs.model }}
+      DIFMP_MODEL: ${{ inputs.model || 'claude-sonnet-5' }}
+      DIFMP_REAL_PROVIDER: "1"
     steps:
       - name: Require the API key secret
         run: |
           if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "::error::ANTHROPIC_API_KEY is not configured for this repository — the optional"
-            echo "::error::real-model smoke test cannot run. Everything else in CI runs without it."
+            echo "::error::ANTHROPIC_API_KEY is not configured for this repository — the isolated"
+            echo "::error::provider contract smoke cannot run. Everything else in CI runs without it."
             exit 1
           fi
 
@@ -305,36 +308,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
-      - if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium
-
-      - run: pnpm run build
-      - run: pnpm --filter @difmp/fixture-app build
-
-      # `alt-layout` is the variant worth pointing a real model at: same functional affordances,
-      # a different arrangement, so it measures navigation rather than memorised coordinates.
-      # No retry: one attempt, and the result is whatever it is.
-      - name: Example scenarios through the distributed CLI (real model)
-        run: bash apps/cli/scripts/ci/run-examples.sh "$RUNNER_TEMP/real-model" alt-layout
-
-      - name: Collect run directories
-        if: always()
-        run: |
-          mkdir -p ci-artifacts
-          rsync -a --exclude node_modules "$RUNNER_TEMP/real-model/runs/" ci-artifacts/real-model-runs/ 2>/dev/null || true
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: real-model-smoke-${{ github.run_id }}
-          path: ci-artifacts/**
-          retention-days: 14
-          if-no-files-found: ignore
+      # Registered as skipped in the ordinary suite. This invocation alone enables the three paid
+      # probes: accepted request + tool call, native structured verdict, and transport cancellation.
+      # No retry: provider drift must remain visible.
+      - name: Request formatting, tool use, structured verdict and cancellation
+        run: pnpm exec vitest run packages/agent-runtime/test/anthropic.live.test.ts --project unit

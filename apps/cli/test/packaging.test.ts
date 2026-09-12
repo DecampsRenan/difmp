@@ -16,6 +16,9 @@ const repoRoot = resolve(cliRoot, "..", "..");
 const pkg = JSON.parse(readFileSync(join(cliRoot, "package.json"), "utf8")) as {
   dependencies: Record<string, string>;
   devDependencies: Record<string, string>;
+  exports: Record<string, unknown>;
+  files: ReadonlyArray<string>;
+  license: string;
 };
 
 /** Source trees whose code ends up INSIDE the published bundle (tsdown `noExternal: [/^@difmp\//]`). */
@@ -61,6 +64,29 @@ const packageOf = (specifier: string): string => {
 };
 
 describe("published package.json", () => {
+  it("ships under the repository's MIT license", () => {
+    expect(pkg.license).toBe("MIT");
+    expect(pkg.files).toContain("LICENSE");
+    expect(readFileSync(join(cliRoot, "LICENSE"), "utf8")).toContain(
+      "Copyright (c) 2026 Renan Decamps",
+    );
+  });
+
+  it("ships the public scripted authoring entry point and its consumer example", () => {
+    expect(pkg.exports["./scripted"]).toEqual({
+      types: "./dist/scripted.d.ts",
+      default: "./dist/scripted.js",
+    });
+    expect(pkg.files).toContain("examples");
+
+    const example = readFileSync(
+      join(cliRoot, "examples", "custom-scripted", "custom-script.ts"),
+      "utf8",
+    );
+    expect(example).toContain('from "difmp/scripted"');
+    expect(example).not.toContain("@difmp/");
+  });
+
   it("declares no @difmp/* runtime dependency — they are bundled, and exist on no registry", () => {
     // `pnpm pack` rewrites `workspace:*` to `0.1.0`, so a @difmp/* entry in `dependencies` makes
     // the tarball uninstallable: npm would go looking for `@difmp/core@0.1.0` on the registry.

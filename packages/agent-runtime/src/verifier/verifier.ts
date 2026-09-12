@@ -92,6 +92,14 @@ export const makeVerifier = (
     ): Effect.Effect<VerificationResponse, VerifierError> =>
       Effect.gen(function* () {
         const { criterion } = request;
+        // A screenshot is admissible model evidence only when the pixels are attached. Filtering
+        // here also constrains verdict validation, so an adapter/capture regression cannot turn a
+        // text-only screenshot label back into a citable visual observation.
+        const evidence = request.evidence.filter(
+          (item) =>
+            item.kind !== "screenshot" ||
+            (item.image !== undefined && item.image.data.byteLength > 0),
+        );
         const response = yield* provider
           .generate({
             role: "verifier",
@@ -99,7 +107,7 @@ export const makeVerifier = (
             prompt: verifierPrompt({
               criterion,
               criterionHash: request.criterionHash,
-              evidence: request.evidence,
+              evidence,
               scenario: request.scenario,
               baseUrl: request.baseUrl,
             }),
@@ -152,7 +160,7 @@ export const makeVerifier = (
           criterion,
           criterionHash: request.criterionHash,
           evaluator,
-          evidence: request.evidence,
+          evidence,
           seq: request.seq,
         });
         return {

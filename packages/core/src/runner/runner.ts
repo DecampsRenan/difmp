@@ -667,6 +667,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             capturedAt: now,
             ...(options?.sourceSeq === undefined ? {} : { sourceSeq: options.sourceSeq }),
             summary: `screenshot "${label}"`,
+            ...(capture.image === undefined ? {} : { image: capture.image }),
           });
         }
         // A capture nobody can look up is a failed capture, whatever the browser managed to write:
