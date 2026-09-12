@@ -18,6 +18,18 @@ const statusLabel: Record<CriterionStatus, string> = {
   error: "error",
 };
 
+/**
+ * A criterion's status is copied verbatim from the `verificationFinished` payload, and
+ * `isHarnessEvent` gates the ENVELOPE only — it never decodes the result. So a status outside the
+ * union does reach this component, and indexing the maps above with it yields `undefined`: the
+ * badge would render `badge-undefined`, i.e. no tone at all, on the one element the whole panel
+ * relies on to say pass from fail. The `Record<CriterionStatus, …>` keeps the compiler honest when
+ * a status is ADDED to the domain; these lookups stay defensive because the wire is not the domain.
+ * Same shape as `Header.tsx` and `Artifacts.tsx`.
+ */
+const toneOf = (status: string): string => statusTone[status as CriterionStatus] ?? "neutral";
+const labelOf = (status: string): string => statusLabel[status as CriterionStatus] ?? status;
+
 const evaluatorLabel = (evaluator: Evaluator): string => {
   switch (evaluator.kind) {
     case "model":
@@ -51,7 +63,7 @@ export const Criteria = (props: { readonly criteria: ReadonlyArray<CriterionView
             <li key={criterion.id} className="criterion" data-testid={`criterion-${criterion.id}`}>
               <div className="criterion-head">
                 <code className="criterion-id">{criterion.id}</code>
-                <Badge tone={statusTone[criterion.status]} title={statusLabel[criterion.status]}>
+                <Badge tone={toneOf(criterion.status)} title={labelOf(criterion.status)}>
                   {/* The domain literal, not a translation: it is what `result.json`, `junit.xml`
                         and the console reporter print, so it stays greppable across artifacts. */}
                   <span data-testid={`criterion-status-${criterion.id}`}>{criterion.status}</span>
@@ -77,8 +89,22 @@ export const Criteria = (props: { readonly criteria: ReadonlyArray<CriterionView
 
               <p className="criterion-text">{criterion.text ?? "(criterion text unavailable)"}</p>
 
+              {/* Gated on `pending`, not on the absence of a result alone: `runFinished` turns a
+                  still-pending criterion into `inconclusive` while leaving `result` undefined and
+                  `evidenceRequested` true (reducer.ts, `runFinished`). Without the status check the
+                  panel contradicts itself on every unfinished run — the badge says "inconclusive"
+                  and the line under it says the evaluation is still running. */}
               {criterion.evidenceRequested && result === undefined ? (
-                <p className="criterion-meta">Evidence requested, evaluation in progress…</p>
+                criterion.status === "pending" ? (
+                  <p className="criterion-meta">Evidence requested, evaluation in progress…</p>
+                ) : (
+                  <p
+                    className="criterion-meta"
+                    data-testid={`criterion-unresolved-${criterion.id}`}
+                  >
+                    Evidence was requested, but the run ended before any verdict was recorded.
+                  </p>
+                )
               ) : null}
 
               {result === undefined ? null : (

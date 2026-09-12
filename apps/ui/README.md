@@ -18,7 +18,7 @@ pnpm run test:ui                                   # or: pnpm run test, which in
 npx vitest run --config apps/ui/vitest.config.ts   # the same thing, spelled out
 ```
 
-A **component** suite, under jsdom, in three layers:
+A **component** suite, under jsdom, in four layers:
 
 - **Per component**, rendered with Testing Library and driven through `user-event`, fed run models
   built by `test/factories.ts`: the header with its connection state and Cancel flow, the run
@@ -36,10 +36,15 @@ A **component** suite, under jsdom, in three layers:
   URL guards. `artifactHref` gets its whole rejection surface — schemes, traversal, absolute and
   protocol-relative paths — because every URL this app renders comes from a journal written from
   model- and page-influenced data.
+- **The reducer's immutability contract** (`test/reducer.test.ts`), asserted directly rather than
+  through the DOM — because a reducer that writes into the state it was handed still renders
+  correctly, and the damage only surfaces once something retains an earlier state or memoizes a row
+  on its object identity. This is the one place in the suite where a DOM assertion cannot reach the
+  rule.
 
 The suite is mutation-checked: breaking the dedupe guard, the URL scheme gate, the cost fallback,
-the gauge clamp, the pending→`inconclusive` rule or the malformed-frame counter each fails a test
-that names the rule it broke.
+the gauge clamp, the pending→`inconclusive` rule, its immutability, or the malformed-frame counter
+each fails a test that names the rule it broke.
 
 It **launches no browser**. Nothing here proves the bundle loads, the SSE stream arrives or a real
 run renders; that is the CLI suite's job (`apps/cli/test`), which drives a real Chromium against the
@@ -87,9 +92,11 @@ drives, but that header cannot be set from script; when the browser gives up (`r
 the app opens a fresh `EventSource` and carries the cursor as `?lastEventId=<seq>`. Both are
 supported by the server and mean the same thing.
 
-**Known gap:** the "server unreachable / Resume the stream" path has never executed.
-`context.setOffline(true)` does not tear down a live `EventSource` in Chromium over loopback, so that
-branch could not be driven from a test. The resume contract itself is proven at the two levels that
+**Known gap, narrowed:** the "server unreachable / Resume the stream" path has never executed _in a
+real browser_. `context.setOffline(true)` does not tear down a live `EventSource` in Chromium over
+loopback, so that branch cannot be driven from the CLI suite. It _is_ covered at the component level
+(`test/app.test.tsx`), where a fake `EventSource` can report `readyState === CLOSED`: the backoff,
+the takeover carrying the cursor, the give-up after the maximum attempts, and the manual resume. The resume contract itself is proven at the two levels that
 matter — header replay, query replay, and a full page reload rebuilding the timeline with no loss and
 no duplicates.
 

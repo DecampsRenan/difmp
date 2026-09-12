@@ -53,12 +53,46 @@ describe("Criteria — status", () => {
     expect(el).toHaveTextContent(status);
     expect(el.parentElement).toHaveClass(tone);
   });
+
+  // A status is copied verbatim from `verificationFinished` and `isHarnessEvent` gates the envelope
+  // only, so one outside the union does reach the panel. It must still get A tone: `badge-undefined`
+  // is an unstyled badge on the one element the panel relies on to say pass from fail.
+  it("falls back to a neutral tone for a status the domain does not (yet) have", () => {
+    render(<Criteria criteria={[criterion({ status: "skipped" as never })]} />);
+    const el = screen.getByTestId("criterion-status-c1");
+    expect(el).toHaveTextContent("skipped");
+    expect(el.parentElement).toHaveClass("badge", "badge-neutral");
+    expect(el.parentElement?.className).not.toContain("undefined");
+    // The title is the status itself rather than the string "undefined".
+    expect(el.parentElement).toHaveAttribute("title", "skipped");
+  });
 });
 
 describe("Criteria — evidence in flight", () => {
   it("says an evaluation is under way once evidence has been requested", () => {
     render(<Criteria criteria={[criterion({ evidenceRequested: true })]} />);
     expect(screen.getByText("Evidence requested, evaluation in progress…")).toBeInTheDocument();
+  });
+
+  // `runFinished` turns a still-pending criterion into `inconclusive` but leaves `result` undefined
+  // and `evidenceRequested` true. Gating the notice on the absence of a result alone made the panel
+  // contradict itself: an "inconclusive" badge with "evaluation in progress…" directly under it.
+  it("stops claiming an evaluation is running once the run has ended without a verdict", () => {
+    render(
+      <Criteria criteria={[criterion({ evidenceRequested: true, status: "inconclusive" })]} />,
+    );
+    expect(screen.queryByText("Evidence requested, evaluation in progress…")).toBeNull();
+    expect(screen.getByTestId("criterion-unresolved-c1")).toHaveTextContent(
+      "Evidence was requested, but the run ended before any verdict was recorded.",
+    );
+    // The status literal still reads inconclusive — the prose agrees with it now.
+    expect(screen.getByTestId("criterion-status-c1")).toHaveTextContent("inconclusive");
+  });
+
+  it("says nothing at all about evidence that was never requested", () => {
+    render(<Criteria criteria={[criterion({ status: "inconclusive" })]} />);
+    expect(screen.queryByTestId("criterion-unresolved-c1")).toBeNull();
+    expect(screen.queryByText(/Evidence/)).toBeNull();
   });
 
   it("drops that notice as soon as the result lands", () => {

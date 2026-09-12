@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ActionGuidance, BlockingBudgets } from "../src/components/Budgets.js";
-import { breach, resolvedConfig, runModel } from "./factories.js";
+import { breach, budgets, resolvedConfig, runModel } from "./factories.js";
 
 const pricing = { currency: "USD", inputPerMillionTokens: 3, outputPerMillionTokens: 15 };
 
@@ -69,6 +69,34 @@ describe("BlockingBudgets — gauges", () => {
     // panel misreports both timeouts.
     expect(valueOf("Per-operation timeout")).toHaveTextContent(/^15\.0 s$/);
     expect(valueOf("Fixture cleanup timeout")).toHaveTextContent(/^5\.00 s$/);
+  });
+
+  // `budgets` is type-checked as `number` on the wire and nothing rejects Infinity or NaN, so the
+  // panel used to print "Infinity s / Infinity s" — which reads like a configured budget.
+  it("admits a non-finite attempt timeout instead of printing it as a budget", () => {
+    const broken = runModel({
+      config: resolvedConfig({
+        budgets: { ...budgets, attemptTimeoutMs: Number.POSITIVE_INFINITY },
+      }),
+    });
+    render(<BlockingBudgets model={broken} pricing={undefined} elapsedMs={5_000} />);
+    const gauge = screen.getByTestId("budget-attemptTimeout");
+    expect(gauge.textContent).not.toMatch(/∞|Infinity|NaN/);
+    expect(within(gauge).getByText("5.00 s / —")).toBeInTheDocument();
+    // The budgets that ARE finite keep rendering normally next to it.
+    expect(
+      within(screen.getByTestId("budget-maxModelCalls")).getByText("0 / 30"),
+    ).toBeInTheDocument();
+  });
+
+  it("admits a non-finite scalar timeout in the same way", () => {
+    const broken = runModel({
+      config: resolvedConfig({
+        budgets: { ...budgets, operationTimeoutMs: Number.NaN },
+      }),
+    });
+    render(<BlockingBudgets model={broken} pricing={undefined} elapsedMs={0} />);
+    expect(screen.getByTestId("blocking-budgets-panel").textContent).not.toMatch(/NaN|Infinity/);
   });
 
   it("marks the gauge of a budget that has actually been exhausted", () => {
@@ -181,7 +209,7 @@ describe("BlockingBudgets — breaches", () => {
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
     expect(calls).toHaveTextContent(/^model calls exhausted — 30 \/ 30$/);
     expect(timeout).toHaveTextContent(
-      /^attempt timeout exhausted — 120001 \/ 120000 — the agent loop was still running$/,
+      /^attempt timeout exhausted — 120,001 \/ 120,000 — the agent loop was still running$/,
     );
   });
 
@@ -218,6 +246,33 @@ describe("ActionGuidance", () => {
       "4 accepted action(s) — indicative threshold unknown",
     );
     expect(screen.queryByTestId("guidance-gauge")).toBeNull();
+  });
+
+  // `??` falls through on undefined only, so a non-finite threshold from the frozen contract or
+  // from `configResolved` used to render as "0 / ∞ suggested". An unusable threshold is no
+  // threshold: the panel must fall through to the branch that says so.
+  it.each([
+    ["contractMaxActions", { contractMaxActions: Number.POSITIVE_INFINITY }],
+    ["a reported guidance", { guidance: { used: 1, guidance: Number.NaN, rendering: "?" } }],
+  ])("treats a non-finite threshold from %s as no threshold at all", (_label, over) => {
+    render(<ActionGuidance model={runModel({ actionCount: 3, ...over })} />);
+    expect(screen.getByTestId("action-count")).toHaveTextContent(
+      "3 accepted action(s) — indicative threshold unknown",
+    );
+    expect(screen.queryByTestId("guidance-gauge")).toBeNull();
+  });
+
+  it("falls back to the next threshold down when the one above it is unusable", () => {
+    render(
+      <ActionGuidance
+        model={runModel({
+          contractMaxActions: Number.POSITIVE_INFINITY,
+          config: resolvedConfig({ maxActions: 25 }),
+          actionCount: 3,
+        })}
+      />,
+    );
+    expect(screen.getByTestId("action-count")).toHaveTextContent("3 / 25 suggested");
   });
 
   it("prefers the scenario's own maxActions over the project default", () => {

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Badge, Empty, Gauge, Panel, durationOf, timeOf } from "../src/components/ui.js";
+import { Badge, Empty, Gauge, Panel, countOf, durationOf, timeOf } from "../src/components/ui.js";
 
 describe("Panel", () => {
   it("renders the title, the test id and the children", () => {
@@ -111,6 +111,37 @@ describe("Gauge", () => {
     expect(screen.getByText("90.0 s left")).toBeInTheDocument();
   });
 
+  // Budget limits arrive as `number` from `configResolved` and the frozen contract, and nothing
+  // upstream rejects Infinity or NaN. "∞ s" reads like a real, enormous budget; a dash reads like
+  // what it is.
+  it.each([[Number.POSITIVE_INFINITY], [Number.NEGATIVE_INFINITY], [Number.NaN]])(
+    "admits a non-finite limit (%p) instead of rendering it as a budget",
+    (limit) => {
+      const { container } = render(
+        <Gauge kind="blocking" label="Tokens" used={5} limit={limit} testId="g" />,
+      );
+      expect(screen.getByText("5 / —")).toBeInTheDocument();
+      expect(screen.getByText("— left")).toBeInTheDocument();
+      expect(screen.getByTestId("g").textContent).not.toMatch(/∞|Infinity|NaN/);
+      // A ratio built from a non-finite limit must not reach the style attribute as NaN%.
+      expect((container.querySelector(".gauge-fill") as HTMLElement).style.width).toBe("0%");
+    },
+  );
+
+  it("admits a non-finite used value too", () => {
+    render(
+      <Gauge
+        kind="blocking"
+        label="Tokens"
+        used={Number.POSITIVE_INFINITY}
+        limit={200}
+        testId="g"
+      />,
+    );
+    expect(screen.getByText("— / 200")).toBeInTheDocument();
+    expect(screen.getByTestId("g").textContent).not.toMatch(/∞|Infinity|NaN/);
+  });
+
   it("renders a footnote only when it is given one", () => {
     const { container, rerender } = render(
       <Gauge kind="blocking" label="Tokens" used={1} limit={2} testId="g" />,
@@ -137,6 +168,19 @@ describe("timeOf", () => {
   });
 });
 
+describe("countOf", () => {
+  it("groups a finite number", () => {
+    expect(countOf(0)).toBe("0");
+    expect(countOf(200_000)).toBe("200,000");
+  });
+
+  it("refuses to render a non-finite number as a quantity", () => {
+    expect(countOf(Number.POSITIVE_INFINITY)).toBe("—");
+    expect(countOf(Number.NEGATIVE_INFINITY)).toBe("—");
+    expect(countOf(Number.NaN)).toBe("—");
+  });
+});
+
 describe("durationOf", () => {
   it("stays in milliseconds below a second", () => {
     expect(durationOf(0)).toBe("0 ms");
@@ -148,5 +192,10 @@ describe("durationOf", () => {
     expect(durationOf(9999)).toBe("10.00 s");
     expect(durationOf(10_000)).toBe("10.0 s");
     expect(durationOf(125_400)).toBe("125.4 s");
+  });
+
+  it("refuses to render a non-finite duration as a timeout", () => {
+    expect(durationOf(Number.POSITIVE_INFINITY)).toBe("—");
+    expect(durationOf(Number.NaN)).toBe("—");
   });
 });

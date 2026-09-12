@@ -766,7 +766,7 @@ describe("App — blocking budgets versus indicative guidance", () => {
 
     const breaches = screen.getByTestId("budget-breaches");
     expect(within(breaches).getAllByRole("listitem")).toHaveLength(1);
-    expect(breaches).toHaveTextContent(/^tokens exhausted — 200412 \/ 200000$/);
+    expect(breaches).toHaveTextContent(/^tokens exhausted — 200,412 \/ 200,000$/);
 
     expect(screen.getByTestId("budget-maxTokens").querySelector(".gauge-track")).toHaveClass(
       "is-exhausted",
