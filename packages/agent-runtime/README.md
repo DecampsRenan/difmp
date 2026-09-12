@@ -21,7 +21,7 @@ inside the SDK would bypass all of that at once.
 
 The Anthropic key is read as `Config.Redacted` from the environment. It never reaches the config, a
 prompt, `manifest.json` or a report, and `providerOptions` is strictly decoded for that adapter so an
-`apiKey` key is *rejected* rather than carried. Interrupting a generation aborts the in-flight HTTP
+`apiKey` key is _rejected_ rather than carried. Interrupting a generation aborts the in-flight HTTP
 request (`withAbort` in `provider.ts`), so a cancelled run leaves nothing in flight.
 
 ## The scripted adapter
@@ -41,7 +41,7 @@ report name the adapter.
 ## The `Verifier`
 
 It evaluates one criterion from the collected evidence and returns a structured verdict, which the
-harness then *polices*: unknown or unpersisted artifact ids are stripped and the criterion forced to
+harness then _polices_: unknown or unpersisted artifact ids are stripped and the criterion forced to
 `inconclusive`; a `passed` with no accepted evidence is refused; the absence branch the evaluator
 claims is re-derived by the runner from what the driver reported. The verifier may answer
 `needsEvidence`, at most `budgets.maxEvidenceRequests` times per criterion.

@@ -1,138 +1,294 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>difmp — live run</title>
-<style>
-  :root { color-scheme: light dark; --bg:#0f1115; --fg:#e6e6e6; --dim:#9aa0a6; --line:#262a31;
-          --ok:#4ac26b; --bad:#f2544a; --warn:#e3b341; --inco:#8a8fd6; }
-  @media (prefers-color-scheme: light) { :root { --bg:#fbfbfc; --fg:#1c1f24; --dim:#606770; --line:#e2e4e8; } }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
-  header { display:flex; gap:16px; align-items:baseline; padding:12px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
-  h1 { font-size:15px; margin:0; font-weight:600; }
-  .dim { color:var(--dim); }
-  main { display:grid; grid-template-columns:minmax(280px,1fr) 2fr; gap:0; height:calc(100vh - 49px); }
-  @media (max-width:800px) { main { grid-template-columns:1fr; height:auto; } }
-  section { padding:12px 16px; overflow:auto; }
-  #side { border-right:1px solid var(--line); }
-  ul { list-style:none; margin:0; padding:0; }
-  li { padding:4px 0; border-bottom:1px solid var(--line); word-break:break-word; }
-  .seq { color:var(--dim); display:inline-block; min-width:3.5em; }
-  .type { font-weight:600; }
-  .passed,.ok { color:var(--ok); } .failed,.error { color:var(--bad); }
-  .inconclusive { color:var(--inco); } .cancelled { color:var(--warn); }
-  button { font:inherit; padding:5px 10px; border:1px solid var(--line); background:transparent; color:var(--fg); border-radius:5px; cursor:pointer; }
-  button:hover { border-color:var(--bad); color:var(--bad); }
-  pre { margin:0; white-space:pre-wrap; }
-</style>
-</head>
-<body>
-<header>
-  <h1>difmp</h1>
-  <span class="dim" id="conn">connecting…</span>
-  <span class="dim" id="counts"></span>
-  <span style="flex:1"></span>
-  <button id="cancel">Cancel run</button>
-</header>
-<main>
-  <section id="side">
-    <div class="dim">Scenarios</div>
-    <ul id="scenarios"></ul>
-    <div class="dim" style="margin-top:16px">Criteria</div>
-    <ul id="criteria"></ul>
-    <div class="dim" style="margin-top:16px">Budgets</div>
-    <pre id="budgets" class="dim">—</pre>
-  </section>
-  <section id="timeline-wrap">
-    <div class="dim">Timeline <span id="last" class="dim"></span></div>
-    <ul id="timeline"></ul>
-  </section>
-</main>
-<script>
-// Everything from a spec, a model, a page or a log is escaped before it reaches the DOM.
-const el = (id) => document.getElementById(id);
-const text = (s) => document.createTextNode(String(s));
-const li = (nodes) => { const n = document.createElement("li"); for (const c of nodes) n.appendChild(c); return n; };
-const span = (cls, s) => { const n = document.createElement("span"); if (cls) n.className = cls; n.appendChild(text(s)); return n; };
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>difmp — live run</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0f1115;
+        --fg: #e6e6e6;
+        --dim: #9aa0a6;
+        --line: #262a31;
+        --ok: #4ac26b;
+        --bad: #f2544a;
+        --warn: #e3b341;
+        --inco: #8a8fd6;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #fbfbfc;
+          --fg: #1c1f24;
+          --dim: #606770;
+          --line: #e2e4e8;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          14px/1.5 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      header {
+        display: flex;
+        gap: 16px;
+        align-items: baseline;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+        flex-wrap: wrap;
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0;
+        font-weight: 600;
+      }
+      .dim {
+        color: var(--dim);
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(280px, 1fr) 2fr;
+        gap: 0;
+        height: calc(100vh - 49px);
+      }
+      @media (max-width: 800px) {
+        main {
+          grid-template-columns: 1fr;
+          height: auto;
+        }
+      }
+      section {
+        padding: 12px 16px;
+        overflow: auto;
+      }
+      #side {
+        border-right: 1px solid var(--line);
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      li {
+        padding: 4px 0;
+        border-bottom: 1px solid var(--line);
+        word-break: break-word;
+      }
+      .seq {
+        color: var(--dim);
+        display: inline-block;
+        min-width: 3.5em;
+      }
+      .type {
+        font-weight: 600;
+      }
+      .passed,
+      .ok {
+        color: var(--ok);
+      }
+      .failed,
+      .error {
+        color: var(--bad);
+      }
+      .inconclusive {
+        color: var(--inco);
+      }
+      .cancelled {
+        color: var(--warn);
+      }
+      button {
+        font: inherit;
+        padding: 5px 10px;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--fg);
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: var(--bad);
+        color: var(--bad);
+      }
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>difmp</h1>
+      <span class="dim" id="conn">connecting…</span>
+      <span class="dim" id="counts"></span>
+      <span style="flex: 1"></span>
+      <button id="cancel">Cancel run</button>
+    </header>
+    <main>
+      <section id="side">
+        <div class="dim">Scenarios</div>
+        <ul id="scenarios"></ul>
+        <div class="dim" style="margin-top: 16px">Criteria</div>
+        <ul id="criteria"></ul>
+        <div class="dim" style="margin-top: 16px">Budgets</div>
+        <pre id="budgets" class="dim">—</pre>
+      </section>
+      <section id="timeline-wrap">
+        <div class="dim">Timeline <span id="last" class="dim"></span></div>
+        <ul id="timeline"></ul>
+      </section>
+    </main>
+    <script>
+      // Everything from a spec, a model, a page or a log is escaped before it reaches the DOM.
+      const el = (id) => document.getElementById(id);
+      const text = (s) => document.createTextNode(String(s));
+      const li = (nodes) => {
+        const n = document.createElement("li");
+        for (const c of nodes) n.appendChild(c);
+        return n;
+      };
+      const span = (cls, s) => {
+        const n = document.createElement("span");
+        if (cls) n.className = cls;
+        n.appendChild(text(s));
+        return n;
+      };
 
-const state = { scenarios: new Map(), criteria: new Map(), lastSeq: 0 };
+      const state = { scenarios: new Map(), criteria: new Map(), lastSeq: 0 };
 
-const short = (v) => { const s = typeof v === "string" ? v : JSON.stringify(v); return s == null ? "" : (s.length > 220 ? s.slice(0, 219) + "…" : s); };
+      const short = (v) => {
+        const s = typeof v === "string" ? v : JSON.stringify(v);
+        return s == null ? "" : s.length > 220 ? s.slice(0, 219) + "…" : s;
+      };
 
-function renderScenarios() {
-  const ul = el("scenarios"); ul.textContent = "";
-  for (const [path, s] of state.scenarios) {
-    ul.appendChild(li([span(s.status || "", (s.status || "running").padEnd(13)), text(" "), span("", path)]));
-  }
-}
-function renderCriteria() {
-  const ul = el("criteria"); ul.textContent = "";
-  for (const [id, c] of state.criteria) {
-    ul.appendChild(li([span(c.status || "", (c.status || "pending").padEnd(13)), text(" "), span("", id + " " + short(c.expected || ""))]));
-  }
-}
-function push(seq, type, detail) {
-  const ul = el("timeline");
-  ul.appendChild(li([span("seq", seq), span("type", type), text(" "), span("dim", short(detail))]));
-  el("timeline-wrap").scrollTop = el("timeline-wrap").scrollHeight;
-  while (ul.childNodes.length > 800) ul.removeChild(ul.firstChild);
-}
+      function renderScenarios() {
+        const ul = el("scenarios");
+        ul.textContent = "";
+        for (const [path, s] of state.scenarios) {
+          ul.appendChild(
+            li([
+              span(s.status || "", (s.status || "running").padEnd(13)),
+              text(" "),
+              span("", path),
+            ]),
+          );
+        }
+      }
+      function renderCriteria() {
+        const ul = el("criteria");
+        ul.textContent = "";
+        for (const [id, c] of state.criteria) {
+          ul.appendChild(
+            li([
+              span(c.status || "", (c.status || "pending").padEnd(13)),
+              text(" "),
+              span("", id + " " + short(c.expected || "")),
+            ]),
+          );
+        }
+      }
+      function push(seq, type, detail) {
+        const ul = el("timeline");
+        ul.appendChild(
+          li([span("seq", seq), span("type", type), text(" "), span("dim", short(detail))]),
+        );
+        el("timeline-wrap").scrollTop = el("timeline-wrap").scrollHeight;
+        while (ul.childNodes.length > 800) ul.removeChild(ul.firstChild);
+      }
 
-function onMessage(ev) {
-  let m; try { m = JSON.parse(ev.data); } catch { return; }
-  state.lastSeq = m.seq;
-  el("last").textContent = " · last event " + m.seq;
-  if (m.type === "harness") {
-    const e = m.data && m.data.event;
-    if (!e) return;
-    if (e.type === "contractFrozen" && Array.isArray(e.criterionIds)) {
-      for (const id of e.criterionIds) if (!state.criteria.has(id)) state.criteria.set(id, { status: "pending" });
-      renderCriteria();
-    }
-    if (e.type === "verificationFinished") {
-      state.criteria.set(e.criterionId, { status: e.status, expected: e.expected });
-      renderCriteria();
-    }
-    if (e.type === "budgetExhausted" || e.type === "actionGuidanceExceeded") {
-      el("budgets").textContent = short(e);
-    }
-    push(m.seq, e.type, e.intent || e.url || e.status || e.reason || "");
-    return;
-  }
-  if (m.type === "scenarioStarted") { state.scenarios.set(m.data.specPath, { status: "running" }); renderScenarios(); }
-  if (m.type === "scenarioFinished") { state.scenarios.set(m.data.specPath, { status: m.data.status }); renderScenarios(); }
-  if (m.type === "cliStarted" && Array.isArray(m.data.scenarios)) {
-    for (const p of m.data.scenarios) if (!state.scenarios.has(p)) state.scenarios.set(p, { status: "" });
-    renderScenarios();
-  }
-  if (m.type === "cliFinished") { el("counts").textContent = m.data.completed + "/" + m.data.total + " done"; }
-  push(m.seq, m.type, m.data);
-}
+      function onMessage(ev) {
+        let m;
+        try {
+          m = JSON.parse(ev.data);
+        } catch {
+          return;
+        }
+        state.lastSeq = m.seq;
+        el("last").textContent = " · last event " + m.seq;
+        if (m.type === "harness") {
+          const e = m.data && m.data.event;
+          if (!e) return;
+          if (e.type === "contractFrozen" && Array.isArray(e.criterionIds)) {
+            for (const id of e.criterionIds)
+              if (!state.criteria.has(id)) state.criteria.set(id, { status: "pending" });
+            renderCriteria();
+          }
+          if (e.type === "verificationFinished") {
+            state.criteria.set(e.criterionId, { status: e.status, expected: e.expected });
+            renderCriteria();
+          }
+          if (e.type === "budgetExhausted" || e.type === "actionGuidanceExceeded") {
+            el("budgets").textContent = short(e);
+          }
+          push(m.seq, e.type, e.intent || e.url || e.status || e.reason || "");
+          return;
+        }
+        if (m.type === "scenarioStarted") {
+          state.scenarios.set(m.data.specPath, { status: "running" });
+          renderScenarios();
+        }
+        if (m.type === "scenarioFinished") {
+          state.scenarios.set(m.data.specPath, { status: m.data.status });
+          renderScenarios();
+        }
+        if (m.type === "cliStarted" && Array.isArray(m.data.scenarios)) {
+          for (const p of m.data.scenarios)
+            if (!state.scenarios.has(p)) state.scenarios.set(p, { status: "" });
+          renderScenarios();
+        }
+        if (m.type === "cliFinished") {
+          el("counts").textContent = m.data.completed + "/" + m.data.total + " done";
+        }
+        push(m.seq, m.type, m.data);
+      }
 
-function connect() {
-  // EventSource resends Last-Event-ID on reconnect; the server replays from the journal, so a
-  // reconnection neither loses nor duplicates events.
-  const es = new EventSource("/api/events");
-  es.onopen = () => { el("conn").textContent = "connected"; };
-  es.onerror = () => { el("conn").textContent = "reconnecting…"; };
-  es.onmessage = onMessage;
-  for (const t of ["harness","cliStarted","cliFinished","scenarioStarted","scenarioFinished","cancellationRequested"]) {
-    es.addEventListener(t, onMessage);
-  }
-}
-el("cancel").addEventListener("click", () => {
-  el("cancel").disabled = true;
-  fetch("/api/cancel", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reason: "dashboard" }) });
-});
-fetch("/api/state").then((r) => r.json()).then((s) => {
-  if (s && s.state && Array.isArray(s.state.scenarios)) {
-    for (const p of s.state.scenarios) state.scenarios.set(p, { status: "" });
-    renderScenarios();
-  }
-}).catch(() => {});
-connect();
-</script>
-</body>
+      function connect() {
+        // EventSource resends Last-Event-ID on reconnect; the server replays from the journal, so a
+        // reconnection neither loses nor duplicates events.
+        const es = new EventSource("/api/events");
+        es.onopen = () => {
+          el("conn").textContent = "connected";
+        };
+        es.onerror = () => {
+          el("conn").textContent = "reconnecting…";
+        };
+        es.onmessage = onMessage;
+        for (const t of [
+          "harness",
+          "cliStarted",
+          "cliFinished",
+          "scenarioStarted",
+          "scenarioFinished",
+          "cancellationRequested",
+        ]) {
+          es.addEventListener(t, onMessage);
+        }
+      }
+      el("cancel").addEventListener("click", () => {
+        el("cancel").disabled = true;
+        fetch("/api/cancel", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ reason: "dashboard" }),
+        });
+      });
+      fetch("/api/state")
+        .then((r) => r.json())
+        .then((s) => {
+          if (s && s.state && Array.isArray(s.state.scenarios)) {
+            for (const p of s.state.scenarios) state.scenarios.set(p, { status: "" });
+            renderScenarios();
+          }
+        })
+        .catch(() => {});
+      connect();
+    </script>
+  </body>
 </html>

@@ -75,4 +75,4 @@ footer { color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--lin
 .missing { color: var(--failed); font-weight: 600; }
 .wrap { word-break: break-word; }
 @media (max-width: 520px) { main { padding: 16px 12px 48px; } .big { font-size: 21px; } }
-`
+`;

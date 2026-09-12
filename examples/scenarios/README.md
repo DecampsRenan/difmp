@@ -7,16 +7,16 @@ Three `*.e2e.md` scenarios that run, and four that must be **rejected**. They ta
 The harness itself is language-agnostic: the body and the criteria are text handed to a model, and
 the frontmatter keys are the only fixed vocabulary.
 
-| spec | shows |
-| --- | --- |
-| `project-create.e2e.md` | The standard journey. A fixture, three **textual** expectations, no TypeScript profile. This is the one run against all four app variants. |
-| `project-create-checked.e2e.md` | The advanced extension: `checks: { c3: project-unique-in-storage }` binds the third criterion to a TS check whose verdict is authoritative and reported as `method: code`. |
+| spec                               | shows                                                                                                                                                                       |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project-create.e2e.md`            | The standard journey. A fixture, three **textual** expectations, no TypeScript profile. This is the one run against all four app variants.                                  |
+| `project-create-checked.e2e.md`    | The advanced extension: `checks: { c3: project-unique-in-storage }` binds the third criterion to a TS check whose verdict is authoritative and reported as `method: code`.  |
 | `project-create-no-fixture.e2e.md` | **`inputs` and `fixture` are genuinely optional.** No fixture, no declared inputs: the harness opens a clean context at `baseUrl` and the scenario signs in through the UI. |
-| `invalid/*.e2e.md` | Four specs that must never reach a browser. |
+| `invalid/*.e2e.md`                 | Four specs that must never reach a browser.                                                                                                                                 |
 
 ## Why `project-create` is worded the way it is
 
-Its third expectation says, in as many words, that it is about *what the list displays* and that a
+Its third expectation says, in as many words, that it is about _what the list displays_ and that a
 filtered or paginated list cannot establish global uniqueness. That is not padding: a textual
 expectation is judged from evidence, and "exactly one exists" is not something a screenshot of a list
 can prove. `project-create-checked` is the scenario that makes the stronger claim, and it does so

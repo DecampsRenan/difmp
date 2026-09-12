@@ -1,15 +1,20 @@
-import type { CriterionDowngrade, CriterionResult, CriterionStatus, DowngradeReason } from "../domain/result.js"
+import type {
+  CriterionDowngrade,
+  CriterionResult,
+  CriterionStatus,
+  DowngradeReason,
+} from "../domain/result.js";
 
 export interface EvidenceCheck {
-  readonly result: CriterionResult
+  readonly result: CriterionResult;
   /** artifactIds that exist, belong to this attempt AND were actually persisted. */
-  readonly attemptArtifacts: ReadonlySet<string>
+  readonly attemptArtifacts: ReadonlySet<string>;
 }
 
 const appendLimitation = (result: CriterionResult, message: string): string =>
   result.limitations === undefined || result.limitations === ""
     ? message
-    : `${result.limitations} | ${message}`
+    : `${result.limitations} | ${message}`;
 
 /**
  * Impose a status the evaluator did not ask for, and RECORD why. A report showing `inconclusive`
@@ -18,21 +23,25 @@ const appendLimitation = (result: CriterionResult, message: string): string =>
  */
 export const recordDowngrade = (
   result: CriterionResult,
-  input: { readonly reason: DowngradeReason; readonly to: CriterionStatus; readonly detail: string }
+  input: {
+    readonly reason: DowngradeReason;
+    readonly to: CriterionStatus;
+    readonly detail: string;
+  },
 ): CriterionResult => {
   const downgrade: CriterionDowngrade = {
     reason: input.reason,
     from: result.status,
     to: input.to,
-    detail: input.detail
-  }
+    detail: input.detail,
+  };
   return {
     ...result,
     status: input.to,
     limitations: appendLimitation(result, input.detail),
-    downgrades: [...(result.downgrades ?? []), downgrade]
-  }
-}
+    downgrades: [...(result.downgrades ?? []), downgrade],
+  };
+};
 
 /**
  * Structural guard over what an evaluator returned — applied to BOTH `method: "model"` and
@@ -42,8 +51,8 @@ export const recordDowngrade = (
  * This is a structural check: it says nothing about whether the semantic judgement is correct.
  */
 export const enforceEvidenceIntegrity = (input: EvidenceCheck): CriterionResult => {
-  const { attemptArtifacts, result } = input
-  const unknown = result.evidence.filter((id) => !attemptArtifacts.has(id))
+  const { attemptArtifacts, result } = input;
+  const unknown = result.evidence.filter((id) => !attemptArtifacts.has(id));
 
   if (unknown.length > 0) {
     return recordDowngrade(
@@ -51,26 +60,26 @@ export const enforceEvidenceIntegrity = (input: EvidenceCheck): CriterionResult 
       {
         reason: "rejected-evidence",
         to: "inconclusive",
-        detail: `evidence references do not exist in this attempt and were rejected: ${unknown.join(", ")}`
-      }
-    )
+        detail: `evidence references do not exist in this attempt and were rejected: ${unknown.join(", ")}`,
+      },
+    );
   }
 
   if (result.status === "passed" && result.evidence.length === 0) {
     return recordDowngrade(result, {
       reason: "rejected-evidence",
       to: "inconclusive",
-      detail: "no evidence was attached, so the criterion cannot be considered verified"
-    })
+      detail: "no evidence was attached, so the criterion cannot be considered verified",
+    });
   }
 
-  return result
-}
+  return result;
+};
 
 export interface EvidencePersistenceCheck {
-  readonly result: CriterionResult
+  readonly result: CriterionResult;
   /** Mandatory evidence for THIS criterion that the store could not persist, with its reason. */
-  readonly failures: ReadonlyArray<string>
+  readonly failures: ReadonlyArray<string>;
 }
 
 /**
@@ -84,11 +93,15 @@ export interface EvidencePersistenceCheck {
  * stands on its own, and the missing capture is recorded as a limitation.
  */
 export const enforceEvidencePersistence = (input: EvidencePersistenceCheck): CriterionResult => {
-  const { failures, result } = input
-  if (failures.length === 0) return result
-  const detail = `mandatory evidence could not be persisted: ${failures.join("; ")}`
+  const { failures, result } = input;
+  if (failures.length === 0) return result;
+  const detail = `mandatory evidence could not be persisted: ${failures.join("; ")}`;
   if (result.status !== "passed") {
-    return { ...result, limitations: appendLimitation(result, detail) }
+    return { ...result, limitations: appendLimitation(result, detail) };
   }
-  return recordDowngrade(result, { reason: "evidence-persistence-failed", to: "inconclusive", detail })
-}
+  return recordDowngrade(result, {
+    reason: "evidence-persistence-failed",
+    to: "inconclusive",
+    detail,
+  });
+};

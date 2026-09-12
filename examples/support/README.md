@@ -1,6 +1,6 @@
 # `@difmp/example-support` — demo config, fixture, TS check and scripted runs
 
-This package is the *project side* of the demo: the things a real consumer of the harness would
+This package is the _project side_ of the demo: the things a real consumer of the harness would
 write for themselves. It holds the `difmp.config.ts` the example scenarios run against, the
 `authenticated-workspace` fixture, the optional `project-unique-in-storage` TS check, and the
 deterministic adapter scripts used by the repository's tests.
@@ -64,12 +64,12 @@ Restart the app with `--variant <name>` **and** export `FIXTURE_APP_VARIANT=<nam
 process: the app changes what it does, and the environment variable tells the `auto` script entry
 (see §6) which walkthrough the deterministic adapter must use — `alt-layout` renames every control.
 
-| variant | what `project-create` should do |
-| --- | --- |
-| `healthy` | pass |
-| `create-500` | fail on the creation criterion, with the HTTP status in the UI and the network log |
-| `false-success` | pass the creation criterion, fail the persistence one after the reload |
-| `alt-layout` | pass — same capability, different shape (toggle + dialog, table instead of a list) |
+| variant         | what `project-create` should do                                                    |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `healthy`       | pass                                                                               |
+| `create-500`    | fail on the creation criterion, with the HTTP status in the UI and the network log |
+| `false-success` | pass the creation criterion, fail the persistence one after the reload             |
+| `alt-layout`    | pass — same capability, different shape (toggle + dialog, table instead of a list) |
 
 ### `project-create-no-fixture` needs a known account
 
@@ -97,7 +97,7 @@ rejects unknown top-level keys.
 What it sets, and why:
 
 - **`baseUrl` / `allowedOrigins`** — the fixture app, and nothing else. The origin allow-list is a
-  *tool-level* check applied to `navigate`; it is not network isolation. A page can still load
+  _tool-level_ check applied to `navigate`; it is not network isolation. A page can still load
   third-party subresources — see §5.
 - **`inputs.projectName: "Project {{ run.id }}"`** — a project-level default, the lowest-priority
   layer of `config < spec < --inputs-file < --input`. `{{ run.id }}` makes the name unique per run.
@@ -115,7 +115,7 @@ What it sets, and why:
   evaluation's tokens away. When that happens, total spend can exceed `maxTokens` by the overshoot
   plus the reserve — that is the price of the guarantee, and it is deliberate.
 - **`provider: "scripted"`** — the deterministic, network-free double, so the repository's tests need
-  no API key. A scripted run tests the *harness*; it is never evidence that a model can navigate,
+  no API key. A scripted run tests the _harness_; it is never evidence that a model can navigate,
   and the report names the adapter that ran.
 
 ### Switching to the real model
@@ -135,10 +135,10 @@ pointing a real model at: it is functionally identical to `healthy` and differen
 Spec §4's fixture. It creates an isolated workspace, its user and an active session in one guarded
 call to `POST /__seed/workspace`, and hands the harness two clearly separated things:
 
-| | | |
-| --- | --- | --- |
-| `public` | `{ workspaceName }` | interpolated as `{{ fixture.workspaceName }}`, **visible to the model** |
-| `storageState` | the `sid` session cookie | **private**: handed to the browser context only |
+|                |                          |                                                                         |
+| -------------- | ------------------------ | ----------------------------------------------------------------------- |
+| `public`       | `{ workspaceName }`      | interpolated as `{{ fixture.workspaceName }}`, **visible to the model** |
+| `storageState` | the `sid` session cookie | **private**: handed to the browser context only                         |
 
 The session token is never in `public`, so it cannot reach a prompt, a report or an interpolated
 criterion. The seed token is read with `ctx.secrets("FIXTURE_APP_SEED_TOKEN")` — from the
@@ -149,7 +149,7 @@ tenant would not be isolation, because these scenarios write to the application.
 
 **Cleanups are registered at acquisition time.** The moment the seed call returns, the fixture
 registers both teardown steps — before it validates the session, which can still fail. A setup that
-fails halfway is therefore still torn down. Cleanup runs after success, failure *and* cancellation,
+fails halfway is therefore still torn down. Cleanup runs after success, failure _and_ cancellation,
 bounded by `budgets.fixtureCleanupTimeoutMs`.
 
 ### What cleanup can and cannot do
@@ -202,7 +202,7 @@ the model, and the workspace id is a probe coordinate.
 ## 5. Security notes
 
 - Secrets come from the environment (`FIXTURE_APP_SEED_TOKEN`), never from `inputs`, never into a
-  prompt, a criterion or a report. Demo *credentials* written in `project-create-no-fixture.e2e.md`
+  prompt, a criterion or a report. Demo _credentials_ written in `project-create-no-fixture.e2e.md`
   are synthetic fixture data for a throwaway local app — a real secret would never be written in a
   spec.
 - `allowedOrigins` is a tool-level check on `navigate`, not network isolation.
@@ -211,7 +211,7 @@ the model, and the workspace id is a probe coordinate.
 
 ## 6. Scripted adapter runs (`scripts/`)
 
-The script *format* and the app-agnostic patterns belong to `@difmp/agent-runtime`
+The script _format_ and the app-agnostic patterns belong to `@difmp/agent-runtime`
 (`src/scripted/script.ts`, `src/scripted/scenarios.ts`); that package already ships that location,
 so nothing is re-implemented here. What lives in `scripts/` is the part that can only be written
 against a concrete application.
@@ -243,21 +243,21 @@ DIFMP_SCRIPT=stale-observation node apps/cli/dist/bin/difmp.js run \
   examples/scenarios/project-create.e2e.md --config examples/support/difmp.config.ts
 ```
 
-| key | drives | expected harness behaviour |
-| --- | --- | --- |
-| `healthy` / `alt-layout` | `project-create` | `passed` |
-| `create-500` | `project-create` | `failed` on creation and everything downstream |
-| `false-success` | `project-create` | creation `passed`, persistence `failed` |
-| `no-fixture` | `project-create-no-fixture` | `passed`, clean context, UI login |
-| `auto` | any | picks by scenario id + `FIXTURE_APP_VARIANT`; the default |
-| `premature-finish` | any | nothing is ever checked ⇒ every criterion `inconclusive` ⇒ run `inconclusive`; `finish` alone is never enough |
-| `unevaluated-criterion` | `project-create` | c1 and c2 `passed`, c3 never requested ⇒ `inconclusive`: `passed` needs every criterion |
-| `cancellable` | `project-create` | a long but legal run, used to test cancellation mid-flight |
-| `exceed-actions` | `project-create` | one `actionGuidanceExceeded`, still `passed` |
-| `stale-observation` | `project-create` | one typed `stale-observation` tool error, no fallback click, action still counted |
-| `budget-exhausted` | any | `inconclusive` with reason `budget-exhausted`, no late actions |
-| `invented-evidence` | any | verdicts citing artifacts that do not exist are forced to `inconclusive` |
-| `needs-evidence` | `project-create` | the verifier asks for more evidence once, then concludes |
+| key                      | drives                      | expected harness behaviour                                                                                    |
+| ------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `healthy` / `alt-layout` | `project-create`            | `passed`                                                                                                      |
+| `create-500`             | `project-create`            | `failed` on creation and everything downstream                                                                |
+| `false-success`          | `project-create`            | creation `passed`, persistence `failed`                                                                       |
+| `no-fixture`             | `project-create-no-fixture` | `passed`, clean context, UI login                                                                             |
+| `auto`                   | any                         | picks by scenario id + `FIXTURE_APP_VARIANT`; the default                                                     |
+| `premature-finish`       | any                         | nothing is ever checked ⇒ every criterion `inconclusive` ⇒ run `inconclusive`; `finish` alone is never enough |
+| `unevaluated-criterion`  | `project-create`            | c1 and c2 `passed`, c3 never requested ⇒ `inconclusive`: `passed` needs every criterion                       |
+| `cancellable`            | `project-create`            | a long but legal run, used to test cancellation mid-flight                                                    |
+| `exceed-actions`         | `project-create`            | one `actionGuidanceExceeded`, still `passed`                                                                  |
+| `stale-observation`      | `project-create`            | one typed `stale-observation` tool error, no fallback click, action still counted                             |
+| `budget-exhausted`       | any                         | `inconclusive` with reason `budget-exhausted`, no late actions                                                |
+| `invented-evidence`      | any                         | verdicts citing artifacts that do not exist are forced to `inconclusive`                                      |
+| `needs-evidence`         | `project-create`            | the verifier asks for more evidence once, then concludes                                                      |
 
 ## 7. The deliberately invalid specs
 

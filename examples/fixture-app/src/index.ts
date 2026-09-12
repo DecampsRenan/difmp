@@ -3,7 +3,15 @@ import type { AddressInfo } from "node:net";
 
 import { createFixtureServer, seedWorkspace } from "./server.js";
 import { Store } from "./store.js";
-import { isVariant, type FixtureAppHandle, type FixtureAppOptions, type ProbeResult, type SeedInput, type SeedResult, type Variant } from "./types.js";
+import {
+  isVariant,
+  type FixtureAppHandle,
+  type FixtureAppOptions,
+  type ProbeResult,
+  type SeedInput,
+  type SeedResult,
+  type Variant,
+} from "./types.js";
 
 export {
   isVariant,
@@ -47,8 +55,7 @@ export const startFixtureApp = async (
   const seedToken = options.seedToken ?? randomBytes(16).toString("hex");
   const store = new Store(options.persistDir);
 
-  const initialSeed =
-    options.seed === undefined ? undefined : seedWorkspace(store, options.seed);
+  const initialSeed = options.seed === undefined ? undefined : seedWorkspace(store, options.seed);
 
   const server = createFixtureServer({ store, variant, seedEnabled, seedToken });
 
@@ -79,7 +86,9 @@ export const startFixtureApp = async (
     });
     const payload: unknown = await response.json();
     if (!response.ok) {
-      throw new Error(`${init.method} ${path} → HTTP ${response.status}: ${JSON.stringify(payload)}`);
+      throw new Error(
+        `${init.method} ${path} → HTTP ${response.status}: ${JSON.stringify(payload)}`,
+      );
     }
     return payload;
   };

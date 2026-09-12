@@ -1,9 +1,9 @@
-import type { RunModel } from "../state/model.js"
-import { Empty, Panel } from "./ui.js"
+import type { RunModel } from "../state/model.js";
+import { Empty, Panel } from "./ui.js";
 
 export const RunContext = (props: { readonly model: RunModel }) => {
-  const { model } = props
-  const config = model.config
+  const { model } = props;
+  const config = model.config;
   return (
     <Panel title="Run context" testId="context-panel">
       <dl className="kv">
@@ -13,7 +13,11 @@ export const RunContext = (props: { readonly model: RunModel }) => {
         </div>
         <div>
           <dt>Provider</dt>
-          <dd>{config === undefined ? "—" : `${config.provider}${config.model === undefined ? "" : ` / ${config.model}`}`}</dd>
+          <dd>
+            {config === undefined
+              ? "—"
+              : `${config.provider}${config.model === undefined ? "" : ` / ${config.model}`}`}
+          </dd>
         </div>
         <div>
           <dt>Capture</dt>
@@ -29,7 +33,9 @@ export const RunContext = (props: { readonly model: RunModel }) => {
         </div>
         <div>
           <dt>Contract fingerprint</dt>
-          <dd className="mono">{model.contractHash === undefined ? "—" : model.contractHash.slice(0, 16)}</dd>
+          <dd className="mono">
+            {model.contractHash === undefined ? "—" : model.contractHash.slice(0, 16)}
+          </dd>
         </div>
         <div>
           <dt>difmp version</dt>
@@ -37,29 +43,27 @@ export const RunContext = (props: { readonly model: RunModel }) => {
         </div>
       </dl>
 
-      {model.fixture === undefined
-        ? <Empty>No fixture — clean context opened on the baseUrl.</Empty>
-        : (
-          <div className="fixture" data-testid="fixture-block">
-            <h3>Fixture "{model.fixture.name}"</h3>
-            <dl className="kv">
-              {Object.entries(model.fixture.publicValues).map(([key, value]) => (
-                <div key={key}>
-                  <dt>{key}</dt>
-                  <dd>{String(value)}</dd>
-                </div>
-              ))}
-            </dl>
-            {model.fixture.cleaned === undefined
-              ? null
-              : (
-                <p className="panel-foot">
-                  Cleanup: {model.fixture.cleaned.cleanupsRun} finalizer(s)
-                  {model.fixture.cleaned.timedOut ? " — timed out" : ""}
-                </p>
-              )}
-          </div>
-        )}
+      {model.fixture === undefined ? (
+        <Empty>No fixture — clean context opened on the baseUrl.</Empty>
+      ) : (
+        <div className="fixture" data-testid="fixture-block">
+          <h3>Fixture "{model.fixture.name}"</h3>
+          <dl className="kv">
+            {Object.entries(model.fixture.publicValues).map(([key, value]) => (
+              <div key={key}>
+                <dt>{key}</dt>
+                <dd>{String(value)}</dd>
+              </div>
+            ))}
+          </dl>
+          {model.fixture.cleaned === undefined ? null : (
+            <p className="panel-foot">
+              Cleanup: {model.fixture.cleaned.cleanupsRun} finalizer(s)
+              {model.fixture.cleaned.timedOut ? " — timed out" : ""}
+            </p>
+          )}
+        </div>
+      )}
 
       {model.errors.length === 0 ? null : (
         <ul className="errors" data-testid="errors-list">
@@ -72,5 +76,5 @@ export const RunContext = (props: { readonly model: RunModel }) => {
         </ul>
       )}
     </Panel>
-  )
-}
+  );
+};

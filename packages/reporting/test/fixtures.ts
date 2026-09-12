@@ -1,4 +1,4 @@
-import type { ReportInput } from "@difmp/core"
+import type { ReportInput } from "@difmp/core";
 import {
   ArtifactInventory,
   decodeStrictSync,
@@ -7,15 +7,15 @@ import {
   Manifest,
   RunResult,
   ScenarioContract,
-  scanJsonl
-} from "@difmp/core"
-import { NodePath } from "@effect/platform-node"
-import { Effect, Path } from "effect"
-import { existsSync, readFileSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+  scanJsonl,
+} from "@difmp/core";
+import { NodePath } from "@effect/platform-node";
+import { Effect, Path } from "effect";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const here = dirname(fileURLToPath(import.meta.url))
+const here = dirname(fileURLToPath(import.meta.url));
 
 /** Fixture names, one directory each, all hand-written JSON decoded through core's schemas. */
 export const fixtureNames = [
@@ -24,40 +24,45 @@ export const fixtureNames = [
   "inconclusive",
   "error",
   /** Died in fixture setup: an `initial` manifest, no `contract.json`, and still reportable. */
-  "setup-failure"
-] as const
-export type FixtureName = typeof fixtureNames[number]
+  "setup-failure",
+] as const;
+export type FixtureName = (typeof fixtureNames)[number];
 
 const nodePath: Path.Path = Effect.runSync(
-  Effect.provide(Effect.gen(function*() {
-    return yield* Path.Path
-  }), NodePath.layer)
-)
+  Effect.provide(
+    Effect.gen(function* () {
+      return yield* Path.Path;
+    }),
+    NodePath.layer,
+  ),
+);
 
-const read = (name: FixtureName, file: string): string => readFileSync(join(here, "fixtures", name, file), "utf8")
+const read = (name: FixtureName, file: string): string =>
+  readFileSync(join(here, "fixtures", name, file), "utf8");
 
-const decodeManifest = decodeStrictSync(Manifest)
-const decodeContract = decodeStrictSync(ScenarioContract)
-const decodeResult = decodeStrictSync(RunResult)
-const decodeInventory = decodeStrictSync(ArtifactInventory)
-const decodeEvent = decodeStrictSync(HarnessEvent)
+const decodeManifest = decodeStrictSync(Manifest);
+const decodeContract = decodeStrictSync(ScenarioContract);
+const decodeResult = decodeStrictSync(RunResult);
+const decodeInventory = decodeStrictSync(ArtifactInventory);
+const decodeEvent = decodeStrictSync(HarnessEvent);
 
 /**
  * Build a `ReportInput` the way `difmp report <run-directory>` does: persisted files only,
  * every one of them validated against the schema that owns it.
  */
 export const loadFixture = (name: FixtureName, outputDir = join(here, "fixtures")): ReportInput => {
-  const manifest = decodeManifest(JSON.parse(read(name, "manifest.json")))
+  const manifest = decodeManifest(JSON.parse(read(name, "manifest.json")));
   // `contract.json` only exists once the freeze succeeded; its absence is itself information.
   const contractSource = existsSync(join(here, "fixtures", name, "contract.json"))
     ? read(name, "contract.json")
-    : undefined
-  const contract = contractSource === undefined ? undefined : decodeContract(JSON.parse(contractSource))
-  const result = decodeResult(JSON.parse(read(name, "result.json")))
-  const inventory = decodeInventory(JSON.parse(read(name, "artifacts.json")))
-  const scan = scanJsonl(read(name, "events.jsonl"))
-  const events = scan.records.map((record) => decodeEvent(record))
-  const finalized = !scan.truncatedTail && events.some((e) => e.type === "runFinished")
+    : undefined;
+  const contract =
+    contractSource === undefined ? undefined : decodeContract(JSON.parse(contractSource));
+  const result = decodeResult(JSON.parse(read(name, "result.json")));
+  const inventory = decodeInventory(JSON.parse(read(name, "artifacts.json")));
+  const scan = scanJsonl(read(name, "events.jsonl"));
+  const events = scan.records.map((record) => decodeEvent(record));
+  const finalized = !scan.truncatedTail && events.some((e) => e.type === "runFinished");
   return {
     layout: makeRunLayout(nodePath, outputDir, manifest.runId),
     manifest,
@@ -65,6 +70,6 @@ export const loadFixture = (name: FixtureName, outputDir = join(here, "fixtures"
     result,
     inventory,
     events,
-    finalized
-  }
-}
+    finalized,
+  };
+};

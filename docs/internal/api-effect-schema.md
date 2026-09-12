@@ -25,57 +25,57 @@ Relevant modules: `Schema`, `SchemaIssue`, `SchemaAST`, `SchemaGetter`,
 
 ## 1. Big deltas from Effect v3 (read this before writing anything)
 
-| v3 habit | v4 reality |
-|---|---|
-| `Schema.Schema<A, I, R>` | `Schema.Codec<T, E, RD, RE>`. Types live at `typeof S["Type"]` / `["Encoded"]`. `Schema.Schema<T>` is the one-param decode-only view. |
-| `ParseResult.ParseError` | `Schema.SchemaError` (a `Data.TaggedError("SchemaError")` with `{ issue: SchemaIssue.Issue }`). `ParseError` does not exist. |
-| `ParseResult.TreeFormatter.formatErrorSync` | `SchemaIssue.makeFormatterDefault()` / `SchemaIssue.makeFormatterStandardSchemaV1()` |
-| `Schema.decodeUnknown(s)` returns Effect | Effect variant is **`Schema.decodeUnknownEffect`**. There is no bare `decodeUnknown`. |
-| `Schema.filter` | `Schema.check(...)` + `Schema.makeFilter` / built-in `Schema.isXxx()` checks |
-| `Schema.optional({ default })` | `Schema.optionalKey` / `Schema.optional` + `Schema.withDecodingDefaultKey` / `withDecodingDefault` / `withConstructorDefault` |
-| `Schema.annotations({...})` | `.annotate({...})` (method) / `Schema.annotate({...})` (pipeable) |
-| `Schema.TaggedRequest` | **DOES NOT EXIST in v4.** (`grep TaggedRequest` over `src/` and `dist/dts/` → zero hits.) Use `Rpc.make` from `effect/unstable/rpc` for request/response pairs, or a `TaggedClass` payload + explicit success/error schemas. |
-| `Schema.Literal("a","b")` variadic | `Schema.Literal(x)` is **single**; use `Schema.Literals(["a","b"])` for the union. |
-| `.pick(...)` / `.omit(...)` on Struct | no such methods — `S.mapFields(Struct.pick(["a","b"]))` using `Struct` from `"effect"`. |
-| `Schema.JSONSchema.make` | `Schema.toJsonSchemaDocument(schema, opts)` → `JsonSchema.Document<"draft-2020-12">` |
+| v3 habit                                    | v4 reality                                                                                                                                                                                                                   |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Schema.Schema<A, I, R>`                    | `Schema.Codec<T, E, RD, RE>`. Types live at `typeof S["Type"]` / `["Encoded"]`. `Schema.Schema<T>` is the one-param decode-only view.                                                                                        |
+| `ParseResult.ParseError`                    | `Schema.SchemaError` (a `Data.TaggedError("SchemaError")` with `{ issue: SchemaIssue.Issue }`). `ParseError` does not exist.                                                                                                 |
+| `ParseResult.TreeFormatter.formatErrorSync` | `SchemaIssue.makeFormatterDefault()` / `SchemaIssue.makeFormatterStandardSchemaV1()`                                                                                                                                         |
+| `Schema.decodeUnknown(s)` returns Effect    | Effect variant is **`Schema.decodeUnknownEffect`**. There is no bare `decodeUnknown`.                                                                                                                                        |
+| `Schema.filter`                             | `Schema.check(...)` + `Schema.makeFilter` / built-in `Schema.isXxx()` checks                                                                                                                                                 |
+| `Schema.optional({ default })`              | `Schema.optionalKey` / `Schema.optional` + `Schema.withDecodingDefaultKey` / `withDecodingDefault` / `withConstructorDefault`                                                                                                |
+| `Schema.annotations({...})`                 | `.annotate({...})` (method) / `Schema.annotate({...})` (pipeable)                                                                                                                                                            |
+| `Schema.TaggedRequest`                      | **DOES NOT EXIST in v4.** (`grep TaggedRequest` over `src/` and `dist/dts/` → zero hits.) Use `Rpc.make` from `effect/unstable/rpc` for request/response pairs, or a `TaggedClass` payload + explicit success/error schemas. |
+| `Schema.Literal("a","b")` variadic          | `Schema.Literal(x)` is **single**; use `Schema.Literals(["a","b"])` for the union.                                                                                                                                           |
+| `.pick(...)` / `.omit(...)` on Struct       | no such methods — `S.mapFields(Struct.pick(["a","b"]))` using `Struct` from `"effect"`.                                                                                                                                      |
+| `Schema.JSONSchema.make`                    | `Schema.toJsonSchemaDocument(schema, opts)` → `JsonSchema.Document<"draft-2020-12">`                                                                                                                                         |
 
 ---
 
 ## 2. Primitives & combinators (compiled — `.recon/schema.ts`)
 
 ```ts
-import { Schema } from "effect"
+import { Schema } from "effect";
 
 const Primitives = Schema.Struct({
   s: Schema.String,
   n: Schema.Number,
-  i: Schema.Int,                      // Number.check(isInt())
+  i: Schema.Int, // Number.check(isInt())
   fin: Schema.Finite,
   b: Schema.Boolean,
   nes: Schema.NonEmptyString,
-  lit: Schema.Literal("a"),           // SINGLE literal only
+  lit: Schema.Literal("a"), // SINGLE literal only
   lits: Schema.Literals(["a", "b", "c"]),
-  uni: Schema.Union([Schema.String, Schema.Number]),   // ARRAY argument, not variadic
+  uni: Schema.Union([Schema.String, Schema.Number]), // ARRAY argument, not variadic
   arr: Schema.Array(Schema.String),
   nea: Schema.NonEmptyArray(Schema.String),
-  tup: Schema.Tuple([Schema.String, Schema.Number]),   // ARRAY argument
+  tup: Schema.Tuple([Schema.String, Schema.Number]), // ARRAY argument
   rec: Schema.Record(Schema.String, Schema.Number),
-  opt: Schema.Option(Schema.String),                   // Encoded: { _tag: "Some"|"None", value? }
-  optNull: Schema.OptionFromNullOr(Schema.String),     // Encoded: string | null  <- use this at JSON edges
+  opt: Schema.Option(Schema.String), // Encoded: { _tag: "Some"|"None", value? }
+  optNull: Schema.OptionFromNullOr(Schema.String), // Encoded: string | null  <- use this at JSON edges
   nullOr: Schema.NullOr(Schema.String),
   undefOr: Schema.UndefinedOr(Schema.String),
   nullishOr: Schema.NullishOr(Schema.String),
-  exactOptional: Schema.optionalKey(Schema.String),    // `a?: string`  (absent only)
-  looseOptional: Schema.optional(Schema.String),       // `a?: string | undefined` (absent OR undefined)
-  defect: Schema.Defect(),                             // unknown <-> Json, Errors round-trip
+  exactOptional: Schema.optionalKey(Schema.String), // `a?: string`  (absent only)
+  looseOptional: Schema.optional(Schema.String), // `a?: string | undefined` (absent OR undefined)
+  defect: Schema.Defect(), // unknown <-> Json, Errors round-trip
   unknown: Schema.Unknown,
   date: Schema.Date,
   dateStr: Schema.DateFromString,
   numStr: Schema.NumberFromString,
-  enumLike: Schema.Enum({ A: "a", B: "b" } as const)
-})
-type T = typeof Primitives["Type"]
-type E = typeof Primitives["Encoded"]
+  enumLike: Schema.Enum({ A: "a", B: "b" } as const),
+});
+type T = (typeof Primitives)["Type"];
+type E = (typeof Primitives)["Encoded"];
 ```
 
 Other notable built-ins: `Schema.Never | Any | Unknown | Null | Undefined | Void | Symbol | BigInt |
@@ -96,7 +96,7 @@ Headers | UrlParams | fromJsonString | fromFormData | fromURLSearchParams | Json
 ### Defaults (compiled + executed)
 
 ```ts
-import { Effect, Schema } from "effect"
+import { Effect, Schema } from "effect";
 
 const WithDefaults = Schema.Struct({
   // decoding default: key ABSENT -> default. Type side stays REQUIRED.
@@ -106,11 +106,11 @@ const WithDefaults = Schema.Struct({
   // constructor-only default: applied by .make(), NOT by decoding
   ctorOnly: Schema.String.pipe(
     Schema.optionalKey,
-    Schema.withConstructorDefault(Effect.succeed("x"))
-  )
-})
-Schema.decodeUnknownSync(WithDefaults)({})           // => { retries: 3, label: "anon" }
-WithDefaults.make({ retries: 1, label: "l" })        // ctorOnly filled in
+    Schema.withConstructorDefault(Effect.succeed("x")),
+  ),
+});
+Schema.decodeUnknownSync(WithDefaults)({}); // => { retries: 3, label: "anon" }
+WithDefaults.make({ retries: 1, label: "l" }); // ctorOnly filled in
 ```
 
 **GOTCHA (hit during recon):** do **not** write
@@ -126,11 +126,11 @@ Both accept `{ encodingStrategy: "passthrough" | "omit" }` (default `"passthroug
 ### Reuse / reshape a Struct
 
 ```ts
-import { Schema, Struct } from "effect"
-const Reused  = Schema.Struct({ ...Primitives.fields, extra: Schema.String })
-const Picked  = Primitives.mapFields(Struct.pick(["s", "n"]))   // NOTE: array arg
-const Omitted = Primitives.mapFields(Struct.omit(["s"]))
-const Added   = Primitives.pipe(Schema.fieldsAssign({ c: Schema.Number }))
+import { Schema, Struct } from "effect";
+const Reused = Schema.Struct({ ...Primitives.fields, extra: Schema.String });
+const Picked = Primitives.mapFields(Struct.pick(["s", "n"])); // NOTE: array arg
+const Omitted = Primitives.mapFields(Struct.omit(["s"]));
+const Added = Primitives.pipe(Schema.fieldsAssign({ c: Schema.Number }));
 ```
 
 ---
@@ -138,32 +138,34 @@ const Added   = Primitives.pipe(Schema.fieldsAssign({ c: Schema.Number }))
 ## 3. Classes, tagged classes, tagged errors
 
 ```ts
-import { Effect, Schema } from "effect"
+import { Effect, Schema } from "effect";
 
 // Schema.Class<Self>(identifier)(fields)
 class User extends Schema.Class<User>("app/User")({
   id: Schema.Int,
-  name: Schema.NonEmptyString
+  name: Schema.NonEmptyString,
 }) {
-  get label() { return `${this.id}:${this.name}` }       // methods/getters are yours
+  get label() {
+    return `${this.id}:${this.name}`;
+  } // methods/getters are yours
 }
-Schema.decodeUnknownSync(User)({ id: 1, name: "a" }) instanceof User   // => true (verified)
-String(new User({ id: 1, name: "a" }))                 // => 'app/User({"id":1,"name":"a"})'
-Object.keys(User.fields)                               // => ["id","name"]
+Schema.decodeUnknownSync(User)({ id: 1, name: "a" }) instanceof User; // => true (verified)
+String(new User({ id: 1, name: "a" })); // => 'app/User({"id":1,"name":"a"})'
+Object.keys(User.fields); // => ["id","name"]
 class Admin extends User.extend<Admin>("app/Admin")({ level: Schema.Int }) {}
 
 // Schema.TaggedClass<Self>(identifier?)(tag, fields) -- note the EMPTY first call
 class Click extends Schema.TaggedClass<Click>()("Click", { selector: Schema.String }) {}
-new Click({ selector: "#a" })._tag                     // => "Click"
+new Click({ selector: "#a" })._tag; // => "Click"
 
 // Schema.TaggedError<Self>(identifier?)(tag, fields) -- yieldable, extends Error
 class DecodeFailed extends Schema.TaggedError<DecodeFailed>()("DecodeFailed", {
   path: Schema.String,
-  detail: Schema.String
+  detail: Schema.String,
 }) {}
-const eff: Effect.Effect<never, DecodeFailed> = Effect.gen(function*() {
-  return yield* new DecodeFailed({ path: "a.b", detail: "boom" })   // `new X(...)` is yieldable
-})
+const eff: Effect.Effect<never, DecodeFailed> = Effect.gen(function* () {
+  return yield* new DecodeFailed({ path: "a.b", detail: "boom" }); // `new X(...)` is yieldable
+});
 ```
 
 There is also `Schema.Error` (untagged schema-backed error class) and `Schema.ErrorInstance`
@@ -183,26 +185,27 @@ see §8).
 ## 4. Discriminated (tagged) unions + matching
 
 ```ts
-import { Schema } from "effect"
+import { Schema } from "effect";
 
 const Step = Schema.TaggedUnion({
   Navigate: { url: Schema.String },
-  Click:    { selector: Schema.String },
-  Expect:   { selector: Schema.String, text: Schema.String }
-})
-type Step = typeof Step["Type"]    // { _tag: "Navigate", url } | { _tag: "Click", ... } | ...
+  Click: { selector: Schema.String },
+  Expect: { selector: Schema.String, text: Schema.String },
+});
+type Step = (typeof Step)["Type"]; // { _tag: "Navigate", url } | { _tag: "Click", ... } | ...
 
 // data-first
-const describe = (s: Step) => Step.match(s, {
-  Navigate: (x) => `goto ${x.url}`,
-  Click:    (x) => `click ${x.selector}`,
-  Expect:   (x) => `expect ${x.selector} ~ ${x.text}`
-})
+const describe = (s: Step) =>
+  Step.match(s, {
+    Navigate: (x) => `goto ${x.url}`,
+    Click: (x) => `click ${x.selector}`,
+    Expect: (x) => `expect ${x.selector} ~ ${x.text}`,
+  });
 // data-last also supported: Step.match({ ... })(s)
-Step.matchOrElse(s, { Navigate: (x) => x.url }, () => "other")   // partial + fallback
-Step.guards.Navigate(u)          // (u: unknown) => u is { _tag: "Navigate"; url: string }
-Step.isAnyOf(["Navigate","Click"])
-Step.cases.Navigate              // the member schema
+Step.matchOrElse(s, { Navigate: (x) => x.url }, () => "other"); // partial + fallback
+Step.guards.Navigate(u); // (u: unknown) => u is { _tag: "Navigate"; url: string }
+Step.isAnyOf(["Navigate", "Click"]);
+Step.cases.Navigate; // the member schema
 ```
 
 Building the union yourself (members can be `TaggedStruct`s or `TaggedClass`es):
@@ -210,8 +213,8 @@ Building the union yourself (members can be `TaggedStruct`s or `TaggedClass`es):
 ```ts
 const Shape = Schema.Union([
   Schema.TaggedStruct("Circle", { r: Schema.Number }),
-  Schema.TaggedStruct("Square", { side: Schema.Number })
-]).pipe(Schema.toTaggedUnion("_tag"))       // adds .match/.guards/.cases/.isAnyOf
+  Schema.TaggedStruct("Square", { side: Schema.Number }),
+]).pipe(Schema.toTaggedUnion("_tag")); // adds .match/.guards/.cases/.isAnyOf
 ```
 
 `toTaggedUnion` additionally exposes `.discriminants` (typed `readonly ["Circle","Square"]`), which
@@ -229,14 +232,14 @@ building blocks (`tag` = `Literal` + `withConstructorDefault`, so `.make` can om
 
 Suffix decides the carrier. There is **no** un-suffixed `decodeUnknown`.
 
-| | unknown input | typed-Encoded input |
-|---|---|---|
-| Effect | `decodeUnknownEffect` | `decodeEffect` |
-| sync (throws) | `decodeUnknownSync` | `decodeSync` |
-| `Result` | `decodeUnknownResult` | `decodeResult` |
-| `Option` | `decodeUnknownOption` | `decodeOption` |
-| `Exit` | `decodeUnknownExit` | `decodeExit` |
-| `Promise` | `decodeUnknownPromise` | `decodePromise` |
+|               | unknown input          | typed-Encoded input |
+| ------------- | ---------------------- | ------------------- |
+| Effect        | `decodeUnknownEffect`  | `decodeEffect`      |
+| sync (throws) | `decodeUnknownSync`    | `decodeSync`        |
+| `Result`      | `decodeUnknownResult`  | `decodeResult`      |
+| `Option`      | `decodeUnknownOption`  | `decodeOption`      |
+| `Exit`        | `decodeUnknownExit`    | `decodeExit`        |
+| `Promise`     | `decodeUnknownPromise` | `decodePromise`     |
 
 Same six for encoding: `encodeUnknownEffect/Sync/Result/Option/Exit/Promise` and
 `encodeEffect/encodeSync/encodeResult/encodeOption/encodeExit/encodePromise`.
@@ -244,9 +247,9 @@ Same six for encoding: `encodeUnknownEffect/Sync/Result/Option/Exit/Promise` and
 Validation-only helpers (no `Schema.validate`):
 
 ```ts
-Schema.is(schema)          // (u: unknown) => u is T   (type-side guard)
-Schema.asserts(schema, u)  // asserts u is T           (2-arg, NOT curried)
-Schema.toStandardSchemaV1(schema)   // Standard Schema v1 adapter
+Schema.is(schema); // (u: unknown) => u is T   (type-side guard)
+Schema.asserts(schema, u); // asserts u is T           (2-arg, NOT curried)
+Schema.toStandardSchemaV1(schema); // Standard Schema v1 adapter
 ```
 
 Every one takes `(schema, options?: SchemaAST.ParseOptions)`.
@@ -287,18 +290,18 @@ Schema.isSchemaError(u): u is SchemaError
 - Effect variants fail with `SchemaError` in the error channel → `Effect.catchTag("SchemaError", …)`.
 - Sync variants **throw** `SchemaError` (verified `Schema.isSchemaError(thrown) === true`).
 - `Result` variants give `Result.Result<T, SchemaError>` — `Result.isFailure(r)` then `r.failure`.
-- **Exception:** `schema.makeEffect(...)` fails with a raw `SchemaIssue.Issue`, *not* a `SchemaError`.
+- **Exception:** `schema.makeEffect(...)` fails with a raw `SchemaIssue.Issue`, _not_ a `SchemaError`.
 
 Two formatters (module `SchemaIssue`):
 
 ```ts
-import { SchemaIssue } from "effect"
+import { SchemaIssue } from "effect";
 
-const text = SchemaIssue.makeFormatterDefault()            // Formatter<string>
-const std  = SchemaIssue.makeFormatterStandardSchemaV1()   // Formatter<StandardSchemaV1.FailureResult>
+const text = SchemaIssue.makeFormatterDefault(); // Formatter<string>
+const std = SchemaIssue.makeFormatterStandardSchemaV1(); // Formatter<StandardSchemaV1.FailureResult>
 
-text(error.issue)            // multi-line "<message>\n  at [\"a\"][\"b\"]"
-std(error.issue).issues      // [{ message: string, path: ReadonlyArray<PropertyKey | {key}> }]
+text(error.issue); // multi-line "<message>\n  at [\"a\"][\"b\"]"
+std(error.issue).issues; // [{ message: string, path: ReadonlyArray<PropertyKey | {key}> }]
 ```
 
 Both accept `{ leafHook?: (issue: Leaf) => string, checkHook?: (issue: Filter) => string | undefined }`.
@@ -339,22 +342,24 @@ Expected a value greater than or equal to 0
 const Port = Schema.Int.pipe(
   Schema.check(
     Schema.isGreaterThanOrEqualTo(1),
-    Schema.isLessThanOrEqualTo(65535, { message: "port must be <= 65535" })
+    Schema.isLessThanOrEqualTo(65535, { message: "port must be <= 65535" }),
   ),
-  Schema.brand("Port")
-)
-type Port = typeof Port["Type"]   // number & Brand<"Port">
+  Schema.brand("Port"),
+);
+type Port = (typeof Port)["Type"]; // number & Brand<"Port">
 
-const Slug = Schema.String.pipe(Schema.check(
-  Schema.isMinLength(1),
-  Schema.isMaxLength(40),
-  Schema.isPattern(/^[a-z0-9-]+$/, { message: "must be kebab-case" })
-))
+const Slug = Schema.String.pipe(
+  Schema.check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(40),
+    Schema.isPattern(/^[a-z0-9-]+$/, { message: "must be kebab-case" }),
+  ),
+);
 
 // refine = type-guard narrowing + runtime check
 const Even = Schema.Number.pipe(
-  Schema.refine((n): n is number => n % 2 === 0, { message: "must be even" })
-)
+  Schema.refine((n): n is number => n % 2 === 0, { message: "must be even" }),
+);
 ```
 
 Built-in check constructors (all take an optional trailing `Annotations.Filter`):
@@ -373,13 +378,14 @@ Custom checks — `Schema.makeFilter` (compiled + executed):
 const Range = Schema.Struct({ lo: Schema.Number, hi: Schema.Number }).check(
   Schema.makeFilter(
     (r) => (r.lo <= r.hi ? undefined : [{ path: ["hi"], issue: "hi must be >= lo" }]),
-    { expected: "a valid range" }
-  )
-)
+    { expected: "a valid range" },
+  ),
+);
 const UpperTag = Schema.String.check(
-  Schema.makeFilter((s) => s === s.toUpperCase() || "must be UPPERCASE")
-)
+  Schema.makeFilter((s) => s === s.toUpperCase() || "must be UPPERCASE"),
+);
 ```
+
 → prints `hi must be >= lo\n  at ["hi"]` and `must be UPPERCASE`.
 
 `FilterOutput = undefined | boolean | FilterIssue | ReadonlyArray<FilterIssue>`, where
@@ -388,7 +394,7 @@ const UpperTag = Schema.String.check(
 shared annotation. `Schema.fromBrand(id, brandCtor)` applies an existing `Brand.Constructor`.
 
 **Message precedence for a failed check:** filter annotation `message` → filter annotation
-`expected` (rendered `Expected <expected>`) → `<filter>`. A node's `identifier` names *type-level*
+`expected` (rendered `Expected <expected>`) → `<filter>`. A node's `identifier` names _type-level_
 failures **before** the filter runs; it never names the failed filter.
 
 ---
@@ -401,20 +407,24 @@ Read back with `Schema.resolveAnnotations(schema)` / `Schema.resolveAnnotationsK
 
 ```ts
 const AnnotatedId = Schema.String.annotate({
-  identifier: "TestId",          // stable name; becomes a $defs key in JSON Schema
+  identifier: "TestId", // stable name; becomes a $defs key in JSON Schema
   title: "Test id",
   description: "Stable identifier for a test case",
-  examples: ["login-happy-path"],   // ReadonlyArray<T>
-  default: "case-1",                // T
+  examples: ["login-happy-path"], // ReadonlyArray<T>
+  default: "case-1", // T
   documentation: "…",
-  format: "uuid", readOnly: true, writeOnly: false,
-  contentEncoding: "base64", contentMediaType: "application/json", contentSchema: {},
-  message: "…",                     // full replacement message for this node's issues
+  format: "uuid",
+  readOnly: true,
+  writeOnly: false,
+  contentEncoding: "base64",
+  contentMediaType: "application/json",
+  contentSchema: {},
+  message: "…", // full replacement message for this node's issues
   messageUnexpectedKey: "…",
-  expected: "…",                    // "Expected <expected>"
-  brands: ["Port"]
-})
-Schema.String.annotateKey({ messageMissingKey: "the name field is required" })
+  expected: "…", // "Expected <expected>"
+  brands: ["Port"],
+});
+Schema.String.annotateKey({ messageMissingKey: "the name field is required" });
 ```
 
 Annotation interfaces: `Annotations.Annotations` (open index signature — module-augmentable),
@@ -460,16 +470,26 @@ interface ToJsonSchemaOptions {
 Verified output for `Schema.toJsonSchemaDocument(HarnessConfig, { onExcessProperty: "error", referencePolicy: () => undefined }).schema`:
 
 ```json
-{"type":"object","properties":{
-  "name":{"type":"string","minLength":1,"description":"Suite name"},
-  "browser":{"type":"string","enum":["chromium","firefox","webkit"]},
-  "baseUrl":{"type":"string"},
-  "retry":{"type":"object","properties":{"max":{"type":"integer","minimum":0,"maximum":10},
-           "backoffMs":{"type":"integer"}},"required":["max"],"additionalProperties":false},
-  "headless":{"type":"boolean"},
-  "env":{"type":"object","additionalProperties":{"type":"string"}},
-  "steps":{"type":"array","items":{"anyOf":[ /* one closed object per tag */ ]}}
-}}
+{
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "description": "Suite name" },
+    "browser": { "type": "string", "enum": ["chromium", "firefox", "webkit"] },
+    "baseUrl": { "type": "string" },
+    "retry": {
+      "type": "object",
+      "properties": {
+        "max": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "backoffMs": { "type": "integer" }
+      },
+      "required": ["max"],
+      "additionalProperties": false
+    },
+    "headless": { "type": "boolean" },
+    "env": { "type": "object", "additionalProperties": { "type": "string" } },
+    "steps": { "type": "array", "items": { "anyOf": [/* one closed object per tag */] } }
+  }
+}
 ```
 
 Notes: a `TaggedUnion` emits `anyOf` of closed objects, each with
@@ -502,18 +522,22 @@ Also `Schema.toStandardJSONSchemaV1(schema)`.
 Compiled at `.recon/schema-config.ts`, executed via `.recon/run-config.ts`.
 
 ```ts
-import { Effect, Result, Schema, SchemaIssue } from "effect"
+import { Effect, Result, Schema, SchemaIssue } from "effect";
 
 const Retry = Schema.Struct({
   max: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 10 })),
-  backoffMs: Schema.Int.pipe(Schema.withDecodingDefaultKey(Effect.succeed(250)))
-}).annotate({ identifier: "Retry" })
+  backoffMs: Schema.Int.pipe(Schema.withDecodingDefaultKey(Effect.succeed(250))),
+}).annotate({ identifier: "Retry" });
 
 const Step = Schema.TaggedUnion({
-  Navigate: { url: Schema.String.check(Schema.isPattern(/^https?:\/\//, { message: "must be an http(s) URL" })) },
-  Click:    { selector: Schema.String.check(Schema.isNonEmpty()) },
-  Expect:   { selector: Schema.String, text: Schema.String }
-})
+  Navigate: {
+    url: Schema.String.check(
+      Schema.isPattern(/^https?:\/\//, { message: "must be an http(s) URL" }),
+    ),
+  },
+  Click: { selector: Schema.String.check(Schema.isNonEmpty()) },
+  Expect: { selector: Schema.String, text: Schema.String },
+});
 
 export const HarnessConfig = Schema.Struct({
   name: Schema.String.check(Schema.isNonEmpty()).annotate({ description: "Suite name" }),
@@ -522,43 +546,46 @@ export const HarnessConfig = Schema.Struct({
   retry: Retry,
   headless: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(Effect.succeed(true))),
   env: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
-  steps: Schema.Array(Step).check(Schema.isMinLength(1, { expected: "at least one step" }))
-}).annotate({ identifier: "HarnessConfig" })
+  steps: Schema.Array(Step).check(Schema.isMinLength(1, { expected: "at least one step" })),
+}).annotate({ identifier: "HarnessConfig" });
 
-export type HarnessConfig = typeof HarnessConfig["Type"]
+export type HarnessConfig = (typeof HarnessConfig)["Type"];
 
-const STRICT = { errors: "all", onExcessProperty: "error", reportInput: true } as const
-const decodeStrict = Schema.decodeUnknownResult(HarnessConfig, STRICT)
-const decodeStrictEffect = Schema.decodeUnknownEffect(HarnessConfig, STRICT)
+const STRICT = { errors: "all", onExcessProperty: "error", reportInput: true } as const;
+const decodeStrict = Schema.decodeUnknownResult(HarnessConfig, STRICT);
+const decodeStrictEffect = Schema.decodeUnknownEffect(HarnessConfig, STRICT);
 
-const stdFormatter = SchemaIssue.makeFormatterStandardSchemaV1()
+const stdFormatter = SchemaIssue.makeFormatterStandardSchemaV1();
 
 export class ConfigInvalid extends Schema.TaggedError<ConfigInvalid>()("ConfigInvalid", {
   source: Schema.String,
-  problems: Schema.Array(Schema.String)
+  problems: Schema.Array(Schema.String),
 }) {
   override get message(): string {
-    return `${this.source}: invalid config\n${this.problems.map((p) => `  - ${p}`).join("\n")}`
+    return `${this.source}: invalid config\n${this.problems.map((p) => `  - ${p}`).join("\n")}`;
   }
 }
 
 // path segments are PropertyKey | { key: PropertyKey } -> normalise before joining
 export const explain = (error: Schema.SchemaError): ReadonlyArray<string> =>
   stdFormatter(error.issue).issues.map((i) => {
-    const path = (i.path ?? []).map((p) => String(typeof p === "object" ? p.key : p)).join(".")
-    return path === "" ? i.message : `${path}: ${i.message}`
-  })
+    const path = (i.path ?? []).map((p) => String(typeof p === "object" ? p.key : p)).join(".");
+    return path === "" ? i.message : `${path}: ${i.message}`;
+  });
 
-export const loadConfig = (source: string, raw: unknown): Effect.Effect<HarnessConfig, ConfigInvalid> =>
+export const loadConfig = (
+  source: string,
+  raw: unknown,
+): Effect.Effect<HarnessConfig, ConfigInvalid> =>
   decodeStrictEffect(raw).pipe(
-    Effect.mapError((e) => new ConfigInvalid({ source, problems: explain(e) }))
-  )
+    Effect.mapError((e) => new ConfigInvalid({ source, problems: explain(e) })),
+  );
 
 export const loadConfigSync = (source: string, raw: unknown): HarnessConfig => {
-  const r = decodeStrict(raw)
-  if (Result.isFailure(r)) throw new ConfigInvalid({ source, problems: explain(r.failure) })
-  return r.success
-}
+  const r = decodeStrict(raw);
+  if (Result.isFailure(r)) throw new ConfigInvalid({ source, problems: explain(r.failure) });
+  return r.success;
+};
 ```
 
 Real executed output for a valid input (defaults applied):
@@ -595,11 +622,14 @@ today, but it is **not** a declared dependency — add it explicitly before impo
 
 ```ts
 // Recursive: annotate the value with an explicit interface + Schema.suspend
-export interface Node { readonly name: string; readonly children: ReadonlyArray<Node> }
+export interface Node {
+  readonly name: string;
+  readonly children: ReadonlyArray<Node>;
+}
 export const Node: Schema.Codec<Node> = Schema.Struct({
   name: Schema.String,
-  children: Schema.Array(Schema.suspend((): Schema.Codec<Node> => Node))
-}).annotate({ identifier: "Node" })
+  children: Schema.Array(Schema.suspend((): Schema.Codec<Node> => Node)),
+}).annotate({ identifier: "Node" });
 ```
 
 - Transformations: `Schema.decodeTo(to, transformation)`, `Schema.encodeTo`, `Schema.decode`,
@@ -620,14 +650,14 @@ export const Node: Schema.Codec<Node> = Schema.Struct({
 
 ## 13. What I verified, exactly
 
-| file | tsc | executed |
-|---|---|---|
-| `.recon/smoke.ts` | ✅ | — |
-| `.recon/schema.ts` (primitives, defaults, filters, brands, annotations, Class/TaggedClass/TaggedError, TaggedUnion+match, all decode/encode variants, formatters, JSON Schema) | ✅ | — |
-| `.recon/schema-config.ts` (the §11 worked example) | ✅ | ✅ via `run-config.ts` |
-| `.recon/schema-tu.ts` (discriminants, encodeKeys, Opaque) | ✅ | — |
-| `.recon/schema-extra.ts` (makeFilter, StructWithRest, suspend/recursion, Option/Date round-trip, catchTag on SchemaError) | ✅ | ✅ via `run-extra.ts` |
-| `.recon/run-schema.ts`, `.recon/run-config.ts`, `.recon/run-extra.ts`, `.recon/run-class.ts` | run scripts (import sibling `.ts` → need `allowImportingTsExtensions` for tsc; they were executed with `tsx`, not typechecked) | ✅ |
+| file                                                                                                                                                                           | tsc                                                                                                                            | executed               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
+| `.recon/smoke.ts`                                                                                                                                                              | ✅                                                                                                                             | —                      |
+| `.recon/schema.ts` (primitives, defaults, filters, brands, annotations, Class/TaggedClass/TaggedError, TaggedUnion+match, all decode/encode variants, formatters, JSON Schema) | ✅                                                                                                                             | —                      |
+| `.recon/schema-config.ts` (the §11 worked example)                                                                                                                             | ✅                                                                                                                             | ✅ via `run-config.ts` |
+| `.recon/schema-tu.ts` (discriminants, encodeKeys, Opaque)                                                                                                                      | ✅                                                                                                                             | —                      |
+| `.recon/schema-extra.ts` (makeFilter, StructWithRest, suspend/recursion, Option/Date round-trip, catchTag on SchemaError)                                                      | ✅                                                                                                                             | ✅ via `run-extra.ts`  |
+| `.recon/run-schema.ts`, `.recon/run-config.ts`, `.recon/run-extra.ts`, `.recon/run-class.ts`                                                                                   | run scripts (import sibling `.ts` → need `allowImportingTsExtensions` for tsc; they were executed with `tsx`, not typechecked) | ✅                     |
 
 UNVERIFIED items are flagged inline; the only ones are the `yaml` dependency note (§11) and the
 `Rpc.make` replacement for `TaggedRequest` (§1) — I confirmed `TaggedRequest` is **absent**, but did

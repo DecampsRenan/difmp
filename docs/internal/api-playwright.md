@@ -5,6 +5,7 @@ Installed: `playwright@1.63.0` / `playwright-core@1.63.0`. Bundled Chromium **15
 below is real, pasted verbatim** from `.recon/pw-probe*.mjs`.
 
 Verification status:
+
 - `/home/ubuntu/apps/difmp/.recon/playwright.ts` — **compiles clean** under
   `npx tsc --noEmit --strict --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck`.
   Every fenced `ts` block below is copied from it.
@@ -21,7 +22,7 @@ see §9).
 
 This is the single most important finding. Three things changed vs. older Playwright:
 
-1. **`page.accessibility` NO LONGER EXISTS.** Not deprecated — *removed*. `typeof page.accessibility`
+1. **`page.accessibility` NO LONGER EXISTS.** Not deprecated — _removed_. `typeof page.accessibility`
    → `undefined`, and `grep -c "accessibility" types.d.ts` finds zero property declarations.
    Do not write `page.accessibility.snapshot()`.
 2. `page.ariaSnapshot()` / `page.ariaSnapshotJSON()` exist at **Page** level (previously
@@ -43,7 +44,7 @@ export async function snapshotJson(page: Page): Promise<unknown> {
 }
 
 export function refLocator(page: Page, ref: string): Locator {
-  return page.locator(`aria-ref=${ref}`);           // works for iframe refs too (f1e2)
+  return page.locator(`aria-ref=${ref}`); // works for iframe refs too (f1e2)
 }
 
 export async function subtreeSnapshot(loc: Locator): Promise<string> {
@@ -122,7 +123,7 @@ subtrees.
   - paragraph [ref=e15]: Some static text.
 ```
 
-Note: only *interactive/landmark* nodes get refs. Bare `text:` fragments and `option` children of a
+Note: only _interactive/landmark_ nodes get refs. Bare `text:` fragments and `option` children of a
 `combobox` get **no ref**. `[cursor=pointer]` marks clickable elements (ai mode only).
 
 ### 1c. REAL OUTPUT — `{ mode: "ai", boxes: true, depth: 3 }`
@@ -152,28 +153,46 @@ tree is shallow). Do not rely on `depth` for token budgeting — measure the str
 ```json
 [
   {
-    "role": "generic", "active": true, "ref": "e1",
+    "role": "generic",
+    "active": true,
+    "ref": "e1",
     "children": [
       { "role": "heading", "name": "Task list", "level": 1, "ref": "e2" },
-      { "role": "form", "name": "New task", "ref": "e3",
+      {
+        "role": "form",
+        "name": "New task",
+        "ref": "e3",
         "children": [
           "Title",
           { "role": "textbox", "name": "Title", "ref": "e4", "placeholder": "What to do?" },
           "Done",
           { "role": "checkbox", "name": "Done", "checked": true, "ref": "e5" },
-          { "role": "combobox", "name": "Priority", "ref": "e6",
+          {
+            "role": "combobox",
+            "name": "Priority",
+            "ref": "e6",
             "children": [
               { "role": "option", "name": "Low" },
               { "role": "option", "name": "High", "selected": true }
-            ] },
+            ]
+          },
           { "role": "button", "name": "Add task", "ref": "e7" }
-        ] },
-      { "role": "list", "name": "Tasks", "ref": "e8",
+        ]
+      },
+      {
+        "role": "list",
+        "name": "Tasks",
+        "ref": "e8",
         "children": [
-          { "role": "listitem", "ref": "e9",
-            "children": [ { "role": "link", "name": "Alpha", "ref": "e10",
-                            "cursor": "pointer", "url": "/a" } ] }
-        ] },
+          {
+            "role": "listitem",
+            "ref": "e9",
+            "children": [
+              { "role": "link", "name": "Alpha", "ref": "e10", "cursor": "pointer", "url": "/a" }
+            ]
+          }
+        ]
+      },
       { "role": "button", "name": "Dup", "ref": "e13" },
       { "role": "button", "name": "Dup", "ref": "e14" },
       { "role": "paragraph", "ref": "e15", "text": "Some static text." }
@@ -241,7 +260,7 @@ Upside: stale refs can never collide with fresh ones — a stale ref just yields
   count after locator.ariaSnapshot (default): 0
 ```
 
-Any `ariaSnapshot()` **without** `mode:"ai"` (Page *or* Locator) overwrites
+Any `ariaSnapshot()` **without** `mode:"ai"` (Page _or_ Locator) overwrites
 `_lastAriaSnapshotForQuery` with a ref-less tree and disarms every outstanding ref.
 **Rule for the harness: never mix default-mode and ai-mode snapshots on the same page.**
 
@@ -268,11 +287,14 @@ fresh number (`e6` — note `e5` was skipped, numbering is not gap-free):
 ```
 
 A ref survives repeated actions on the same node without re-snapshotting:
+
 ```
   after 1 click, same ref count: 1
   after 2nd click via same ref count: 1
 ```
+
 But it dies if the node is **replaced** (`isConnected === false`):
+
 ```
   after replacing the button node, old ref count: 0
 ```
@@ -343,7 +365,7 @@ export async function assertions(page: Page, loc: Locator): Promise<void> {
 export async function launch(): Promise<Browser> {
   return chromium.launch({
     headless: true,
-    chromiumSandbox: false,               // preferred over --no-sandbox
+    chromiumSandbox: false, // preferred over --no-sandbox
     args: ["--disable-dev-shm-usage", "--disable-gpu"],
     timeout: 30_000,
     tracesDir: "/tmp/pw-traces",
@@ -377,7 +399,7 @@ export async function makeContext(browser: Browser): Promise<BrowserContext> {
     viewport: { width: 1280, height: 720 },
     deviceScaleFactor: 1,
     ignoreHTTPSErrors: true,
-    storageState: undefined,               // string path | inline object
+    storageState: undefined, // string path | inline object
     recordVideo: { dir: "./artifacts/video", size: { width: 640, height: 360 } },
     recordHar: { path: "./artifacts/net.har", content: "embed", mode: "full" },
     serviceWorkers: "block",
@@ -393,7 +415,7 @@ export async function makeContext(browser: Browser): Promise<BrowserContext> {
 
 `baseURL` makes `page.goto("/")` work. `viewport: null` = use the real window size.
 
-**The two `setDefaultTimeout` calls are not optional** — in library mode there is otherwise *no*
+**The two `setDefaultTimeout` calls are not optional** — in library mode there is otherwise _no_
 action timeout at all and a missing element hangs forever. See §9.
 
 ### storageState — verified round-trip and isolation
@@ -415,10 +437,18 @@ action timeout at all and a missing element hangs forever. See §9.
 export async function inlineStorageState(browser: Browser): Promise<BrowserContext> {
   return browser.newContext({
     storageState: {
-      cookies: [{
-        name: "sid", value: "abc", domain: "127.0.0.1", path: "/",
-        expires: -1, httpOnly: false, secure: false, sameSite: "Lax",
-      }],
+      cookies: [
+        {
+          name: "sid",
+          value: "abc",
+          domain: "127.0.0.1",
+          path: "/",
+          expires: -1,
+          httpOnly: false,
+          secure: false,
+          sameSite: "Lax",
+        },
+      ],
       origins: [{ origin: "http://127.0.0.1:3000", localStorage: [{ name: "k", value: "v" }] }],
     },
   });
@@ -436,7 +466,7 @@ are per-`BrowserContext`. Writing `localStorage` in ctx3 left ctx2 untouched. On
 export async function trace(ctx: BrowserContext): Promise<void> {
   await ctx.tracing.start({
     screenshots: true,
-    snapshots: { dom: true, aria: true, screen: true },  // 1.63: object form
+    snapshots: { dom: true, aria: true, screen: true }, // 1.63: object form
     sources: true,
     title: "run-42",
     live: false,
@@ -469,7 +499,7 @@ export async function traceChunks(ctx: BrowserContext): Promise<void> {
   await ctx.tracing.stopChunk({ path: "./artifacts/step1.zip" });
   await ctx.tracing.startChunk({ title: "step2" });
   await ctx.tracing.stopChunk({ path: "./artifacts/step2.zip" });
-  await ctx.tracing.stop();                 // NOTE: no { path } here
+  await ctx.tracing.stop(); // NOTE: no { path } here
   const g = await ctx.tracing.group("Log in");
   await ctx.tracing.groupEnd();
   void g;
@@ -481,7 +511,7 @@ export async function traceChunks(ctx: BrowserContext): Promise<void> {
 session; per-chunk zips come from `stopChunk({ path })`. Verified sizes: `chunk1.zip 23542`,
 `chunk2.zip 25383`, and a separate plain `start`→`stop({path})` produced `full.zip 5626`.
 
-`tracing.start({ name })` only sets the *intermediate* file prefix inside `tracesDir`; the final zip
+`tracing.start({ name })` only sets the _intermediate_ file prefix inside `tracesDir`; the final zip
 name always comes from `stop({ path })`.
 
 ### Ordering vs. `context.close()`
@@ -498,10 +528,14 @@ you should (video needs `ctx.close()`, see §6).
 ## 6. Video — `context.close()` is MANDATORY
 
 ```ts
-export async function shutdown(page: Page, ctx: BrowserContext, browser: Browser): Promise<string | null> {
+export async function shutdown(
+  page: Page,
+  ctx: BrowserContext,
+  browser: Browser,
+): Promise<string | null> {
   const video: Video | null = page.video();
   await ctx.tracing.stop({ path: "./artifacts/trace.zip" });
-  await ctx.close();                                  // MUST precede browser.close()
+  await ctx.close(); // MUST precede browser.close()
   const p = video ? await video.path() : null;
   if (video) await video.saveAs("./artifacts/run.webm");
   await browser.close();
@@ -528,6 +562,7 @@ And the failure mode you must avoid:
 ```
 
 Rules:
+
 - `page.video()` returns non-null as soon as `recordVideo` is set; `video.path()` resolves
   **immediately** and the file exists but is **0 bytes** until the context closes.
 - **`browser.close()` without `ctx.close()` leaves a 0-byte, unusable .webm.** Always
@@ -546,10 +581,22 @@ Rules:
 export function captureConsole(page: Page, sink: ConsoleRecord[]): void {
   page.on("console", (msg: ConsoleMessage) => {
     const loc = msg.location();
-    sink.push({ type: msg.type(), text: msg.text(), url: loc.url, line: loc.lineNumber, column: loc.columnNumber });
+    sink.push({
+      type: msg.type(),
+      text: msg.text(),
+      url: loc.url,
+      line: loc.lineNumber,
+      column: loc.columnNumber,
+    });
   });
   page.on("pageerror", (err: Error) => {
-    sink.push({ type: "pageerror", text: `${err.name}: ${err.message}`, url: "", line: 0, column: 0 });
+    sink.push({
+      type: "pageerror",
+      text: `${err.name}: ${err.message}`,
+      url: "",
+      line: 0,
+      column: 0,
+    });
   });
 }
 ```
@@ -560,8 +607,13 @@ REAL console event shape (`msg.location()` has **both** `line/column` and `lineN
 {
   "type": "log",
   "text": "hello log {a: 1}",
-  "location": { "url": "http://127.0.0.1:41187/", "line": 15, "column": 8,
-                "lineNumber": 15, "columnNumber": 8 },
+  "location": {
+    "url": "http://127.0.0.1:41187/",
+    "line": 15,
+    "column": 8,
+    "lineNumber": 15,
+    "columnNumber": 8
+  },
   "argCount": 2,
   "page": true
 }
@@ -586,11 +638,13 @@ page.pageErrors() -> [{"name":"Error","message":"boom from page"}]
 The handler receives an `Error` whose **runtime constructor is `PlaywrightError`** but whose `.name`
 is the page-side name (`"Error"`). Don't branch on `constructor.name`.
 
-**New in 1.63:** `page.pageErrors({ filter })` — a *pull* API returning up to the last **200** page
+**New in 1.63:** `page.pageErrors({ filter })` — a _pull_ API returning up to the last **200** page
 errors, so a harness that attaches late doesn't lose them:
 
 ```ts
-export async function pullPageErrors(page: Page): Promise<Array<{ name: string; message: string }>> {
+export async function pullPageErrors(
+  page: Page,
+): Promise<Array<{ name: string; message: string }>> {
   const errs: Error[] = await page.pageErrors({ filter: "since-navigation" });
   return errs.map((e) => ({ name: e.name, message: e.message }));
 }
@@ -621,12 +675,26 @@ export function captureNetwork(page: Page, sink: NetRecord[]): void {
     sink.push({ method: r.method(), url: r.url(), resourceType: r.resourceType() });
   });
   page.on("response", (r: Response) => {
-    sink.push({ method: r.request().method(), url: r.url(), resourceType: r.request().resourceType(), status: r.status(), ok: r.ok() });
+    sink.push({
+      method: r.request().method(),
+      url: r.url(),
+      resourceType: r.request().resourceType(),
+      status: r.status(),
+      ok: r.ok(),
+    });
   });
   page.on("requestfailed", (r: Request) => {
-    sink.push({ method: r.method(), url: r.url(), resourceType: r.resourceType(), status: -1, ok: false });
+    sink.push({
+      method: r.method(),
+      url: r.url(),
+      resourceType: r.resourceType(),
+      status: -1,
+      ok: false,
+    });
   });
-  page.on("requestfinished", (r: Request) => { void r.timing(); });
+  page.on("requestfinished", (r: Request) => {
+    void r.timing();
+  });
 }
 ```
 
@@ -643,9 +711,17 @@ Verified field shapes:
 (`-1` means "not applicable", e.g. a reused connection):
 
 ```json
-{ "startTime": 1789144429545.472, "domainLookupStart": -1, "domainLookupEnd": -1,
-  "connectStart": -1, "secureConnectionStart": -1, "connectEnd": -1,
-  "requestStart": 4.495, "responseStart": 7.33, "responseEnd": 12.18 }
+{
+  "startTime": 1789144429545.472,
+  "domainLookupStart": -1,
+  "domainLookupEnd": -1,
+  "connectStart": -1,
+  "secureConnectionStart": -1,
+  "connectEnd": -1,
+  "requestStart": 4.495,
+  "responseStart": 7.33,
+  "responseEnd": 12.18
+}
 ```
 
 `startTime` is epoch-ms (float); every other field is **ms relative to `startTime`**.
@@ -664,7 +740,7 @@ export async function safeBody(resp: Response): Promise<string | null> {
     const buf: Buffer = await resp.body();
     return buf.subarray(0, 64 * 1024).toString("utf8");
   } catch {
-    return null;                       // body evicted / redirect / request aborted
+    return null; // body evicted / redirect / request aborted
   }
 }
 ```
@@ -691,15 +767,17 @@ export async function injectFault(page: Page): Promise<void> {
     });
   });
   await page.route(/\/api\/flaky/, async (route: Route) => {
-    await route.fulfill({ status: 503, json: { retryAfter: 1 } });   // `json` shorthand
+    await route.fulfill({ status: 503, json: { retryAfter: 1 } }); // `json` shorthand
   });
   await page.route("**/api/slow", async (route: Route) => {
-    const real: APIResponse<Record<string, unknown>> = await route.fetch();  // real upstream
+    const real: APIResponse<Record<string, unknown>> = await route.fetch(); // real upstream
     const body = await real.json();
     await route.fulfill({ response: real, json: { ...body, patched: true } });
   });
   await page.route("**/*.png", (route: Route) => route.abort("failed"));
-  await page.route("**/api/pass", (route: Route) => route.continue({ headers: { "x-trace": "1" } }));
+  await page.route("**/api/pass", (route: Route) =>
+    route.continue({ headers: { "x-trace": "1" } }),
+  );
   await page.route("**/api/next", (route: Route) => route.fallback());
   await page.unroute("**/api/orders");
   await page.unrouteAll({ behavior: "ignoreErrors" });
@@ -722,6 +800,7 @@ REAL OUTPUT proving the injected 500 reached both the page and the `response` ev
 ```
 
 Key facts:
+
 - `route.fulfill({ status, body | json, contentType, headers, path, response })`. The **`json`
   option** auto-sets `content-type: application/json` — use it, don't hand-roll.
 - **`route.fetch()` returns `APIResponse<T>`, NOT `Response`.** `APIResponse<T = any>` is generic in
@@ -829,7 +908,7 @@ Otherwise one missing element wedges the agent loop with no error, ever.
   context, including ones created later. Also `page.setDefaultTimeout` /
   `page.setDefaultNavigationTimeout` (page-level wins over context-level).
 - `timeout: 0` explicitly disables. `browserType.launch({ timeout })` **does** default to 30 000 ms
-  (that one is the browser *startup* timeout only).
+  (that one is the browser _startup_ timeout only).
 - `ariaSnapshot` / `ariaSnapshotJSON` likewise default to no timeout — pass one explicitly.
 - Not every failure is a TimeoutError: an unreachable navigation rejects fast with a plain `Error`,
   e.g. `page.goto: net::ERR_UNSAFE_PORT at http://10.255.255.1:1/` after 22 ms.
@@ -842,9 +921,24 @@ Otherwise one missing element wedges the agent loop with no error, ever.
 
 ```ts
 export async function shots(page: Page, loc: Locator): Promise<Buffer> {
-  await page.screenshot({ path: "./artifacts/page.png", fullPage: true, animations: "disabled", caret: "hide", scale: "css" });
-  await page.screenshot({ path: "./artifacts/clip.png", clip: { x: 0, y: 0, width: 400, height: 300 } });
-  await page.screenshot({ path: "./artifacts/masked.jpeg", type: "jpeg", quality: 70, mask: [loc], maskColor: "#ff00ff" });
+  await page.screenshot({
+    path: "./artifacts/page.png",
+    fullPage: true,
+    animations: "disabled",
+    caret: "hide",
+    scale: "css",
+  });
+  await page.screenshot({
+    path: "./artifacts/clip.png",
+    clip: { x: 0, y: 0, width: 400, height: 300 },
+  });
+  await page.screenshot({
+    path: "./artifacts/masked.jpeg",
+    type: "jpeg",
+    quality: 70,
+    mask: [loc],
+    maskColor: "#ff00ff",
+  });
   return loc.screenshot({ path: "./artifacts/el.png", timeout: 5_000 });
 }
 ```
@@ -877,8 +971,8 @@ that owns the video muxer.
 
 - `chromium.launch()` → `browser.version()` = `"153.0.8010.12"`.
 - `playwright/test` exports: `_android, _baseTest, _electron, _utilityTest, chromium, default,
-  defineConfig, devices, errors, expect, firefox, mergeExpects, mergeTests, request, selectors,
-  test, webkit`.
+defineConfig, devices, errors, expect, firefox, mergeExpects, mergeTests, request, selectors,
+test, webkit`.
 - `selectors.setTestIdAttribute(name)` and `selectors.register(name, script)` are both functions on
   the library-mode `selectors` singleton.
 - `devices["iPhone 15"]` exists and typechecks.
@@ -921,7 +1015,8 @@ Design-contracts §5 says stale refs must produce a typed tool error, not a wron
 reliable detection is the pre-flight count (GOTCHA E):
 
 ```ts
-if (await page.locator(`aria-ref=${ref}`).count() === 0) return staleRefError(observationId, ref)
+if ((await page.locator(`aria-ref=${ref}`).count()) === 0) return staleRefError(observationId, ref);
 ```
+
 Do this **before** every ref-targeted action; a dead ref otherwise burns the whole action timeout
 and arrives as an indistinguishable `TimeoutError`.

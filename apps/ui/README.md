@@ -17,10 +17,14 @@ Every URL is **relative to the page** (`base: "./"`), so the CLI may mount the b
 The CLI overrides the four endpoints by injecting one script tag before the bundle:
 
 ```html
-<script id="difmp-ui-runtime">globalThis.__DIFMP_UI__ = {
-  eventsUrl: "/api/ui/events", cancelUrl: "/api/cancel",
-  contractUrl: "/api/contract", artifactBaseUrl: "/api/artifacts/"
-}</script>
+<script id="difmp-ui-runtime">
+  globalThis.__DIFMP_UI__ = {
+    eventsUrl: "/api/ui/events",
+    cancelUrl: "/api/cancel",
+    contractUrl: "/api/contract",
+    artifactBaseUrl: "/api/artifacts/",
+  };
+</script>
 ```
 
 `pricing` is an optional fifth field. It is absent by default and there is no price table anywhere in
@@ -43,7 +47,7 @@ against the indicative threshold, the blocking budgets, the artifact list and th
 `seq` increases by 1 per run, so the reducer applies an event iff `seq > lastSeq` — exact, and
 tolerant of a server that replays inclusively (one absorbed duplicate, not a duplicated row).
 
-Reconnection is handled twice on purpose. `EventSource` sends `Last-Event-ID` on the reconnects *it*
+Reconnection is handled twice on purpose. `EventSource` sends `Last-Event-ID` on the reconnects _it_
 drives, but that header cannot be set from script; when the browser gives up (`readyState === CLOSED`)
 the app opens a fresh `EventSource` and carries the cursor as `?lastEventId=<seq>`. Both are
 supported by the server and mean the same thing.

@@ -1,6 +1,6 @@
-import type { CriterionReCheck, CriterionResult, CriterionStatus } from "../domain/result.js"
+import type { CriterionReCheck, CriterionResult, CriterionStatus } from "../domain/result.js";
 
-export type VerdictRequester = "agent" | "runner"
+export type VerdictRequester = "agent" | "runner";
 
 /**
  * How strong a claim a status makes about the product. A later evaluation may only move a criterion
@@ -11,19 +11,20 @@ const severity: Record<CriterionStatus, number> = {
   passed: 0,
   inconclusive: 1,
   error: 2,
-  failed: 3
-}
+  failed: 3,
+};
 
 /** `passed` and `failed` are decisions; `inconclusive` and `error` are "not settled yet". */
-export const isTerminal = (status: CriterionStatus): boolean => status === "passed" || status === "failed"
+export const isTerminal = (status: CriterionStatus): boolean =>
+  status === "passed" || status === "failed";
 
 export interface VerdictAdmission {
   /** The result to store for this criterion. */
-  readonly result: CriterionResult
+  readonly result: CriterionResult;
   /** True when the incoming evaluation replaced the recorded verdict. */
-  readonly applied: boolean
+  readonly applied: boolean;
   /** Human-readable rule that was applied — journalled with the verification event. */
-  readonly note: string
+  readonly note: string;
 }
 
 /**
@@ -43,21 +44,21 @@ export interface VerdictAdmission {
  * the verifier asked for) replaces them normally, in either direction.
  */
 export const admitVerdict = (input: {
-  readonly current: CriterionResult | undefined
-  readonly incoming: CriterionResult
-  readonly requestedBy: VerdictRequester
+  readonly current: CriterionResult | undefined;
+  readonly incoming: CriterionResult;
+  readonly requestedBy: VerdictRequester;
 }): VerdictAdmission => {
-  const { current, incoming, requestedBy } = input
+  const { current, incoming, requestedBy } = input;
   if (current === undefined || !isTerminal(current.status)) {
-    return { result: incoming, applied: true, note: "first verdict recorded for this criterion" }
+    return { result: incoming, applied: true, note: "first verdict recorded for this criterion" };
   }
 
-  const worse = severity[incoming.status] > severity[current.status]
+  const worse = severity[incoming.status] > severity[current.status];
   const note = worse
     ? `a later ${requestedBy} evaluation reported ${incoming.status}, which is worse than the recorded ` +
       `${current.status}: the recorded verdict was replaced, never upgraded`
     : `the criterion was already ${current.status}; a later ${requestedBy} evaluation reported ` +
-      `${incoming.status} and was kept as an observation — asking again never upgrades a verdict`
+      `${incoming.status} and was kept as an observation — asking again never upgrades a verdict`;
 
   const entry: CriterionReCheck = {
     status: incoming.status,
@@ -66,12 +67,12 @@ export const admitVerdict = (input: {
     requestedBy,
     evaluatedAtSeq: incoming.evaluatedAtSeq,
     applied: worse,
-    note
-  }
-  const history: ReadonlyArray<CriterionReCheck> = [...(current.reChecks ?? []), entry]
+    note,
+  };
+  const history: ReadonlyArray<CriterionReCheck> = [...(current.reChecks ?? []), entry];
 
   if (!worse) {
-    return { result: { ...current, reChecks: history }, applied: false, note }
+    return { result: { ...current, reChecks: history }, applied: false, note };
   }
   return {
     result: {
@@ -80,9 +81,9 @@ export const admitVerdict = (input: {
       reChecks: history,
       ...(current.downgrades === undefined && incoming.downgrades === undefined
         ? {}
-        : { downgrades: [...(current.downgrades ?? []), ...(incoming.downgrades ?? [])] })
+        : { downgrades: [...(current.downgrades ?? []), ...(incoming.downgrades ?? [])] }),
     },
     applied: true,
-    note
-  }
-}
+    note,
+  };
+};

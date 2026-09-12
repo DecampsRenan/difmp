@@ -1,10 +1,16 @@
-import type { Criterion, CriterionDowngrade, CriterionResult, EvidenceItem, Evaluator } from "@difmp/core"
-import type { CriterionVerdictShape } from "./verdict.js"
+import type {
+  Criterion,
+  CriterionDowngrade,
+  CriterionResult,
+  EvidenceItem,
+  Evaluator,
+} from "@difmp/core";
+import type { CriterionVerdictShape } from "./verdict.js";
 
 export interface VerdictValidation {
-  readonly result: CriterionResult
+  readonly result: CriterionResult;
   /** References the evaluator produced that do not exist in this attempt's evidence. */
-  readonly rejectedReferences: ReadonlyArray<string>
+  readonly rejectedReferences: ReadonlyArray<string>;
 }
 
 /**
@@ -21,54 +27,62 @@ export interface VerdictValidation {
  * inventory; the two are deliberately redundant.
  */
 export const validateVerdict = (options: {
-  readonly verdict: CriterionVerdictShape
-  readonly criterion: Criterion
-  readonly criterionHash: string
-  readonly evaluator: Evaluator
-  readonly evidence: ReadonlyArray<EvidenceItem>
-  readonly seq: number
+  readonly verdict: CriterionVerdictShape;
+  readonly criterion: Criterion;
+  readonly criterionHash: string;
+  readonly evaluator: Evaluator;
+  readonly evidence: ReadonlyArray<EvidenceItem>;
+  readonly seq: number;
 }): VerdictValidation => {
-  const { criterion, evaluator, seq, verdict } = options
-  const known = new Set(options.evidence.map((item) => item.artifactId))
-  const accepted = verdict.evidence.filter((id) => known.has(id))
-  const rejected = verdict.evidence.filter((id) => !known.has(id))
+  const { criterion, evaluator, seq, verdict } = options;
+  const known = new Set(options.evidence.map((item) => item.artifactId));
+  const accepted = verdict.evidence.filter((id) => known.has(id));
+  const rejected = verdict.evidence.filter((id) => !known.has(id));
 
-  const limitations: Array<string> = []
-  if (verdict.limitations !== null && verdict.limitations !== "") limitations.push(verdict.limitations)
+  const limitations: Array<string> = [];
+  if (verdict.limitations !== null && verdict.limitations !== "")
+    limitations.push(verdict.limitations);
 
-  let status: CriterionResult["status"] = verdict.status
+  let status: CriterionResult["status"] = verdict.status;
   // Every status the harness imposes is recorded, so a report can say WHY it refused to conclude
   // instead of showing a bare `inconclusive`.
-  const downgrades: Array<CriterionDowngrade> = []
+  const downgrades: Array<CriterionDowngrade> = [];
   const downgrade = (reason: CriterionDowngrade["reason"], detail: string) => {
-    if (status !== "inconclusive") downgrades.push({ reason, from: status, to: "inconclusive", detail })
-    status = "inconclusive"
-    limitations.push(detail)
-  }
+    if (status !== "inconclusive")
+      downgrades.push({ reason, from: status, to: "inconclusive", detail });
+    status = "inconclusive";
+    limitations.push(detail);
+  };
 
   if (verdict.criterionId !== criterion.id) {
     downgrade(
       "rejected-evidence",
-      `the evaluator answered about ${verdict.criterionId} instead of ${criterion.id}; the verdict was rejected`
-    )
+      `the evaluator answered about ${verdict.criterionId} instead of ${criterion.id}; the verdict was rejected`,
+    );
   }
 
   if (rejected.length > 0) {
     downgrade(
       "rejected-evidence",
-      `evidence references do not exist in this attempt and were rejected: ${rejected.join(", ")}`
-    )
+      `evidence references do not exist in this attempt and were rejected: ${rejected.join(", ")}`,
+    );
   }
 
   if (status === "passed" && accepted.length === 0) {
-    downgrade("rejected-evidence", "no usable evidence was attached, so the criterion cannot be considered verified")
+    downgrade(
+      "rejected-evidence",
+      "no usable evidence was attached, so the criterion cannot be considered verified",
+    );
   }
 
   if (verdict.missingEvidence.length > 0) {
     if (status === "passed") {
-      downgrade("rejected-evidence", `evidence still missing: ${verdict.missingEvidence.join(", ")}`)
+      downgrade(
+        "rejected-evidence",
+        `evidence still missing: ${verdict.missingEvidence.join(", ")}`,
+      );
     } else {
-      limitations.push(`evidence still missing: ${verdict.missingEvidence.join(", ")}`)
+      limitations.push(`evidence still missing: ${verdict.missingEvidence.join(", ")}`);
     }
   }
 
@@ -78,8 +92,8 @@ export const validateVerdict = (options: {
   if (verdict.absence === "uncertain-navigation" && status === "failed") {
     downgrade(
       "absence-uncertain-navigation",
-      "the evaluator reported an absence after an uncertain navigation, which cannot establish a failure"
-    )
+      "the evaluator reported an absence after an uncertain navigation, which cannot establish a failure",
+    );
   }
 
   const result: CriterionResult = {
@@ -95,7 +109,7 @@ export const validateVerdict = (options: {
     ...(limitations.length === 0 ? {} : { limitations: limitations.join(" | ") }),
     ...(verdict.absence === null ? {} : { absence: verdict.absence }),
     ...(downgrades.length === 0 ? {} : { downgrades }),
-    evaluatedAtSeq: seq
-  }
-  return { result, rejectedReferences: rejected }
-}
+    evaluatedAtSeq: seq,
+  };
+  return { result, rejectedReferences: rejected };
+};

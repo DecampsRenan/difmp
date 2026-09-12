@@ -142,15 +142,15 @@ The names may evolve if that simplifies the repository. Avoid multiplying packag
 
 ### Effect services
 
-| Service | Responsibility |
-| --- | --- |
-| `SpecLoader` | Read, parse, normalise and validate the specs |
-| `FixtureManager` | Prepare and clean up the data and the authentication |
-| `AgentRuntime` | Obtain a next structured action from the model |
-| `BrowserDriver` | Observe the browser and execute the permitted actions |
-| `Verifier` | Evaluate the textual expectations or optional TS checks from the evidence |
-| `RunStore` | Persist the manifest, the events, the results and the artifacts |
-| `Reporter` | Produce the JSON, JUnit and HTML exports |
+| Service          | Responsibility                                                            |
+| ---------------- | ------------------------------------------------------------------------- |
+| `SpecLoader`     | Read, parse, normalise and validate the specs                             |
+| `FixtureManager` | Prepare and clean up the data and the authentication                      |
+| `AgentRuntime`   | Obtain a next structured action from the model                            |
+| `BrowserDriver`  | Observe the browser and execute the permitted actions                     |
+| `Verifier`       | Evaluate the textual expectations or optional TS checks from the evidence |
+| `RunStore`       | Persist the manifest, the events, the results and the artifacts           |
+| `Reporter`       | Produce the JSON, JUnit and HTML exports                                  |
 
 Use `Context.Service` and explicit layers in accordance with the installed Effect v4 version. Use scopes for resources, typed errors, structured concurrency and bounded timeouts.
 
@@ -212,13 +212,13 @@ Persist the resolved non-sensitive parameters, the versions of the main dependen
 
 An attempt's result is a discriminated union:
 
-| Status | Meaning |
-| --- | --- |
-| `passed` | Every mandatory criterion was verified with the required evidence |
-| `failed` | An observation contradicts a mandatory product criterion |
+| Status         | Meaning                                                                                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `passed`       | Every mandatory criterion was verified with the required evidence                                                                                        |
+| `failed`       | An observation contradicts a mandatory product criterion                                                                                                 |
 | `inconclusive` | The evidence does not allow a conclusion, or a blocking budget is exhausted before a conclusion could be reached; exceeding `maxActions` is not a ground |
-| `error` | Fixture, provider, browser, storage or infrastructure failure |
-| `cancelled` | Explicit cancellation of the execution |
+| `error`        | Fixture, provider, browser, storage or infrastructure failure                                                                                            |
+| `cancelled`    | Explicit cancellation of the execution                                                                                                                   |
 
 Each criterion has its own state: `pending`, `passed`, `failed`, `inconclusive` or `error`, as well as its method, `model` or `code`. A run can keep a failed criterion even if an infrastructure error occurs afterwards. Do not lose that information in the aggregated status. In the internal tests, also identify the scripted verifier's responses so as not to confuse them with a real model judgement.
 

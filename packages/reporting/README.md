@@ -32,7 +32,7 @@ cancellations** become `<error>`, with the real status preserved in the message 
 
 ## When the contract was never frozen
 
-`contract.json` is optional, and its absence *is* the information: `ReportInput.contract` is
+`contract.json` is optional, and its absence _is_ the information: `ReportInput.contract` is
 `undefined`, the report carries no criteria, and both `junit.xml` and `report.html` are still
 produced with one run-level `<error>` naming the infrastructure failure. An infrastructure failure
 that reports nothing is indistinguishable, in CI, from a suite that never ran.

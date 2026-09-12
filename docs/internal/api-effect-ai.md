@@ -9,7 +9,7 @@ All snippets below were compiled with:
 Files: `.recon/ai.ts` (full loop + verifier), `.recon/ai-probe2.ts`, `.recon/ai-probe3.ts`,
 `.recon/ai-wiring.ts`, `.recon/ai-runtime.ts`, `.recon/ai-runtime2.ts` (last two also **executed** under `tsx`
 against a fake LanguageModel — no network).
-`ai-probe2.ts` / `ai-probe3.ts` are deliberate *type-reveal* files: they assign to a bogus string literal so
+`ai-probe2.ts` / `ai-probe3.ts` are deliberate _type-reveal_ files: they assign to a bogus string literal so
 `tsc` prints the inferred type. Their errors are expected output, not failures; `ai.ts`, `ai-wiring.ts`,
 `ai-runtime.ts`, `ai-runtime2.ts` compile clean.
 
@@ -24,10 +24,24 @@ relinking. (If `pnpm install` ever produces two `vitest` copies again, see api-t
 ## 1. Imports
 
 ```ts
-import { AiError, Chat, LanguageModel, Model, Prompt, Response, Tool, Toolkit } from "effect/unstable/ai"
-import { AnthropicClient, AnthropicConfig, AnthropicLanguageModel, AnthropicTool } from "@effect/ai-anthropic"
-import { FetchHttpClient } from "effect/unstable/http"      // or:
-import { NodeHttpClient } from "@effect/platform-node"       // NodeHttpClient.layerUndici
+import {
+  AiError,
+  Chat,
+  LanguageModel,
+  Model,
+  Prompt,
+  Response,
+  Tool,
+  Toolkit,
+} from "effect/unstable/ai";
+import {
+  AnthropicClient,
+  AnthropicConfig,
+  AnthropicLanguageModel,
+  AnthropicTool,
+} from "@effect/ai-anthropic";
+import { FetchHttpClient } from "effect/unstable/http"; // or:
+import { NodeHttpClient } from "@effect/platform-node"; // NodeHttpClient.layerUndici
 ```
 
 `effect/unstable/ai` is a real subpath export. Sub-module deep imports also work
@@ -63,16 +77,18 @@ key is a compile error.
 
 ```ts
 class GenerateTextResponse<Tools, ParametersMode = "decoded"> {
-  content: Array<Response.Part<Tools, ParametersMode>>
-  get text(): string                       // all "text" parts joined
-  get reasoning(): Array<Response.ReasoningPart>
-  get reasoningText(): string | undefined
-  get toolCalls(): Array<Response.ToolCallParts<Tools, ParametersMode>>
-  get toolResults(): Array<Response.ToolResultParts<Tools>>
-  get finishReason(): Response.FinishReason // "unknown" when there is no finish part
-  get usage(): Response.Usage              // all fields undefined when there is no finish part
+  content: Array<Response.Part<Tools, ParametersMode>>;
+  get text(): string; // all "text" parts joined
+  get reasoning(): Array<Response.ReasoningPart>;
+  get reasoningText(): string | undefined;
+  get toolCalls(): Array<Response.ToolCallParts<Tools, ParametersMode>>;
+  get toolResults(): Array<Response.ToolResultParts<Tools>>;
+  get finishReason(): Response.FinishReason; // "unknown" when there is no finish part
+  get usage(): Response.Usage; // all fields undefined when there is no finish part
 }
-class GenerateObjectResponse<Tools, A, ParametersMode> extends GenerateTextResponse { readonly value: A }
+class GenerateObjectResponse<Tools, A, ParametersMode> extends GenerateTextResponse {
+  readonly value: A;
+}
 ```
 
 `FinishReason = "stop" | "length" | "content-filter" | "tool-calls" | "error" | "pause" | "other" | "unknown"`.
@@ -90,6 +106,7 @@ class Response.Usage {
   outputTokens: { total?: number; text?: number; reasoning?: number }
 }
 ```
+
 Every field is `Schema.optional(Schema.Int)` → `number | undefined`. Anthropic fills
 `inputTokens.uncached = input_tokens`, `inputTokens.total = input + cache_creation + cache_read`,
 `cacheRead`, `cacheWrite`, `outputTokens.total`; it leaves `outputTokens.text` and
@@ -100,45 +117,51 @@ Every field is `Schema.optional(Schema.Int)` → `number | undefined`. Anthropic
 
 `disableToolCallResolution: true` is the option you want. Verified consequences (type-level and at runtime):
 
-| | resolution on (default) | `disableToolCallResolution: true` |
-|---|---|---|
-| tool handlers | run inside `generateText` | **never run** |
-| `R` from the toolkit | `Tool.Handler<"name"> \| …` required | **nothing** — only `LanguageModel` |
-| `E` | `AiError \| Tool.HandlerError<…>` | **`AiError` only** |
-| `call.params` | `unknown` (`ParametersMode = "opaque"`) | `Tool.ParametersEncoded<Tool>` (`"encoded"`) |
-| `response.toolResults` | populated | empty |
+|                        | resolution on (default)                 | `disableToolCallResolution: true`            |
+| ---------------------- | --------------------------------------- | -------------------------------------------- |
+| tool handlers          | run inside `generateText`               | **never run**                                |
+| `R` from the toolkit   | `Tool.Handler<"name"> \| …` required    | **nothing** — only `LanguageModel`           |
+| `E`                    | `AiError \| Tool.HandlerError<…>`       | **`AiError` only**                           |
+| `call.params`          | `unknown` (`ParametersMode = "opaque"`) | `Tool.ParametersEncoded<Tool>` (`"encoded"`) |
+| `response.toolResults` | populated                               | empty                                        |
 
 Key point: you may pass the bare `Toolkit` (which is itself `Effect<WithHandler, never, HandlersFor<Tools>>`)
 **without ever building a handler layer**. `Toolkit`'s `evaluate` only reads handler services lazily inside
 `handle()`, which is never called when resolution is disabled — verified by running it with no handler layer
 provided (`.recon/ai-runtime.ts`).
 
-`params` are encoded, i.e. the *wire* shape (`Schema.DateTimeUtcFromString` → `string`), not decoded.
+`params` are encoded, i.e. the _wire_ shape (`Schema.DateTimeUtcFromString` → `string`), not decoded.
 Validate them yourself with `Schema.decodeUnknownEffect(ParamsSchema)`.
 
 ```ts
-const ClickParams = Schema.Struct({ selector: Schema.String, timeoutMs: Schema.optional(Schema.Int) })
+const ClickParams = Schema.Struct({
+  selector: Schema.String,
+  timeoutMs: Schema.optional(Schema.Int),
+});
 
 const Click = Tool.make("browser_click", {
   description: "Click an element",
-  parameters: ClickParams,          // default: Tool.EmptyParams (Record<string, never>)
-  success: Schema.Struct({ ok: Schema.Boolean }),   // default Schema.Void
+  parameters: ClickParams, // default: Tool.EmptyParams (Record<string, never>)
+  success: Schema.Struct({ ok: Schema.Boolean }), // default Schema.Void
   failure: Schema.Struct({ message: Schema.String }), // default Schema.Never
-  failureMode: "error"              // "error" (default) -> error channel | "return" -> tool result
+  failureMode: "error", // "error" (default) -> error channel | "return" -> tool result
   // also: dependencies?: Context.Key[], needsApproval?: boolean | fn
-})
+});
 
-const Kit = Toolkit.make(Click, Finish)             // Toolkit<{ browser_click: …, finish: … }>
+const Kit = Toolkit.make(Click, Finish); // Toolkit<{ browser_click: …, finish: … }>
 // Toolkit.merge(kitA, kitB), Toolkit.empty also exist.
 ```
 
-Handlers, only if you *do* want auto-resolution:
+Handlers, only if you _do_ want auto-resolution:
 
 ```ts
-const KitLayer = Kit.toLayer(Kit.of({              // or Kit.toLayer(Effect.gen(...))
-  browser_click: ({ selector }, ctx) => Effect.succeed({ ok: selector.length > 0 }),
-  finish: () => Effect.void
-}))
+const KitLayer = Kit.toLayer(
+  Kit.of({
+    // or Kit.toLayer(Effect.gen(...))
+    browser_click: ({ selector }, ctx) => Effect.succeed({ ok: selector.length > 0 }),
+    finish: () => Effect.void,
+  }),
+);
 // Layer<Tool.HandlersFor<Tools>, EX, Exclude<RX, Scope>>; Kit.toHandlers(...) gives a Context instead.
 // Handler ctx: { toolCallId?: string; preliminary(result): Effect<void> }
 // Handler E may be Tool.Failure | AiError | AiError.AiErrorReason.
@@ -165,28 +188,40 @@ Encoded message literals are the easiest input (decoded eagerly, throws on bad s
 ```ts
 const p = Prompt.make([
   { role: "system", content: "You drive a browser." },
-  { role: "user", content: "log in" },                        // string OR part array
+  { role: "user", content: "log in" }, // string OR part array
   { role: "assistant", content: [{ type: "tool-call", id: "c1", name: "t", params: { n: 5 } }] },
-  { role: "tool", content: [{ type: "tool-result", id: "c1", name: "t", isFailure: false, result: "ok" }] }
-])
+  {
+    role: "tool",
+    content: [{ type: "tool-result", id: "c1", name: "t", isFailure: false, result: "ok" }],
+  },
+]);
 ```
 
 `Prompt.ToolCallPart` / `Prompt.ToolResultPart` (prompt-side) are **different types** from
 `Response.ToolCallPart` / `Response.ToolResultPart`. Prompt-side `params`/`result` are `unknown`;
 Response-side are generic in the tool. `Prompt.ToolResultPart` requires `{ id, name, isFailure, result,
-providerExecuted }` (`providerExecuted` optional in the *Encoded* form only).
+providerExecuted }` (`providerExecuted` optional in the _Encoded_ form only).
 
 Loop shape, verified: append the model's own parts, then your own tool message.
 
 ```ts
-prompt = Prompt.concat(prompt, Prompt.fromResponseParts(response.content))  // assistant msg w/ tool-call
-prompt = Prompt.concat(prompt, Prompt.fromMessages([
-  Prompt.makeMessage("tool", {
-    content: [Prompt.makePart("tool-result", {
-      id: call.id, name: call.name, isFailure: false, result, providerExecuted: false
-    })]
-  })
-]))
+prompt = Prompt.concat(prompt, Prompt.fromResponseParts(response.content)); // assistant msg w/ tool-call
+prompt = Prompt.concat(
+  prompt,
+  Prompt.fromMessages([
+    Prompt.makeMessage("tool", {
+      content: [
+        Prompt.makePart("tool-result", {
+          id: call.id,
+          name: call.name,
+          isFailure: false,
+          result,
+          providerExecuted: false,
+        }),
+      ],
+    }),
+  ]),
+);
 ```
 
 `Prompt.fromResponseParts` folds `*-delta` streams into whole text/reasoning parts, puts `tool-call` +
@@ -199,105 +234,125 @@ the assistant message — confirmed at runtime (`roles: user,assistant`).
 Compiles clean (`.recon/ai.ts`). No network.
 
 ```ts
-import { AnthropicClient, AnthropicLanguageModel } from "@effect/ai-anthropic"
-import { Config, Effect, Layer, Schema } from "effect"
-import { AiError, LanguageModel, Prompt, Tool, Toolkit } from "effect/unstable/ai"
-import { FetchHttpClient } from "effect/unstable/http"
+import { AnthropicClient, AnthropicLanguageModel } from "@effect/ai-anthropic";
+import { Config, Effect, Layer, Schema } from "effect";
+import { AiError, LanguageModel, Prompt, Tool, Toolkit } from "effect/unstable/ai";
+import { FetchHttpClient } from "effect/unstable/http";
 
 export const AnthropicLayer: Layer.Layer<AnthropicClient.AnthropicClient, Config.ConfigError> =
-  AnthropicClient.layerConfig({ apiKey: Config.Redacted("ANTHROPIC_API_KEY") })
-    .pipe(Layer.provide(FetchHttpClient.layer))
+  AnthropicClient.layerConfig({ apiKey: Config.Redacted("ANTHROPIC_API_KEY") }).pipe(
+    Layer.provide(FetchHttpClient.layer),
+  );
 
-export const modelLayer = (id: string): Layer.Layer<LanguageModel.LanguageModel, Config.ConfigError> =>
-  AnthropicLanguageModel.layer({ model: id, config: { max_tokens: 4096 } })
-    .pipe(Layer.provide(AnthropicLayer))
+export const modelLayer = (
+  id: string,
+): Layer.Layer<LanguageModel.LanguageModel, Config.ConfigError> =>
+  AnthropicLanguageModel.layer({ model: id, config: { max_tokens: 4096 } }).pipe(
+    Layer.provide(AnthropicLayer),
+  );
 
-const ClickParams = Schema.Struct({ selector: Schema.String, timeoutMs: Schema.optional(Schema.Int) })
+const ClickParams = Schema.Struct({
+  selector: Schema.String,
+  timeoutMs: Schema.optional(Schema.Int),
+});
 export const Click = Tool.make("browser_click", {
   description: "Click an element",
   parameters: ClickParams,
   success: Schema.Struct({ ok: Schema.Boolean }),
-  failure: Schema.Struct({ message: Schema.String })
-})
+  failure: Schema.Struct({ message: Schema.String }),
+});
 export const Finish = Tool.make("finish", {
   description: "End the run",
   parameters: Schema.Struct({ verdict: Schema.Literals(["pass", "fail"]) }),
-  success: Schema.Void
-})
-export const Kit = Toolkit.make(Click, Finish)
+  success: Schema.Void,
+});
+export const Kit = Toolkit.make(Click, Finish);
 
-const decodeClick = Schema.decodeUnknownEffect(ClickParams)
+const decodeClick = Schema.decodeUnknownEffect(ClickParams);
 
-export const loop = Effect.fn("loop")(function*(goal: string) {
+export const loop = Effect.fn("loop")(function* (goal: string) {
   let prompt: Prompt.Prompt = Prompt.make([
     { role: "system", content: "You drive a browser." },
-    { role: "user", content: goal }
-  ])
+    { role: "user", content: goal },
+  ]);
 
   for (let step = 0; step < 10; step++) {
     const response = yield* LanguageModel.generateText({
       prompt,
-      toolkit: Kit,                    // no handler layer needed
+      toolkit: Kit, // no handler layer needed
       toolChoice: "auto",
-      disableToolCallResolution: true  // params arrive ENCODED, nothing is executed
-    })
+      disableToolCallResolution: true, // params arrive ENCODED, nothing is executed
+    });
 
     yield* Effect.log(
-      `finish=${response.finishReason} in=${response.usage.inputTokens.total} out=${response.usage.outputTokens.total}`
-    )
+      `finish=${response.finishReason} in=${response.usage.inputTokens.total} out=${response.usage.outputTokens.total}`,
+    );
 
-    const calls = response.toolCalls
-    if (calls.length === 0) return response.text
+    const calls = response.toolCalls;
+    if (calls.length === 0) return response.text;
 
-    prompt = Prompt.concat(prompt, Prompt.fromResponseParts(response.content))
+    prompt = Prompt.concat(prompt, Prompt.fromResponseParts(response.content));
 
-    const resultParts: Array<Prompt.ToolResultPart> = []
+    const resultParts: Array<Prompt.ToolResultPart> = [];
     for (const call of calls) {
-      const id: string = call.id
-      const name: "browser_click" | "finish" = call.name   // literal union, narrowable
+      const id: string = call.id;
+      const name: "browser_click" | "finish" = call.name; // literal union, narrowable
       if (name === "browser_click") {
-        const params = yield* decodeClick(call.params)      // OUR validation, OUR execution
-        resultParts.push(Prompt.makePart("tool-result", {
-          id, name, isFailure: false,
-          result: { ok: params.selector.length > 0 },
-          providerExecuted: false
-        }))
+        const params = yield* decodeClick(call.params); // OUR validation, OUR execution
+        resultParts.push(
+          Prompt.makePart("tool-result", {
+            id,
+            name,
+            isFailure: false,
+            result: { ok: params.selector.length > 0 },
+            providerExecuted: false,
+          }),
+        );
       } else {
-        resultParts.push(Prompt.makePart("tool-result", {
-          id, name, isFailure: false, result: undefined, providerExecuted: false
-        }))
+        resultParts.push(
+          Prompt.makePart("tool-result", {
+            id,
+            name,
+            isFailure: false,
+            result: undefined,
+            providerExecuted: false,
+          }),
+        );
       }
     }
-    prompt = Prompt.concat(prompt, Prompt.fromMessages([
-      Prompt.makeMessage("tool", { content: resultParts })
-    ]))
+    prompt = Prompt.concat(
+      prompt,
+      Prompt.fromMessages([Prompt.makeMessage("tool", { content: resultParts })]),
+    );
   }
-  return "max steps"
-})
+  return "max steps";
+});
 
 export class Verdict extends Schema.Class<Verdict>("Verdict")({
   passed: Schema.Boolean,
   confidence: Schema.Finite,
-  reasons: Schema.Array(Schema.String)
+  reasons: Schema.Array(Schema.String),
 }) {}
 
-export const verify = Effect.fn("verify")(function*(transcript: string) {
+export const verify = Effect.fn("verify")(function* (transcript: string) {
   const res = yield* LanguageModel.generateObject({
     objectName: "verdict",
     schema: Verdict,
     prompt: Prompt.make([
       { role: "system", content: "You are a strict judge." },
-      { role: "user", content: transcript }
-    ])
-  })
-  return res.value                         // Verdict, already decoded
-})
+      { role: "user", content: transcript },
+    ]),
+  });
+  return res.value; // Verdict, already decoded
+});
 
-export const main: Effect.Effect<Verdict, AiError.AiError | Schema.SchemaError | Config.ConfigError> =
-  Effect.gen(function*() {
-    const text = yield* loop("log in")
-    return yield* verify(text)
-  }).pipe(Effect.provide(modelLayer("claude-sonnet-4-5")))
+export const main: Effect.Effect<
+  Verdict,
+  AiError.AiError | Schema.SchemaError | Config.ConfigError
+> = Effect.gen(function* () {
+  const text = yield* loop("log in");
+  return yield* verify(text);
+}).pipe(Effect.provide(modelLayer("claude-sonnet-4-5")));
 ```
 
 `E` of the whole program: `AiError` (from the model) `| Schema.SchemaError` (from our own
@@ -344,19 +399,19 @@ AnthropicLanguageModel.withConfigOverride(effect, overrides)   // dual, scoped C
 `model(id)` returns a `Model`, which **extends `Layer<LanguageModel | ProviderName | ModelName, never,
 AnthropicClient>`** — use it with `Effect.provide` / `Layer.provide` directly. It also exposes
 `.captureRequirements: Effect<Layer<…>, never, AnthropicClient>` to lift the client requirement out to the
-enclosing service. It is *not* an `Effect<LanguageModel>`.
+enclosing service. It is _not_ an `Effect<LanguageModel>`.
 
 Runtime model selection:
 
 ```ts
-export const withRuntimeModel = Effect.gen(function*() {
-  const id = yield* Config.String("AGENT_MODEL").pipe(Config.withDefault("claude-sonnet-4-5"))
+export const withRuntimeModel = Effect.gen(function* () {
+  const id = yield* Config.String("AGENT_MODEL").pipe(Config.withDefault("claude-sonnet-4-5"));
   const model = yield* AnthropicLanguageModel.model(id, { max_tokens: 8192, temperature: 0 })
-    .captureRequirements
-  const provider = yield* Effect.provide(Effect.service(Model.ProviderName), model)  // "anthropic"
-  const name = yield* Effect.provide(Effect.service(Model.ModelName), model)         // the id
-  return { model, provider, name }
-})
+    .captureRequirements;
+  const provider = yield* Effect.provide(Effect.service(Model.ProviderName), model); // "anthropic"
+  const name = yield* Effect.provide(Effect.service(Model.ModelName), model); // the id
+  return { model, provider, name };
+});
 ```
 
 `model` accepts `(string & {}) | AnthropicLanguageModel.Model` — arbitrary strings are allowed, so a config
@@ -385,7 +440,7 @@ web search …) — these are executed server-side and do **not** get handlers.
 `effect/src/unstable/http/HttpClient.ts` (`make`, ~L788-880): every non-scoped request runs under
 `Effect.uninterruptibleMask`; on `onFailure` it checks `Cause.hasInterrupts(cause)` and calls
 `controller.abort()`, where `controller.signal` is what `FetchHttpClient` passes to `fetch`. Successful
-responses are wrapped in an `InterruptibleResponse` that aborts the controller if the *body stream* is
+responses are wrapped in an `InterruptibleResponse` that aborts the controller if the _body stream_ is
 interrupted, and a `FinalizationRegistry` + 5s timer aborts responses whose body is never read.
 `AnthropicClient` is built on `HttpClient` for both `createMessage` and `createMessageStream`, so
 `Effect.timeout`, `Effect.race`, fiber interrupt and scope closure all propagate to the socket.
@@ -395,8 +450,8 @@ export const guarded: Effect.Effect<string, AiError.AiError, LanguageModel.Langu
   LanguageModel.generateText({ prompt: "hi" }).pipe(
     Effect.map((r) => r.text),
     Effect.timeout("30 seconds"),
-    Effect.catchTag("TimeoutError", () => Effect.succeed("timed out"))
-  )
+    Effect.catchTag("TimeoutError", () => Effect.succeed("timed out")),
+  );
 ```
 
 ## 9. Errors
@@ -443,7 +498,7 @@ loop we fully control, a plain `let prompt: Prompt.Prompt` (as in §5) is simple
   `AnyPartEncoded[]` / `Stream<AnyPartEncoded>` and the framework decodes + resolves. Used in
   `.recon/ai-runtime*.ts`; this is the cheapest way to unit-test a loop with no network.
 - Provider hook receives `LanguageModel.ProviderOptions`: `{ prompt, tools, responseFormat, toolChoice, span,
-  previousResponseId, incrementalPrompt }` — handy for asserting on what we sent in tests.
+previousResponseId, incrementalPrompt }` — handy for asserting on what we sent in tests.
 - `ExecutionPlan.make({ provide: Model, attempts }, …)` + `Effect.withExecutionPlan` gives multi-provider
   fallback; `plan.captureRequirements` lifts client requirements into a Layer. UNVERIFIED: not compiled here
   (single-provider setup), but it is the pattern in `ai-docs/src/71_ai/10_language-model.ts`.
@@ -457,7 +512,7 @@ Compiled: `.recon/critic-ai.ts`, `.recon/critic-scripted.ts`, `.recon/critic-too
 
 Re-verified from §3/§5: with `disableToolCallResolution: true` the effect's type is exactly
 `Effect<…, AiError.AiError, LanguageModel.LanguageModel>` — **no handler layer, no `Tool.Handler`
-in `R`** — and `call.params` is the *encoded* shape (`c.params.selector` is `string`).
+in `R`** — and `call.params` is the _encoded_ shape (`c.params.selector` is `string`).
 
 ## B1. `Tool.getJsonSchema(tool)` — how to get a tool definition for a custom `ModelProvider`
 
@@ -465,20 +520,20 @@ in `R`** — and `call.params` is the *encoded* shape (`c.params.selector` is `s
 Schema". You do **not** need to re-derive it — every `Tool` exposes its parts:
 
 ```ts
-import { Tool, Toolkit } from "effect/unstable/ai"
+import { Tool, Toolkit } from "effect/unstable/ai";
 
-tool.name              // literal union member, e.g. "browser_click"
-tool.description       // string | undefined
-tool.parametersSchema  // the Schema you passed (or Tool.EmptyParams)
-tool.successSchema     // Schema.Void by default
-tool.failureSchema     // Schema.Never by default
-Tool.getJsonSchema(tool)                    // JsonSchema.JsonSchema  <- feed this to a provider
-Tool.getJsonSchemaFromSchema(anySchema)     // same for a bare Schema (e.g. the verifier's response)
-Object.entries(kit.tools)                   // Toolkit -> Record<name, Tool.Any>
+tool.name; // literal union member, e.g. "browser_click"
+tool.description; // string | undefined
+tool.parametersSchema; // the Schema you passed (or Tool.EmptyParams)
+tool.successSchema; // Schema.Void by default
+tool.failureSchema; // Schema.Never by default
+Tool.getJsonSchema(tool); // JsonSchema.JsonSchema  <- feed this to a provider
+Tool.getJsonSchemaFromSchema(anySchema); // same for a bare Schema (e.g. the verifier's response)
+Object.entries(kit.tools); // Toolkit -> Record<name, Tool.Any>
 ```
 
 **GOTCHA 1 — `getJsonSchema` emits `additionalProperties: true`.** It calls
-`Schema.toJsonSchemaDocument` with *default* options (`onExcessProperty: "ignore"`). Executed:
+`Schema.toJsonSchemaDocument` with _default_ options (`onExcessProperty: "ignore"`). Executed:
 
 ```
 Tool.make("browser_click", { parameters: Schema.Struct({observationId, ref, intent?}) })
@@ -497,6 +552,7 @@ parameters: Schema.Struct({ criterionId: Schema.String.annotate({ identifier: "C
  -> {"type":"object","properties":{"criterionId":{"$ref":"#/$defs/CriterionId"}},…,
      "$defs":{"CriterionId":{"type":"string"}}}
 ```
+
 Not every provider follows `$defs` in a tool's `input_schema`. Pass
 `referencePolicy: () => undefined` to force everything inline, or simply do not put `identifier`
 annotations on tool-parameter field schemas.
@@ -513,7 +569,7 @@ need a tool shape Effect Schema cannot express — not needed for the eight MVP 
 
 Spec §3 requires "un adaptateur scripté déterministe pour tester le harness sans appel externe",
 and §13 requires scripted **verifier** responses too. The right seam is `LanguageModel.make` —
-then the *same* agent loop, the same `Toolkit`, the same `Prompt` plumbing run against it, and only
+then the _same_ agent loop, the same `Toolkit`, the same `Prompt` plumbing run against it, and only
 the layer changes. Exact signature from `src/unstable/ai/LanguageModel.ts:790`:
 
 ```ts
@@ -536,38 +592,45 @@ interface ProviderOptions {       // what your fake RECEIVES — assert on it in
 You return **encoded** parts; the framework decodes them and applies the toolkit typing.
 
 ```ts
-import { Effect, Layer, Ref, Stream } from "effect"
-import { LanguageModel, Response } from "effect/unstable/ai"
+import { Effect, Layer, Ref, Stream } from "effect";
+import { LanguageModel, Response } from "effect/unstable/ai";
 
-type Turn = ReadonlyArray<Response.PartEncoded>
+type Turn = ReadonlyArray<Response.PartEncoded>;
 
 const finishPart = (reason: "stop" | "tool-calls"): Response.PartEncoded => ({
   type: "finish",
   reason,
-  usage: { inputTokens: { total: 10 }, outputTokens: { total: 5 } }
-})
+  usage: { inputTokens: { total: 10 }, outputTokens: { total: 5 } },
+});
 
 export const scriptedLayer = (
   script: ReadonlyArray<Turn>,
-  seen?: Array<LanguageModel.ProviderOptions>        // optional spy for assertions
+  seen?: Array<LanguageModel.ProviderOptions>, // optional spy for assertions
 ): Layer.Layer<LanguageModel.LanguageModel> =>
-  Layer.effect(LanguageModel.LanguageModel, Effect.gen(function*() {
-    const cursor = yield* Ref.make(0)
-    return yield* LanguageModel.make({
-      generateText: (options) => Effect.gen(function*() {
-        seen?.push(options)
-        const i = yield* Ref.getAndUpdate(cursor, (n) => n + 1)
-        return [...(script[i] ?? [finishPart("stop")])]
-      }),
-      streamText: (options) => Stream.unwrap(Effect.gen(function*() {
-        seen?.push(options)
-        const i = yield* Ref.getAndUpdate(cursor, (n) => n + 1)
-        return Stream.fromIterable(
-          (script[i] ?? [finishPart("stop")]) as ReadonlyArray<Response.StreamPartEncoded>
-        )
-      }))
-    })
-  }))
+  Layer.effect(
+    LanguageModel.LanguageModel,
+    Effect.gen(function* () {
+      const cursor = yield* Ref.make(0);
+      return yield* LanguageModel.make({
+        generateText: (options) =>
+          Effect.gen(function* () {
+            seen?.push(options);
+            const i = yield* Ref.getAndUpdate(cursor, (n) => n + 1);
+            return [...(script[i] ?? [finishPart("stop")])];
+          }),
+        streamText: (options) =>
+          Stream.unwrap(
+            Effect.gen(function* () {
+              seen?.push(options);
+              const i = yield* Ref.getAndUpdate(cursor, (n) => n + 1);
+              return Stream.fromIterable(
+                (script[i] ?? [finishPart("stop")]) as ReadonlyArray<Response.StreamPartEncoded>,
+              );
+            }),
+          ),
+      });
+    }),
+  );
 ```
 
 Encoded part shapes you need (from `src/unstable/ai/Response.ts`):
@@ -591,13 +654,14 @@ roles in final prompt: user,assistant,tool,assistant,tool
 ```
 
 Notes:
-* `usage` flows straight through — a scripted run can therefore exercise the **token budget**
+
+- `usage` flows straight through — a scripted run can therefore exercise the **token budget**
   and `verifierReserveTokens` logic without any network.
-* For the **scripted verifier**, reuse the same layer and script a single
+- For the **scripted verifier**, reuse the same layer and script a single
   `{ type: "text", text: JSON.stringify(verdict) }` turn; `generateObject` sets
   `responseFormat: { type: "json", objectName, schema }`, which your fake can read from
   `options.responseFormat` to pick the right canned verdict. Mark the result
   `evaluator.kind === "scripted-model"` per design-contracts §8.
-* `Layer.fresh(scriptedLayer(...))` per attempt if you don't want the cursor shared.
-* `options.tools` / `options.prompt` are the assertion surface for "secrets never reach the model"
+- `Layer.fresh(scriptedLayer(...))` per attempt if you don't want the cursor shared.
+- `options.tools` / `options.prompt` are the assertion surface for "secrets never reach the model"
   and "the contract text is never re-sent from the page".

@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Schema } from "effect";
 
 /**
  * The evaluator's structured answer. Optional information is modelled as explicitly nullable rather
@@ -23,26 +23,26 @@ export const CriterionVerdict = Schema.Struct({
   /** What the runner could capture next. It never changes the expectation. */
   evidenceHint: Schema.NullOr(Schema.String),
   /** Which branch of the absence rule was taken, when the criterion is about something missing. */
-  absence: Schema.NullOr(Schema.Literals(["uncertain-navigation", "established-at-checkpoint"]))
-}).annotate({ identifier: "CriterionVerdict" })
+  absence: Schema.NullOr(Schema.Literals(["uncertain-navigation", "established-at-checkpoint"])),
+}).annotate({ identifier: "CriterionVerdict" });
 
 export type CriterionVerdictShape = {
-  readonly criterionId: string
-  readonly status: "passed" | "failed" | "inconclusive"
-  readonly expected: string
-  readonly observed: string
-  readonly evidence: ReadonlyArray<string>
-  readonly limitations: string | null
-  readonly missingEvidence: ReadonlyArray<string>
-  readonly evidenceHint: string | null
-  readonly absence: "uncertain-navigation" | "established-at-checkpoint" | null
-}
+  readonly criterionId: string;
+  readonly status: "passed" | "failed" | "inconclusive";
+  readonly expected: string;
+  readonly observed: string;
+  readonly evidence: ReadonlyArray<string>;
+  readonly limitations: string | null;
+  readonly missingEvidence: ReadonlyArray<string>;
+  readonly evidenceHint: string | null;
+  readonly absence: "uncertain-navigation" | "established-at-checkpoint" | null;
+};
 
 /**
  * A machine-readable marker placed in the verifier prompt. The scripted double reads it to pick its
  * canned answer; a real model simply echoes the id back in `criterionId`.
  */
-export const criterionMarker = (criterionId: string): string => `criterion_id: ${criterionId}`
+export const criterionMarker = (criterionId: string): string => `criterion_id: ${criterionId}`;
 
 export const readCriterionMarker = (text: string): string | undefined =>
-  /criterion_id:\s*(c[1-9][0-9]*)/.exec(text)?.[1]
+  /criterion_id:\s*(c[1-9][0-9]*)/.exec(text)?.[1];

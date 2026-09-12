@@ -9,14 +9,14 @@ difmp in a project, write scenarios, choose a provider, read results, and the fu
 reference. This file covers what a packager, a CI author or a contributor needs and the root README
 deliberately does not carry:
 
-| | |
-| --- | --- |
+|                                                                     |                                                                  |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | [The scripted provider in detail](#the-scripted-provider-in-detail) | the script factory contract and the built-in generic walkthrough |
-| [The dashboard's HTTP surface](#the-dashboards-http-surface) | endpoints, the two SSE streams, the resume contract |
-| [Build and packaging](#build-and-packaging) | what is bundled, what stays external, and why |
-| [The consumer matrix](#the-consumer-matrix) | npm / pnpm / Yarn × ESM / CJS, verified |
-| [External system dependencies](#external-system-dependencies) | what has to exist on the machine |
-| [CI](#ci) | what `.github/workflows/ci.yml` actually runs |
+| [The dashboard's HTTP surface](#the-dashboards-http-surface)        | endpoints, the two SSE streams, the resume contract              |
+| [Build and packaging](#build-and-packaging)                         | what is bundled, what stays external, and why                    |
+| [The consumer matrix](#the-consumer-matrix)                         | npm / pnpm / Yarn × ESM / CJS, verified                          |
+| [External system dependencies](#external-system-dependencies)       | what has to exist on the machine                                 |
+| [CI](#ci)                                                           | what `.github/workflows/ci.yml` actually runs                    |
 
 ```text
 difmp [file-or-dir-or-glob...]          alias of `difmp run`
@@ -36,7 +36,7 @@ reference](../../README.md#cli-reference).
 **`list` and `validate`** start neither a model nor a browser. `validate` checks the frontmatter, the
 input declarations and precedence, every `{{ … }}` reference, and the fixture / check names against
 the project registry. It **accepts** unresolved `{{ fixture.* }}`: no setup has run, so those values
-cannot exist yet — `run` rejects an unresolved fixture reference *after* setup. Both accept `--json`.
+cannot exist yet — `run` rejects an unresolved fixture reference _after_ setup. Both accept `--json`.
 
 **`report <run-directory>`** rebuilds `report.html`, `result.json` and `junit.xml` from the persisted
 run directory alone: no model call, no browser, no replay, no configuration re-resolution.
@@ -48,21 +48,21 @@ re-presented as a model validation.
 report path. `report.html`, `result.json` and `junit.xml` are written into the run directory either
 way — that is the layout `report` replays from.
 
-* `console` — ASCII status labels, fixed width, no colour, no animation: identical on a TTY and in a
+- `console` — ASCII status labels, fixed width, no colour, no animation: identical on a TTY and in a
   CI log.
-* `json` — **one** JSON document on stdout and nothing else. Every diagnostic, including the resolved
+- `json` — **one** JSON document on stdout and nothing else. Every diagnostic, including the resolved
   configuration, moves to stderr.
-* `junit` — announces `junit.xml` in the console output.
+- `junit` — announces `junit.xml` in the console output.
 
 **JUnit mapping.** Product criterion failures become `<failure>`; technical errors, indeterminate
 results and cancellations become `<error>`, with the real status preserved in the message and in
 `result.json`. An indeterminate result is never turned into a green `skipped`.
 
-**Cancellation.** SIGINT produces exit `130` *after* the finalizers have run: the browser context is
+**Cancellation.** SIGINT produces exit `130` _after_ the finalizers have run: the browser context is
 closed, the trace is settled and the fixture cleanups have executed. A cancellation from the
 dashboard is the same thing over HTTP, and the `202` from `POST /api/cancel` is only sent once that
 teardown has completed — no late action or request can land afterwards. The one asymmetry: SIGINT
-interrupts the CLI before the *file reporters* run, so a Ctrl-C'd run directory has `result.json` but
+interrupts the CLI before the _file reporters_ run, so a Ctrl-C'd run directory has `result.json` but
 no `junit.xml` or `report.html` until `difmp report <dir>` rebuilds them. The dashboard's Cancel
 button writes them in the first place.
 
@@ -93,8 +93,8 @@ name, never by module path:
 export default defineConfig({
   provider: "scripted",
   scripts: { healthy: myScriptFactory },
-  providerOptions: { script: "healthy" }
-})
+  providerOptions: { script: "healthy" },
+});
 ```
 
 An entry is a **factory**, not a finished script. It is called with `ScriptFactoryContext` — `runId`,
@@ -125,16 +125,16 @@ back `inconclusive` with exit `1`.
 and CI runs with no UI server at all. Loopback only by default; `--ui-host` accepts something else and
 says loudly that it is no longer loopback.
 
-| endpoint | |
-| --- | --- |
-| `GET /` and every other path | the dashboard assets |
-| `GET /api/ui/events` | SSE of **raw `HarnessEvent`s** for the run being followed — what `apps/ui` consumes |
-| `GET /api/events` | SSE of the CLI's own stream: scenario lifecycle plus every harness event, wrapped |
-| `POST /api/cancel` | `{"reason": "…"}` → `202`, cancels the run cleanly |
-| `GET /api/contract` | the frozen `contract.json` of the run being followed (`404` until it is frozen) |
-| `GET /api/artifacts/<run-relative path>` | evidence files, as recorded in `artifactAvailable.path` |
-| `GET /api/state` | a snapshot the dashboard can render before any event arrives |
-| `GET /api/health` | `204` |
+| endpoint                                 |                                                                                     |
+| ---------------------------------------- | ----------------------------------------------------------------------------------- |
+| `GET /` and every other path             | the dashboard assets                                                                |
+| `GET /api/ui/events`                     | SSE of **raw `HarnessEvent`s** for the run being followed — what `apps/ui` consumes |
+| `GET /api/events`                        | SSE of the CLI's own stream: scenario lifecycle plus every harness event, wrapped   |
+| `POST /api/cancel`                       | `{"reason": "…"}` → `202`, cancels the run cleanly                                  |
+| `GET /api/contract`                      | the frozen `contract.json` of the run being followed (`404` until it is frozen)     |
+| `GET /api/artifacts/<run-relative path>` | evidence files, as recorded in `artifactAvailable.path`                             |
+| `GET /api/state`                         | a snapshot the dashboard can render before any event arrives                        |
+| `GET /api/health`                        | `204`                                                                               |
 
 The served `index.html` gets a
 `<script id="difmp-ui-runtime">globalThis.__DIFMP_UI__ = { … }</script>` injected before the bundle —
@@ -151,10 +151,10 @@ what a multi-scenario invocation needs. Both honour `Last-Event-ID` and `?lastEv
 (the browser's `EventSource` does this by itself) and the server replays the journal from there. A
 reconnection neither loses nor duplicates a displayed event:
 
-* the subscriber queue is registered **before** the replay snapshot is taken, so nothing published in
+- the subscriber queue is registered **before** the replay snapshot is taken, so nothing published in
   between is missed;
-* the overlap between the snapshot and the live queue is dropped by sequence number, not duplicated;
-* each client's queue is **bounded and dropping**, so a slow reader can never make the runner wait —
+- the overlap between the snapshot and the live queue is dropped by sequence number, not duplicated;
+- each client's queue is **bounded and dropping**, so a slow reader can never make the runner wait —
   and when a message arrives out of sequence the server fills the gap from the journal before
   emitting it, so the client catches up without reconnecting at all.
 
@@ -164,18 +164,18 @@ self-contained `assets/dashboard.html` otherwise. Both are resolved from the **i
 CLI also works under Yarn PnP, where the resolved path lives inside a zip.
 
 > **Known limitation.** The dashboard journal is fed from the run store's live fan-out, which is a
-> *dropping* pub-sub so the runner can never be blocked by a subscriber. If the fan-out ever dropped
+> _dropping_ pub-sub so the runner can never be blocked by a subscriber. If the fan-out ever dropped
 > (the recorder would have to fall more than 1024 events behind, which only pushes into an array),
 > those harness events would be missing from the dashboard journal. The SSE sequence stays contiguous
 > either way, and `events.jsonl` on disk is always complete.
 
 ## Build and packaging
 
-| script | |
-| --- | --- |
-| `pnpm build` | `tsc -b` — the workspace build, used by project references |
+| script              |                                                             |
+| ------------------- | ----------------------------------------------------------- |
+| `pnpm build`        | `tsc -b` — the workspace build, used by project references  |
 | `pnpm build:bundle` | `tsdown` — the shippable artifact; also what `prepack` runs |
-| `pnpm test` | `vitest run --config vitest.config.ts` |
+| `pnpm test`         | `vitest run --config vitest.config.ts`                      |
 
 `build:bundle` emits ESM with `.js` / `.d.ts` extensions, keeps the shebang, and sets the executable
 bit. `effect`, `@effect/*`, `playwright`, `tsx`, `yaml` and `tinyglobby` stay **external** — bundling
@@ -192,7 +192,7 @@ exactly `effect`, `effect/unstable/{ai,cli,http,encoding}`,
 loader.
 
 **The `@effect/platform-node` imports are deep subpaths, never the barrel.** The barrel re-exports
-`NodeRedis`, which eagerly imports `redis` — a *non-optional* peer dependency of that package. npm and
+`NodeRedis`, which eagerly imports `redis` — a _non-optional_ peer dependency of that package. npm and
 pnpm auto-install peers so the barrel appears to work there; Yarn does not, and an installed CLI died
 with `ERR_MODULE_NOT_FOUND: Cannot find package 'redis'`.
 
@@ -219,10 +219,10 @@ rebuilding it, the dashboard served from the installed package, and that nothing
 
 Verified on this machine, Node 24.19.0, 24/24 in every cell:
 
-| consumer | npm 11.17.0 | pnpm 10.29.3 | Yarn 4.13.0 (corepack) | Yarn 1.22.22 |
-| --- | --- | --- | --- | --- |
-| `"type": "module"`, erasable config | 24/24 | 24/24 | 24/24 | 24/24 |
-| `"type": "commonjs"`, config with an `enum` | 24/24 | 24/24 | 24/24 | 24/24 |
+| consumer                                    | npm 11.17.0 | pnpm 10.29.3 | Yarn 4.13.0 (corepack) | Yarn 1.22.22 |
+| ------------------------------------------- | ----------- | ------------ | ---------------------- | ------------ |
+| `"type": "module"`, erasable config         | 24/24       | 24/24        | 24/24                  | 24/24        |
+| `"type": "commonjs"`, config with an `enum` | 24/24       | 24/24        | 24/24                  | 24/24        |
 
 The CommonJS row matters twice over: a CJS-typed package cannot load an `import` statement and Node
 cannot strip an `enum`, so those cells pass only through the bundled `tsx` fallback. (They also pay
@@ -247,14 +247,14 @@ The package is still not published to any registry; consumers install the tarbal
 
 ## External system dependencies
 
-* **Chromium at the revision pinned by `playwright@1.63.0`**, plus its Linux shared libraries:
+- **Chromium at the revision pinned by `playwright@1.63.0`**, plus its Linux shared libraries:
   `pnpm exec playwright install --with-deps chromium` (apt, so root). Consumers install `playwright`
   from the tarball's own dependencies and find the browsers in the shared `~/.cache/ms-playwright`;
   they never download one.
-* **Corepack**, only for the Yarn cells of the matrix.
-* **`xdg-utils`** if you want `xdg-open report.html` to work. It is *not* present on a bare Linux box;
+- **Corepack**, only for the Yarn cells of the matrix.
+- **`xdg-utils`** if you want `xdg-open report.html` to work. It is _not_ present on a bare Linux box;
   `report.html` is a single offline file, so pointing a browser at the absolute path is equivalent.
-* Nothing else. The scripted adapter makes no network call, and the demo app binds an ephemeral
+- Nothing else. The scripted adapter makes no network call, and the demo app binds an ephemeral
   loopback port.
 
 ## CI

@@ -1,62 +1,69 @@
-import type { BrowserSession, CaptureOutcome, OpenContextOptions, StorageStateLike } from "@difmp/core"
-import { BrowserDriver, BrowserError } from "@difmp/core"
-import { Effect, Layer } from "effect"
-import type { Scope } from "effect/Scope"
-import { mkdir } from "node:fs/promises"
-import { join } from "node:path"
-import type { Browser, BrowserContext } from "playwright"
-import { chromium } from "playwright"
-import { fromCause } from "./errors.js"
-import type { ContextState, SessionConfig } from "./session.js"
-import { makeSession } from "./session.js"
+import type {
+  BrowserSession,
+  CaptureOutcome,
+  OpenContextOptions,
+  StorageStateLike,
+} from "@difmp/core";
+import { BrowserDriver, BrowserError } from "@difmp/core";
+import { Effect, Layer } from "effect";
+import type { Scope } from "effect/Scope";
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import type { Browser, BrowserContext } from "playwright";
+import { chromium } from "playwright";
+import { fromCause } from "./errors.js";
+import type { ContextState, SessionConfig } from "./session.js";
+import { makeSession } from "./session.js";
 
 export interface PlaywrightDriverOptions {
-  readonly headless?: boolean
-  readonly launchTimeoutMs?: number
-  readonly args?: ReadonlyArray<string>
-  readonly executablePath?: string
-  readonly viewport?: { readonly width: number; readonly height: number }
+  readonly headless?: boolean;
+  readonly launchTimeoutMs?: number;
+  readonly args?: ReadonlyArray<string>;
+  readonly executablePath?: string;
+  readonly viewport?: { readonly width: number; readonly height: number };
   /** Cap on console/network records kept in memory per attempt. */
-  readonly maxCaptureRecords?: number
+  readonly maxCaptureRecords?: number;
   /**
    * Optional second application of core's navigation policy inside the driver. The runner already
    * calls `checkNavigationOrigin` before it ever reaches us; pass this when the driver is driven
    * directly (probes, tests) and must not be talked into leaving the allow-list.
    */
-  readonly allowedOrigins?: ReadonlyArray<string>
+  readonly allowedOrigins?: ReadonlyArray<string>;
 }
 
-const defaultViewport = { width: 1280, height: 720 } as const
-const defaultArgs = ["--disable-dev-shm-usage", "--disable-gpu"] as const
+const defaultViewport = { width: 1280, height: 720 } as const;
+const defaultArgs = ["--disable-dev-shm-usage", "--disable-gpu"] as const;
 
 /** Playwright wants a mutable storage state; the fixture hands us a readonly one. */
 const toStorageState = (state: StorageStateLike) => ({
   cookies: (state.cookies ?? []).map((cookie) => ({ ...cookie })),
   origins: (state.origins ?? []).map((origin) => ({
     origin: origin.origin,
-    localStorage: (origin.localStorage ?? []).map((entry) => ({ ...entry }))
-  }))
-})
+    localStorage: (origin.localStorage ?? []).map((entry) => ({ ...entry })),
+  })),
+});
 
-export const make = (
-  driverOptions: PlaywrightDriverOptions = {}
-): BrowserDriver["Service"] => {
-  const viewport = driverOptions.viewport ?? defaultViewport
+export const make = (driverOptions: PlaywrightDriverOptions = {}): BrowserDriver["Service"] => {
+  const viewport = driverOptions.viewport ?? defaultViewport;
   const sessionConfig: SessionConfig = {
     viewport,
     maxCaptureRecords: driverOptions.maxCaptureRecords ?? 5_000,
-    ...(driverOptions.allowedOrigins === undefined ? {} : { allowedOrigins: driverOptions.allowedOrigins })
-  }
+    ...(driverOptions.allowedOrigins === undefined
+      ? {}
+      : { allowedOrigins: driverOptions.allowedOrigins }),
+  };
 
-  const openContext = (options: OpenContextOptions): Effect.Effect<BrowserSession, BrowserError, Scope> =>
-    Effect.gen(function*() {
+  const openContext = (
+    options: OpenContextOptions,
+  ): Effect.Effect<BrowserSession, BrowserError, Scope> =>
+    Effect.gen(function* () {
       yield* Effect.tryPromise({
         try: async () => {
-          await mkdir(options.screenshotsDir, { recursive: true })
-          await mkdir(options.attemptDir, { recursive: true })
+          await mkdir(options.screenshotsDir, { recursive: true });
+          await mkdir(options.attemptDir, { recursive: true });
         },
-        catch: (cause) => fromCause("open-context", cause, "capture")
-      })
+        catch: (cause) => fromCause("open-context", cause, "capture"),
+      });
 
       // Finalizers run LIFO, so the context is always closed before the browser — the order the
       // video muxer requires.
@@ -80,14 +87,14 @@ export const make = (
               ...(driverOptions.executablePath === undefined
                 ? {}
                 : { executablePath: driverOptions.executablePath }),
-              timeout: driverOptions.launchTimeoutMs ?? 30_000
+              timeout: driverOptions.launchTimeoutMs ?? 30_000,
             }),
-          catch: (cause) => fromCause("launch", cause, "launch")
+          catch: (cause) => fromCause("launch", cause, "launch"),
         }),
-        (instance) => Effect.promise(() => instance.close().catch(() => undefined))
-      )
+        (instance) => Effect.promise(() => instance.close().catch(() => undefined)),
+      );
 
-      const state: ContextState = { closed: false, contextClosed: false }
+      const state: ContextState = { closed: false, contextClosed: false };
       const context: BrowserContext = yield* Effect.acquireRelease(
         Effect.tryPromise({
           try: () =>
@@ -99,12 +106,19 @@ export const make = (
               strictSelectors: true,
               timezoneId: "UTC",
               locale: "en-US",
-              ...(options.storageState === undefined ? {} : { storageState: toStorageState(options.storageState) }),
+              ...(options.storageState === undefined
+                ? {}
+                : { storageState: toStorageState(options.storageState) }),
               ...(options.capture.video === "on"
-                ? { recordVideo: { dir: join(options.attemptDir, ".video"), size: { width: 1280, height: 720 } } }
-                : {})
+                ? {
+                    recordVideo: {
+                      dir: join(options.attemptDir, ".video"),
+                      size: { width: 1280, height: 720 },
+                    },
+                  }
+                : {}),
             }),
-          catch: (cause) => fromCause("open-context", cause, "launch")
+          catch: (cause) => fromCause("open-context", cause, "launch"),
         }),
         (instance) =>
           Effect.promise(async () => {
@@ -113,18 +127,18 @@ export const make = (
             // set once `context.close()` has actually completed: a `finalize` that was cut short
             // after flipping `closed` still needs us to close the context here, or the video is
             // never muxed.
-            state.closed = true
+            state.closed = true;
             if (!state.contextClosed) {
-              await instance.close().catch(() => undefined)
-              state.contextClosed = true
+              await instance.close().catch(() => undefined);
+              state.contextClosed = true;
             }
-          })
-      )
+          }),
+      );
 
       // In library mode there is NO default action timeout: without these two calls a missing
       // element wedges the agent loop forever.
-      context.setDefaultTimeout(options.operationTimeoutMs)
-      context.setDefaultNavigationTimeout(options.operationTimeoutMs)
+      context.setDefaultTimeout(options.operationTimeoutMs);
+      context.setDefaultNavigationTimeout(options.operationTimeoutMs);
 
       if (options.capture.trace === "on") {
         yield* Effect.tryPromise({
@@ -136,18 +150,18 @@ export const make = (
               // Verified in .recon/bp-t2.mjs: with aria:true, aria-ref=e7 resolves to 0 elements.
               snapshots: { dom: true, screen: true },
               sources: false,
-              title: options.attemptId
+              title: options.attemptId,
             }),
-          catch: (cause) => fromCause("trace-start", cause, "capture")
-        })
+          catch: (cause) => fromCause("trace-start", cause, "capture"),
+        });
       }
 
       const page = yield* Effect.tryPromise({
         try: () => context.newPage(),
-        catch: (cause) => fromCause("open-context", cause, "launch")
-      })
+        catch: (cause) => fromCause("open-context", cause, "launch"),
+      });
 
-      const session = yield* makeSession(context, page, options, sessionConfig, state)
+      const session = yield* makeSession(context, page, options, sessionConfig, state);
 
       // A cancelled attempt still has to settle its evidence. This finalizer is registered last, so
       // it runs FIRST: trace stopped, logs written, context closed (which is what finalises the
@@ -157,16 +171,16 @@ export const make = (
         session.finalize({ retainTrace: true }).pipe(
           Effect.timeoutOrElse({
             duration: 15_000,
-            orElse: () => Effect.succeed([] as ReadonlyArray<CaptureOutcome>)
+            orElse: () => Effect.succeed([] as ReadonlyArray<CaptureOutcome>),
           }),
-          Effect.asVoid
-        )
-      )
-      return session
-    })
+          Effect.asVoid,
+        ),
+      );
+      return session;
+    });
 
-  return { id: "playwright-chromium", openContext }
-}
+  return { id: "playwright-chromium", openContext };
+};
 
 export const layer = (options: PlaywrightDriverOptions = {}): Layer.Layer<BrowserDriver> =>
-  Layer.succeed(BrowserDriver, make(options))
+  Layer.succeed(BrowserDriver, make(options));

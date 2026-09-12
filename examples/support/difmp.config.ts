@@ -1,7 +1,7 @@
-import { defineConfig } from "@difmp/core"
-import { projectUniqueInStorage } from "./checks/project-unique-in-storage.js"
-import { authenticatedWorkspace } from "./fixtures/authenticated-workspace.js"
-import { fixtureAppScriptRegistry } from "./scripts/registry.js"
+import { defineConfig } from "@difmp/core";
+import { projectUniqueInStorage } from "./checks/project-unique-in-storage.js";
+import { authenticatedWorkspace } from "./fixtures/authenticated-workspace.js";
+import { fixtureAppScriptRegistry } from "./scripts/registry.js";
 
 /**
  * Demo configuration for the example scenarios.
@@ -10,7 +10,7 @@ import { fixtureAppScriptRegistry } from "./scripts/registry.js"
  * (`--port 0`); a test harness that started it programmatically exports the URL it actually got.
  * With `node dist/main.js --port 3000 --seed` the default below is already correct.
  */
-const baseUrl = process.env["DIFMP_BASE_URL"] ?? "http://127.0.0.1:3000"
+const baseUrl = process.env["DIFMP_BASE_URL"] ?? "http://127.0.0.1:3000";
 
 export default defineConfig({
   // Discovery. `include`/`exclude` are resolved against the DIRECTORY OF THIS FILE, not the
@@ -30,15 +30,15 @@ export default defineConfig({
   // Project-level input defaults (lowest priority: config < spec < --inputs-file < --input).
   // `{{ run.id }}` makes the name unique per run, so two runs never collide in one workspace.
   inputs: {
-    projectName: "Project {{ run.id }}"
+    projectName: "Project {{ run.id }}",
   },
 
   // Registries. A spec references these NAMES; it can never name a module path.
   fixtures: {
-    "authenticated-workspace": authenticatedWorkspace
+    "authenticated-workspace": authenticatedWorkspace,
   },
   checks: {
-    "project-unique-in-storage": projectUniqueInStorage
+    "project-unique-in-storage": projectUniqueInStorage,
   },
   // Deterministic browsing scripts for `provider: "scripted"`, selected BY NAME below. Each entry
   // is a factory: the real project name only exists once the run id is minted.
@@ -57,7 +57,7 @@ export default defineConfig({
     // budget-exhausted, invented-evidence, needs-evidence).
     script: process.env["DIFMP_SCRIPT"] ?? "auto",
     maxTokens: 2048,
-    temperature: 0
+    temperature: 0,
   },
 
   // INDICATIVE journey length. Crossing it warns once and changes nothing else: no tool is
@@ -73,16 +73,16 @@ export default defineConfig({
     // A pool for the final verification: withheld from the browsing loop, and guaranteed to the
     // verifier even if a browsing turn overshot the ceiling. See design-contracts §7.
     verifierReserveTokens: 20_000,
-    fixtureCleanupTimeoutMs: 15_000
+    fixtureCleanupTimeoutMs: 15_000,
   },
 
   capture: {
     trace: "on",
     video: "off",
     screenshots: "checkpoints",
-    retainTraceOn: "all"
+    retainTraceOn: "all",
   },
 
   outputDir: "runs",
-  reporters: ["console", "json", "junit", "html"]
-})
+  reporters: ["console", "json", "junit", "html"],
+});
