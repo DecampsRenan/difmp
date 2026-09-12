@@ -52,9 +52,13 @@
     // artifact writes are ordered on purpose, and `Promise.all` would be a behaviour change.
     "no-await-in-loop": "off",
 
-    // A stylesheet import has no binding to assign; that is what a side-effect import is for.
-    // The rule ships an `allow` list for exactly this.
-    "import/no-unassigned-import": ["error", { "allow": ["**/*.css"] }]
+    // A stylesheet import has no binding to assign, and neither does jest-dom's Vitest entry — it
+    // exists only to register the DOM matchers on `expect`. That is what a side-effect import is
+    // for, and the rule ships an `allow` list for exactly this.
+    "import/no-unassigned-import": [
+      "error",
+      { "allow": ["**/*.css", "@testing-library/jest-dom/vitest"] }
+    ]
 
     // Everything else this config does not name inherits its category severity above, i.e. error.
     // The tree is at zero errors AND zero warnings, so there is no warning tier to get used to

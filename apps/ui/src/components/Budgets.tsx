@@ -1,6 +1,6 @@
 import type { UiRuntimeConfig } from "../runtime/config.js";
 import type { RunModel } from "../state/model.js";
-import { Empty, Gauge, Panel, durationOf } from "./ui.js";
+import { Empty, Gauge, Panel, countOf, durationOf } from "./ui.js";
 
 const budgetLabel: Record<string, string> = {
   attemptTimeout: "attempt timeout",
@@ -60,9 +60,7 @@ export const BlockingBudgets = (props: {
             limit={budgets.maxTokens}
             exhausted={exhausted("maxTokens")}
             testId="budget-maxTokens"
-            footnote={`of which ${props.model.model.verifierTokens.toLocaleString("en-US")} verifier · reserve ${budgets.verifierReserveTokens.toLocaleString(
-              "en-US",
-            )}`}
+            footnote={`of which ${countOf(props.model.model.verifierTokens)} verifier · reserve ${countOf(budgets.verifierReserveTokens)}`}
           />
           <Gauge
             kind="blocking"
@@ -95,7 +93,7 @@ export const BlockingBudgets = (props: {
           {breaches.map((breach) => (
             <li key={`${breach.budget}-${breach.used}`}>
               <strong>{budgetLabel[breach.budget] ?? breach.budget}</strong> exhausted —{" "}
-              {breach.used} / {breach.limit}
+              {countOf(breach.used)} / {countOf(breach.limit)}
               {breach.detail === undefined ? null : ` — ${breach.detail}`}
             </li>
           ))}
@@ -106,15 +104,25 @@ export const BlockingBudgets = (props: {
 };
 
 /**
+ * `??` falls through on undefined only, and `Infinity`/`NaN` are perfectly good numbers to it.
+ * `maxActions` reaches the view from the frozen contract (`readContract` accepts any `number`) and
+ * from `configResolved`, neither of which checks finiteness — so a non-finite threshold would
+ * render as "0 / ∞ suggested". An unusable threshold is not a threshold: fall through to the
+ * branch that says the threshold is unknown.
+ */
+const threshold = (n: number | undefined): number | undefined =>
+  n !== undefined && Number.isFinite(n) ? n : undefined;
+
+/**
  * Deliberately a SEPARATE panel from the blocking budgets. `maxActions` never refuses an action and
  * never degrades a status (design-contracts §7); merging it into the budget gauges would read as a
  * limit, which it is not.
  */
 export const ActionGuidance = (props: { readonly model: RunModel }) => {
   const guidance =
-    props.model.contractMaxActions ??
-    props.model.guidance?.guidance ??
-    props.model.config?.maxActions;
+    threshold(props.model.contractMaxActions) ??
+    threshold(props.model.guidance?.guidance) ??
+    threshold(props.model.config?.maxActions);
   const used = props.model.actionCount;
   const exceededEvent = props.model.guidance;
 

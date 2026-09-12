@@ -27,6 +27,19 @@ export const Badge = (props: {
   </span>
 );
 
+/** What every formatter below prints instead of a number it cannot honestly render. */
+const UNKNOWN = "—";
+
+/**
+ * Budget limits, thresholds and token counts are copied straight from `configResolved`,
+ * `modelCallFinished` and the frozen contract. Those payloads are type-checked as `number`, and
+ * `Infinity` and `NaN` are numbers: nothing upstream rejects them. `toLocaleString` renders
+ * `Infinity` as "∞", which reads like a real, enormous budget rather than like missing data —
+ * so an unrenderable number is admitted as unknown instead.
+ */
+export const countOf = (n: number): string =>
+  Number.isFinite(n) ? n.toLocaleString("en-US") : UNKNOWN;
+
 /**
  * A consumed/limit gauge. `kind` drives the visual language and is NOT cosmetic: `blocking` bars are
  * the ones that can end a run, `indicative` bars never are (design-contracts §7).
@@ -43,9 +56,13 @@ export const Gauge = (props: {
   readonly format?: (n: number) => string;
 }) => {
   const ratio = props.limit > 0 ? Math.min(props.used / props.limit, 1) : 0;
-  const remaining = Math.max(props.limit - props.used, 0);
+  // An unrenderable limit leaves the remainder unknowable too: `Math.max` would otherwise turn
+  // `-Infinity - used` into a confident "0 left".
+  const remaining = Number.isFinite(props.limit)
+    ? Math.max(props.limit - props.used, 0)
+    : props.limit;
   const over = props.used > props.limit;
-  const fmt = props.format ?? ((n: number) => n.toLocaleString("en-US"));
+  const fmt = props.format ?? countOf;
   return (
     <div className={`gauge gauge-${props.kind}`} data-testid={props.testId}>
       <div className="gauge-line">
@@ -86,5 +103,7 @@ export const timeOf = (iso: string): string => {
   );
 };
 
-export const durationOf = (ms: number): string =>
-  ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
+export const durationOf = (ms: number): string => {
+  if (!Number.isFinite(ms)) return UNKNOWN;
+  return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
+};

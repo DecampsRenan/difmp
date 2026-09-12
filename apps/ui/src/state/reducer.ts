@@ -463,8 +463,12 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
 
     case "runFinished": {
       // Any criterion still pending when the run ends is unresolved, not silently passed.
+      // A NEW object, never `Object.assign(c, …)`: that mutates the criterion the PREVIOUS model
+      // still holds, so a retained earlier state would silently rewrite itself and a row memoized
+      // on its object identity would never re-render. Criteria that need no change are carried over
+      // by reference, so structural sharing is kept.
       const criteria = base.criteria.map((c) =>
-        c.status === "pending" ? Object.assign(c, { status: "inconclusive" as const }) : c,
+        c.status === "pending" ? { ...c, status: "inconclusive" as const } : c,
       );
       return {
         ...row({
