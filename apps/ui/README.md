@@ -11,6 +11,41 @@ pnpm --filter @difmp/ui build     # or: pnpm --filter @difmp/ui dev
 It is an **option of the runner** (`difmp run --ui`), never a requirement: a CI run starts no
 server at all, and a run progresses identically with nothing attached.
 
+## Tests
+
+```sh
+pnpm run test:ui                                   # or: pnpm run test, which includes it
+npx vitest run --config apps/ui/vitest.config.ts   # the same thing, spelled out
+```
+
+A **component** suite, under jsdom, in three layers:
+
+- **Per component**, rendered with Testing Library and driven through `user-event`, fed run models
+  built by `test/factories.ts`: the header with its connection state and Cancel flow, the run
+  context, the criteria and their method, the blocking budgets and the `unavailable` cost, the
+  timeline and its filters, the artifact list, the latest screenshot, and the shared primitives
+  (panel, badge, gauge, time and duration formatting). Each one is checked in every state it can
+  actually reach — including the ones before any event has arrived, where the rule is that a user
+  sees a dash, never `undefined`.
+- **The whole dashboard** (`test/app.test.tsx`), driven through its real data path —
+  `App` → `useRunStream` → `runReducer` → the panels — against a fake `EventSource` and a stubbed
+  `fetch`. This is where the stream's contracts are pinned: `seq > lastSeq` dedupe across an
+  inclusive resume, malformed frames counted and never rendered, the backoff takeover reconnecting
+  with the cursor, cancellation, and the degradation path when `contractUrl` is unavailable.
+- **The tolerant readers** (`test/runtime.test.ts`): `readRuntimeConfig`, `readContract`, and the
+  URL guards. `artifactHref` gets its whole rejection surface — schemes, traversal, absolute and
+  protocol-relative paths — because every URL this app renders comes from a journal written from
+  model- and page-influenced data.
+
+The suite is mutation-checked: breaking the dedupe guard, the URL scheme gate, the cost fallback,
+the gauge clamp, the pending→`inconclusive` rule or the malformed-frame counter each fails a test
+that names the rule it broke.
+
+It **launches no browser**. Nothing here proves the bundle loads, the SSE stream arrives or a real
+run renders; that is the CLI suite's job (`apps/cli/test`), which drives a real Chromium against the
+CLI actually serving this app. Two suites, two questions: this one is fast and answers "does the
+component behave", the other is slow and answers "does it work in a browser, end to end".
+
 ## How it finds the CLI
 
 Every URL is **relative to the page** (`base: "./"`), so the CLI may mount the bundle at any path.

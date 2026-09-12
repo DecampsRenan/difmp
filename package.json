@@ -10,6 +10,7 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "test": "vitest run",
+    "test:ui": "vitest run --config apps/ui/vitest.config.ts",
     "test:packaging": "bash apps/cli/scripts/consumer-smoke/run.sh",
     "test:examples": "bash apps/cli/scripts/ci/run-examples.sh"
   },
@@ -20,10 +21,15 @@
   },
   "devDependencies": {
     "@effect/vitest": "4.0.0-rc.113",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^24.13.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "jsdom": "^30.0.1",
     "lefthook": "^2.1.12",
     "oxfmt": "^0.67.0",
     "oxlint": "^1.82.0",
