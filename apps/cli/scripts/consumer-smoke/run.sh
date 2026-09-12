@@ -57,7 +57,14 @@ for PM in "${PMS[@]}"; do
       cd "$DIR"
       case "$PM" in
         npm)  npm install "$TGZ" ;;
-        pnpm) pnpm add "$TGZ" ;;
+        # `--allow-build=esbuild` is the remedy the README prescribes to users, so the matrix
+        # installs the way the documentation says to. difmp pulls esbuild in through `tsx`;
+        # pnpm 10 only warns and exits 0, but pnpm >= 12 turns the skipped build script into
+        # ERR_PNPM_IGNORED_BUILDS and exits 1. A runner reaches pnpm 12 even when the workspace
+        # is pinned to 10: `corepack enable` makes `pnpm` a shim, and these consumer projects
+        # live outside the workspace with no `packageManager` field to pin it. The flag is
+        # accepted and harmless on both versions.
+        pnpm) pnpm add --allow-build=esbuild "$TGZ" ;;
         yarn)
           node -e 'const j=require("./package.json");j.packageManager="yarn@4.13.0";require("fs").writeFileSync("package.json",JSON.stringify(j,null,2))'
           printf 'nodeLinker: node-modules\nenableScripts: false\n' > .yarnrc.yml

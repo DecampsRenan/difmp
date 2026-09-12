@@ -30,16 +30,29 @@
 # `apps/cli/scripts/ci/run-examples.sh` (healthy and alt-layout, 3 scenarios each, exit 0 through
 # the tarball's binary), and both `rsync` collection commands.
 #
-# THIS WORKFLOW HAS NOW RUN ONCE ON A GITHUB RUNNER, AND IT FAILED: run 34653238470 (push of
-# `8da6e6f`, 2026-09-11T22:16Z, 4m17s). Everything through `pnpm run test` passed there. The
-# packaging step failed because the runner's consumer installs resolve **pnpm 12.4.1**, which turns
-# an unapproved dependency build into an error — `ERR_PNPM_IGNORED_BUILDS · Ignored build scripts:
-# esbuild@0.28.2` (esbuild arrives transitively through `tsx`); the npm and Yarn cells passed 24/24
-# there, both pnpm cells reported INSTALL FAILED. Locally pnpm 10.29.3 only warns, which is why the
-# matrix is green here. `pnpm add --allow-build=esbuild` exits 0 under both pnpm versions.
-# STILL UNVERIFIED on a runner, because the job stopped before them or they only exist there: the
-# example-scenarios step, the `actions/cache` hit branch, and the `secrets.ANTHROPIC_API_KEY` path
-# of the optional job — no Anthropic call was made.
+# RUNNER HISTORY. This workflow failed its first two runs on a GitHub runner, both times at the
+# packaging step and both times for the same reason: runs 34653238470 (push of `8da6e6f`,
+# 2026-09-11T22:16Z) and 34687483497 (push of `96d0bfa`, 2026-09-12T10:04Z). Everything through
+# `pnpm run test` passed on both; the npm and Yarn cells passed 24/24; both pnpm cells reported
+# INSTALL FAILED with `ERR_PNPM_IGNORED_BUILDS · Ignored build scripts: esbuild@0.28.2`.
+#
+# The cause is a pnpm VERSION difference, not a difference in the package. esbuild arrives
+# transitively through `tsx`; pnpm 10 prints the skipped build script and exits 0, pnpm >= 12 turns
+# it into an error and exits 1. The consumer projects live outside this workspace with no
+# `packageManager` field, and `corepack enable` (needed for the Yarn cell) makes `pnpm` a shim that
+# then resolves the latest — 12.4.1 — so the runner's consumers use a different pnpm from the
+# workspace's pinned 10.29.3. That is why the matrix was green locally and red there.
+#
+# FIXED by having the pnpm cells install with `--allow-build=esbuild`, which is the remedy the
+# README already prescribes to users. Reproduced and verified locally before the change rather than
+# inferred: `pnpm@12 add <tgz>` exits 1 with that exact error, `pnpm@12 add --allow-build=esbuild
+# <tgz>` exits 0, the same flag exits 0 on pnpm 10.29.3, and the installed binary runs in both.
+# `run.sh <dir> pnpm` then passes 24/24 on both the ESM and CommonJS cells.
+#
+# STILL UNVERIFIED on a runner, because the job has never got past packaging or because they only
+# exist there: the example-scenarios step, the `actions/cache` hit branch, and the
+# `secrets.ANTHROPIC_API_KEY` path of the optional job — no Anthropic call has been made.
+# The `quality` job below HAS passed on a runner (34687483497).
 
 name: ci
 
