@@ -3,10 +3,10 @@ version: 1
 id: twin
 ---
 
-# Scénario two
+# Scenario two
 
-Ouvrir la page d'accueil.
+Open the home page.
 
-## Résultats attendus
+## Expected results
 
-- La page d'accueil s'affiche.
+- The home page is displayed.

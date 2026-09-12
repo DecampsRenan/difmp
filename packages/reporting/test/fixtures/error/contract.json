@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "specPath": "tests/e2e/creation-projet-hostile.e2e.md",
-  "id": "creation-projet-hostile",
-  "tags": ["securite"],
-  "body": "Créer un projet dont le nom est une charge utile HTML : <img src=x onerror=\"document.title='PWNED-BODY'\"> et vérifier que l'application l'affiche littéralement.",
+  "specPath": "tests/e2e/project-create-hostile.e2e.md",
+  "id": "project-create-hostile",
+  "tags": ["security"],
+  "body": "Create a project whose name is an HTML payload: <img src=x onerror=\"document.title='PWNED-BODY'\"> and check that the application displays it literally.",
   "criteria": [
     {
       "id": "c1",
-      "text": "Le projet « <img src=x onerror=\"document.title='PWNED-NAME'\"> » s'affiche littéralement dans la liste, sans exécution de script.",
-      "sourceText": "Le projet « {{ projectName }} » s'affiche littéralement dans la liste, sans exécution de script.",
+      "text": "The project \"<img src=x onerror=\"document.title='PWNED-NAME'\">\" is displayed literally in the list, with no script execution.",
+      "sourceText": "The project \"{{ projectName }}\" is displayed literally in the list, with no script execution.",
       "line": 9,
       "column": 3,
       "method": "model"
     },
     {
       "id": "c2",
-      "text": "Le nom du projet est stocké tel quel côté serveur.",
-      "sourceText": "Le nom du projet est stocké tel quel côté serveur.",
+      "text": "The project name is stored verbatim server-side.",
+      "sourceText": "The project name is stored verbatim server-side.",
       "line": 10,
       "column": 3,
       "method": "code",

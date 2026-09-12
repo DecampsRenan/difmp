@@ -31,7 +31,7 @@ const renderToDisk = (name: FixtureName, outputDir: string): Promise<Rendered> =
     if (artifact.state !== "present" || artifact.path === undefined) continue
     const target = join(input.layout.root, artifact.path)
     mkdirSync(dirname(target), { recursive: true })
-    writeFileSync(target, `contenu de démonstration pour ${artifact.artifactId}\n`)
+    writeFileSync(target, `demo content for ${artifact.artifactId}\n`)
   }
   return Effect.gen(function*() {
     const reporter = yield* Reporter
@@ -93,7 +93,7 @@ describe.each(fixtureNames)("standalone report for %s", (name: FixtureName) => {
     const evaluations = await page.locator("#evaluations").innerText()
     for (const criterion of input.contract?.criteria ?? []) {
       expect(evaluations).toContain(criterion.id)
-      expect(evaluations).toContain(`méthode ${criterion.method}`)
+      expect(evaluations).toContain(`method ${criterion.method}`)
       expect(evaluations).toContain(criterion.text)
     }
   })
@@ -101,27 +101,27 @@ describe.each(fixtureNames)("standalone report for %s", (name: FixtureName) => {
   it("states that a model evaluation is probabilistic, and only for model criteria", async () => {
     const input = loadFixture(name, outputDir)
     const notes = await page.locator("#evaluations .note").allInnerTexts()
-    const probabilistic = notes.filter((n) => n.includes("probabiliste"))
-    const deterministic = notes.filter((n) => n.includes("déterministe") && !n.includes("probabiliste"))
+    const probabilistic = notes.filter((n) => n.includes("probabilistic"))
+    const deterministic = notes.filter((n) => n.includes("deterministic") && !n.includes("probabilistic"))
     const criteria = input.contract?.criteria ?? []
     expect(probabilistic.length).toBeGreaterThanOrEqual(criteria.filter((c) => c.method === "model").length)
     expect(deterministic.length).toBeGreaterThanOrEqual(criteria.filter((c) => c.method === "code").length)
   })
 
   it("keeps budgets and the indicative action threshold apart", async () => {
-    const section = await page.locator("#comptes").innerText()
-    expect(section).toContain("Budgets bloquants")
-    expect(section).toContain("indicatives")
+    const section = await page.locator("#accounting").innerText()
+    expect(section).toContain("Blocking budgets")
+    expect(section).toContain("suggested")
     // `th` is uppercased by the stylesheet, so compare case-insensitively.
-    expect(section.toLowerCase()).toContain("consommé")
-    expect(section.toLowerCase()).toContain("restant")
-    const budgetTableText = await page.locator("#comptes table").first().innerText()
-    expect(budgetTableText).not.toContain("indicatives")
+    expect(section.toLowerCase()).toContain("consumed")
+    expect(section.toLowerCase()).toContain("remaining")
+    const budgetTableText = await page.locator("#accounting table").first().innerText()
+    expect(budgetTableText).not.toContain("suggested")
   })
 
   it("lists artifacts, including missing ones with their reason", async () => {
     const input = loadFixture(name, outputDir)
-    const section = await page.locator("#artefacts").innerText()
+    const section = await page.locator("#artifacts").innerText()
     for (const artifact of input.inventory.artifacts) {
       expect(section).toContain(artifact.artifactId)
       if (artifact.reason !== undefined) expect(section).toContain(artifact.reason.slice(0, 40))
@@ -131,7 +131,7 @@ describe.each(fixtureNames)("standalone report for %s", (name: FixtureName) => {
   it("links artifacts as relative paths that resolve next to the report", async () => {
     const input = loadFixture(name, outputDir)
     const linkable = input.inventory.artifacts.filter((a) => a.state === "present" && a.path !== undefined)
-    const hrefs = await page.locator("#artefacts a").evaluateAll((nodes) =>
+    const hrefs = await page.locator("#artifacts a").evaluateAll((nodes) =>
       nodes.map((n) => (n as HTMLAnchorElement).getAttribute("href") ?? "")
     )
     expect(hrefs.length).toBe(linkable.length)
@@ -139,18 +139,18 @@ describe.each(fixtureNames)("standalone report for %s", (name: FixtureName) => {
     for (const href of hrefs) {
       expect(href.startsWith("/")).toBe(false)
       expect(href).not.toMatch(/^[a-z]+:/i)
-      expect(readFileSync(join(rendered.root, decodeURIComponent(href)), "utf8")).toContain("démonstration")
+      expect(readFileSync(join(rendered.root, decodeURIComponent(href)), "utf8")).toContain("demo content")
     }
   })
 
   it("shows the timeline of actions, observations, verifications and errors", async () => {
     const input = loadFixture(name, outputDir)
-    const rows = await page.locator("#faits tbody tr").count()
+    const rows = await page.locator("#facts tbody tr").count()
     expect(rows).toBe(input.events.length)
   })
 
   it("separates factual observations, expectations, evaluations and diagnostic hypotheses", async () => {
-    for (const id of ["#attentes", "#evaluations", "#faits", "#diagnostics"]) {
+    for (const id of ["#expectations", "#evaluations", "#facts", "#diagnostics"]) {
       expect(await page.locator(id).count()).toBe(1)
     }
   })

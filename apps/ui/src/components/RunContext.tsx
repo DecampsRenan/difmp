@@ -5,22 +5,22 @@ export const RunContext = (props: { readonly model: RunModel }) => {
   const { model } = props
   const config = model.config
   return (
-    <Panel title="Contexte du run" testId="context-panel">
+    <Panel title="Run context" testId="context-panel">
       <dl className="kv">
         <div>
-          <dt>Cible</dt>
+          <dt>Target</dt>
           <dd>{model.baseUrl ?? "—"}</dd>
         </div>
         <div>
-          <dt>Fournisseur</dt>
+          <dt>Provider</dt>
           <dd>{config === undefined ? "—" : `${config.provider}${config.model === undefined ? "" : ` / ${config.model}`}`}</dd>
         </div>
         <div>
-          <dt>Captures</dt>
+          <dt>Capture</dt>
           <dd>
             {model.capture === undefined
               ? "—"
-              : `trace ${model.capture.trace} · vidéo ${model.capture.video} · captures ${model.capture.screenshots}`}
+              : `trace ${model.capture.trace} · video ${model.capture.video} · screenshots ${model.capture.screenshots}`}
           </dd>
         </div>
         <div>
@@ -28,20 +28,20 @@ export const RunContext = (props: { readonly model: RunModel }) => {
           <dd>{model.observationCount}</dd>
         </div>
         <div>
-          <dt>Empreinte contrat</dt>
+          <dt>Contract fingerprint</dt>
           <dd className="mono">{model.contractHash === undefined ? "—" : model.contractHash.slice(0, 16)}</dd>
         </div>
         <div>
-          <dt>Version difmp</dt>
+          <dt>difmp version</dt>
           <dd>{model.harnessVersion ?? "—"}</dd>
         </div>
       </dl>
 
       {model.fixture === undefined
-        ? <Empty>Aucune fixture — contexte propre ouvert sur la baseUrl.</Empty>
+        ? <Empty>No fixture — clean context opened on the baseUrl.</Empty>
         : (
           <div className="fixture" data-testid="fixture-block">
-            <h3>Fixture « {model.fixture.name} »</h3>
+            <h3>Fixture "{model.fixture.name}"</h3>
             <dl className="kv">
               {Object.entries(model.fixture.publicValues).map(([key, value]) => (
                 <div key={key}>
@@ -54,8 +54,8 @@ export const RunContext = (props: { readonly model: RunModel }) => {
               ? null
               : (
                 <p className="panel-foot">
-                  Nettoyage : {model.fixture.cleaned.cleanupsRun} finaliseur(s)
-                  {model.fixture.cleaned.timedOut ? " — délai dépassé" : ""}
+                  Cleanup: {model.fixture.cleaned.cleanupsRun} finalizer(s)
+                  {model.fixture.cleaned.timedOut ? " — timed out" : ""}
                 </p>
               )}
           </div>

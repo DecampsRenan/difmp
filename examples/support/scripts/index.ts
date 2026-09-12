@@ -31,34 +31,34 @@ const failed = (expected: string, observed: string): VerdictSpec => ({
 })
 
 const expectations = {
-  created: "le projet apparaît dans la liste après création",
-  persisted: "le projet est toujours présent après rechargement",
-  unique: "une seule entrée de ce nom est visible dans la liste après rechargement"
+  created: "the project appears in the list after it is created",
+  persisted: "the project is still present after the reload",
+  unique: "exactly one entry with that name is visible in the list after the reload"
 } as const
 
 export const healthyVerdicts: VerdictScript = {
   byCriterion: {
-    c1: passed(expectations.created, "la liste affiche le projet juste après la soumission du formulaire"),
-    c2: passed(expectations.persisted, "après rechargement, la liste rendue par le serveur contient toujours le projet"),
-    c3: passed(expectations.unique, "la liste visible après rechargement contient une seule entrée de ce nom")
+    c1: passed(expectations.created, "the list shows the project right after the form was submitted"),
+    c2: passed(expectations.persisted, "after the reload, the list rendered by the server still contains the project"),
+    c3: passed(expectations.unique, "the list visible after the reload contains exactly one entry with that name")
   }
 }
 
 /** `create-500`: the POST is refused, nothing is persisted, the UI shows the status in an alert. */
 export const create500Verdicts: VerdictScript = {
   byCriterion: {
-    c1: failed(expectations.created, "la création a échoué (HTTP 500) et la liste ne contient pas le projet ; une alerte cite le statut"),
-    c2: failed(expectations.persisted, "le projet n'a jamais existé : la liste rechargée ne le contient pas"),
-    c3: failed(expectations.unique, "aucune entrée de ce nom n'est visible après rechargement")
+    c1: failed(expectations.created, "creation failed (HTTP 500) and the list does not contain the project; an alert quotes the status"),
+    c2: failed(expectations.persisted, "the project never existed: the reloaded list does not contain it"),
+    c3: failed(expectations.unique, "no entry with that name is visible after the reload")
   }
 }
 
 /** `false-success`: 201 + optimistic UI, nothing written. Only the reload tells the difference. */
 export const falseSuccessVerdicts: VerdictScript = {
   byCriterion: {
-    c1: passed(expectations.created, "la liste affiche le projet ajouté par l'interface après la réponse 201"),
-    c2: failed(expectations.persisted, "après rechargement, la liste rendue par le serveur ne contient plus le projet"),
-    c3: failed(expectations.unique, "aucune entrée de ce nom n'est visible après rechargement")
+    c1: passed(expectations.created, "the list shows the project appended by the interface after the 201 response"),
+    c2: failed(expectations.persisted, "after the reload, the list rendered by the server no longer contains the project"),
+    c3: failed(expectations.unique, "no entry with that name is visible after the reload")
   }
 }
 
@@ -70,10 +70,10 @@ export const falseSuccessVerdicts: VerdictScript = {
 export const prematureFinishVerdicts: VerdictScript = {
   fallback: {
     status: "inconclusive",
-    expected: "une preuve collectée pour ce critère",
-    observed: "l'agent a déclaré la fin du parcours sans demander de collecte de preuve",
+    expected: "evidence collected for this criterion",
+    observed: "the agent declared the journey finished without requesting any evidence collection",
     evidence: [],
-    missingEvidence: ["aucune capture ni observation n'a été demandée pour ce critère"]
+    missingEvidence: ["no screenshot and no observation was requested for this criterion"]
   }
 }
 
@@ -83,14 +83,14 @@ export const prematureFinishVerdicts: VerdictScript = {
  */
 export const unevaluatedCriterionVerdicts: VerdictScript = {
   byCriterion: {
-    c1: passed(expectations.created, "la liste affiche le projet juste après la soumission du formulaire"),
-    c2: passed(expectations.persisted, "après rechargement, la liste contient toujours le projet"),
+    c1: passed(expectations.created, "the list shows the project right after the form was submitted"),
+    c2: passed(expectations.persisted, "after the reload, the list still contains the project"),
     c3: {
       status: "inconclusive",
       expected: expectations.unique,
-      observed: "aucune preuve n'a été demandée pour ce critère",
+      observed: "no evidence was requested for this criterion",
       evidence: [],
-      missingEvidence: ["une observation de la liste prise après le rechargement, pour ce critère"]
+      missingEvidence: ["an observation of the list taken after the reload, for this criterion"]
     }
   }
 }
@@ -100,7 +100,7 @@ export const inventedEvidenceVerdicts: VerdictScript = {
   fallback: {
     status: "passed",
     expected: expectations.created,
-    observed: "prétend s'appuyer sur une preuve qui n'a jamais été produite",
+    observed: "claims to rely on evidence that was never produced",
     // Deliberately NOT a `$` token: `art_9999` is never minted, so the reference check must bite.
     evidence: ["art_9999"]
   }
@@ -113,15 +113,15 @@ export const needsEvidenceThenPasses: VerdictScript = {
       {
         status: "inconclusive",
         expected: expectations.created,
-        observed: "la capture disponible précède la soumission du formulaire",
+        observed: "the only screenshot available predates the form submission",
         evidence: [],
-        missingEvidence: ["une capture de la liste postérieure à la création"],
-        evidenceHint: "prendre une capture après la soumission"
+        missingEvidence: ["a screenshot of the list taken after the creation"],
+        evidenceHint: "take a screenshot after the submission"
       },
-      passed(expectations.created, "la capture postérieure à la soumission montre le projet dans la liste")
+      passed(expectations.created, "the screenshot taken after the submission shows the project in the list")
     ],
-    c2: passed(expectations.persisted, "après rechargement, la liste contient toujours le projet"),
-    c3: passed(expectations.unique, "une seule entrée de ce nom est visible après rechargement")
+    c2: passed(expectations.persisted, "after the reload, the list still contains the project"),
+    c3: passed(expectations.unique, "exactly one entry with that name is visible after the reload")
   }
 }
 
@@ -167,9 +167,9 @@ export const fixtureAppScripts = (
       }),
       verdicts: {
         byCriterion: {
-          c1: passed("l'utilisateur est connecté", "l'accueil affiche le nom de l'espace de travail"),
-          c2: passed(expectations.created, "la liste affiche le projet juste après la soumission"),
-          c3: passed(expectations.persisted, "après rechargement, la liste contient toujours le projet")
+          c1: passed("the user is signed in", "the home page displays the workspace name"),
+          c2: passed(expectations.created, "the list shows the project right after the submission"),
+          c3: passed(expectations.persisted, "after the reload, the list still contains the project")
         }
       }
     },

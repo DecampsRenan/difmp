@@ -3,10 +3,10 @@ version: 1
 id: unknown-variable
 ---
 
-# Référence inconnue
+# Unknown reference
 
-Ouvrir {{ notDeclared }}.
+Open {{ notDeclared }}.
 
-## Résultats attendus
+## Expected results
 
-- La page montre {{ alsoNotDeclared }}.
+- The page shows {{ alsoNotDeclared }}.

@@ -3,8 +3,8 @@
   "runId": "r_z5wn6ch2rqt4a",
   "artifacts": [
     { "artifactId": "art_1", "attemptId": "a1", "kind": "trace", "path": "attempts/a1/trace.zip", "state": "present", "bytes": 301880, "ts": "2026-03-04T11:40:50.900Z" },
-    { "artifactId": "art_2", "attemptId": "a1", "kind": "aria-snapshot", "label": "liste en chargement", "path": "attempts/a1/screenshots/obs_4.aria.txt", "state": "present", "bytes": 640, "ts": "2026-03-04T11:40:33.100Z", "sourceSeq": 10 },
-    { "artifactId": "art_3", "attemptId": "a1", "kind": "screenshot", "label": "checkpoint-resultats", "state": "missing", "reason": "la capture au checkpoint a expiré après 15000 ms : la page ne s'est jamais stabilisée", "ts": "2026-03-04T11:40:48.200Z", "sourceSeq": 13 },
+    { "artifactId": "art_2", "attemptId": "a1", "kind": "aria-snapshot", "label": "list loading", "path": "attempts/a1/screenshots/obs_4.aria.txt", "state": "present", "bytes": 640, "ts": "2026-03-04T11:40:33.100Z", "sourceSeq": 10 },
+    { "artifactId": "art_3", "attemptId": "a1", "kind": "screenshot", "label": "checkpoint-results", "state": "missing", "reason": "the checkpoint screenshot timed out after 15000 ms: the page never settled", "ts": "2026-03-04T11:40:48.200Z", "sourceSeq": 13 },
     { "artifactId": "art_4", "attemptId": "a1", "kind": "console-log", "path": "attempts/a1/console.jsonl", "state": "present", "bytes": 1502, "ts": "2026-03-04T11:40:51.000Z" }
   ]
 }

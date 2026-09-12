@@ -3,10 +3,10 @@ version: 1
 id: legacy
 ---
 
-# Scénario d'un projet antérieur au renommage
+# Scenario from a project that predates the rename
 
-Observer la page du projet {{ configBasename }}.
+Observe the page of project {{ configBasename }}.
 
-## Résultats attendus
+## Expected results
 
-- La page est accessible.
+- The page is reachable.

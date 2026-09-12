@@ -2,7 +2,7 @@
 version: 1
 id: duplicate-key
 id: duplicate-key-again
-verification: Une attente.
+verification: An expectation.
 ---
 
-# Corps
+# Body

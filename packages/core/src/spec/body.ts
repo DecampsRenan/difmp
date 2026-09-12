@@ -20,7 +20,9 @@ const normalizeHeading = (text: string): string =>
     .trim()
     .toLowerCase()
 
-const expectationHeadings = new Set(["resultats attendus", "expected results"])
+// `expected results` is the documented form. `resultats attendus` is kept as a compatibility
+// alias for scenarios written against the original French brief; dropping it would break them.
+const expectationHeadings = new Set(["expected results", "resultats attendus"])
 
 export interface BodySection {
   readonly text: string
@@ -30,7 +32,7 @@ export interface BodySection {
   readonly headingRelLine: number
 }
 
-/** Locate a `## Résultats attendus` / `## Expected results` section, accent- and case-insensitively. */
+/** Locate an `## Expected results` (or legacy `## Résultats attendus`) section, accent- and case-insensitively. */
 export const findExpectationSection = (body: string): BodySection | undefined => {
   const lines = body.split("\n")
   for (let i = 0; i < lines.length; i++) {

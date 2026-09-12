@@ -14,27 +14,27 @@ export const LatestScreenshot = (props: {
   const href = latest?.path === undefined ? undefined : artifactHref(props.config.artifactBaseUrl, latest.path)
 
   return (
-    <Panel title="Dernière capture" testId="screenshot-panel">
+    <Panel title="Latest screenshot" testId="screenshot-panel">
       {latest === undefined
-        ? <Empty>Aucune capture disponible pour l'instant.</Empty>
+        ? <Empty>No screenshot available yet.</Empty>
         : (
           <figure className="shot">
             {href === undefined
               ? (
                 <p className="empty" data-testid="screenshot-unavailable">
-                  Capture {latest.artifactId} enregistrée mais son chemin n'est pas servable.
+                  Screenshot {latest.artifactId} recorded, but its path is not servable.
                 </p>
               )
               : (
                 // `src` comes from the run journal: artifactHref() rejects anything that is not a
                 // relative path resolving to http(s) under the artifact base.
-                <img src={href} alt={`Capture ${latest.artifactId}`} data-testid="screenshot-image" />
+                <img src={href} alt={`Screenshot ${latest.artifactId}`} data-testid="screenshot-image" />
               )}
             <figcaption>
               <span data-testid="screenshot-ts">{timeOf(latest.ts)}</span>
               <span className="sep">·</span>
               <span data-testid="screenshot-action">
-                {latest.actionLabel ?? "action inconnue"}
+                {latest.actionLabel ?? "unknown action"}
               </span>
               <span className="sep">·</span>
               <code>{latest.artifactId}</code>

@@ -5,8 +5,8 @@ taken, and — without softening — what it does not do. Read
 [`internal/design-contracts.md`](internal/design-contracts.md) alongside it: that file is the
 authoritative source for names and shapes, this one is the rationale and the honest account.
 
-The specs (`docs/spec.md`) and the example scenarios are in French. The code, the comments and the
-documentation are in English. That is the only language rule.
+Everything in this repository is written in English: the specs, the example scenarios, the code, the
+comments and the documentation. That is the only language rule.
 
 **On the `.recon/` paths cited below.** `.recon/` is the local scratch directory the probes and the
 adversarial reviews were written in. It is in `.gitignore` and is **not** part of the repository, so
@@ -199,7 +199,7 @@ re-packing over the same filename silently reinstalls the previous bytes.)
 ### Other decisions worth knowing
 
 * **`maxActions` is indicative; the blocking limits are `budgets`, and there are no hidden ones.**
-  Crossing `maxActions` emits one `actionGuidanceExceeded`, renders `"28 actions / 25 indicatives"`
+  Crossing `maxActions` emits one `actionGuidanceExceeded`, renders `"28 actions / 25 suggested"`
   and injects one nudge. Nothing is refused, no verdict is degraded, and a run that passes in 40
   actions is `passed`. Every threshold that actually *stops* something is a `budgets` key — including
   the two that used to be hardcoded, `fixtureSetupTimeoutMs` (which bounds everything before the
@@ -433,7 +433,7 @@ not copied from the review that raised it.
   that the workflow is **red**, and what comes after the packaging step — the example scenarios
   through the distributed CLI, and `actions/cache` on a cache hit — still has **never** run on a
   runner, nor has the optional `secrets.ANTHROPIC_API_KEY` job.
-* **The dashboard's "stream unavailable / Reprendre le flux" path is untested.** The SSE resume
+* **The dashboard's "server unreachable / Resume the stream" path is untested.** The SSE resume
   contract itself is proven at the levels that matter (`Last-Event-ID` header and `?lastEventId=`
   query both replay from the right cursor; a full page reload rebuilds the timeline with no loss and
   no duplicates). But `context.setOffline(true)` does not tear down a live `EventSource` in Chromium

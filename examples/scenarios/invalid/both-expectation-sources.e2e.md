@@ -2,14 +2,14 @@
 version: 1
 id: invalid-both-expectation-sources
 verification: |
-  - Le projet apparaît dans la liste après création.
+  - The project appears in the list after it is created.
 ---
 
-# Deux sources d'attentes
+# Two expectation sources
 
-Cette spec déclare ses attentes DEUX fois : dans le champ `verification` et dans une section
-Markdown. Le loader doit la rejeter, parce que rien ne permet de décider laquelle est le contrat.
+This spec declares its expectations TWICE: in the `verification` field and in a Markdown section.
+The loader must reject it, because nothing makes it possible to decide which one is the contract.
 
-## Résultats attendus
+## Expected results
 
-- Le projet apparaît dans la liste après création.
+- The project appears in the list after it is created.

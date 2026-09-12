@@ -21,23 +21,23 @@ export const Artifacts = (props: {
 
   return (
     <Panel
-      title="Preuves et artefacts"
+      title="Evidence and artifacts"
       testId="artifacts-panel"
-      note="Un artefact attendu mais absent reste listé avec sa raison : un échec de capture n'est jamais masqué."
+      note="An expected artifact that is missing stays listed with its reason: a capture failure is never hidden."
       aside={<span className="count">{props.artifacts.length}</span>}
     >
       {props.artifacts.length === 0
-        ? <Empty>Aucun artefact enregistré.</Empty>
+        ? <Empty>No artifact recorded.</Empty>
         : (
           <table className="artifacts" data-testid="artifacts-table">
             <thead>
               <tr>
                 <th>Id</th>
                 <th>Type</th>
-                <th>État</th>
-                <th>Heure</th>
-                <th>Cité par</th>
-                <th>Lien</th>
+                <th>State</th>
+                <th>Time</th>
+                <th>Cited by</th>
+                <th>Link</th>
               </tr>
             </thead>
             <tbody>
@@ -58,7 +58,7 @@ export const Artifacts = (props: {
                     <td>{cited.length === 0 ? "—" : cited.map((id) => <code key={id} className="chip">{id}</code>)}</td>
                     <td>
                       {href === undefined
-                        ? <span className="muted">{artifact.path === undefined ? "—" : "non servable"}</span>
+                        ? <span className="muted">{artifact.path === undefined ? "—" : "not servable"}</span>
                         : (
                           <a href={href} target="_blank" rel="noreferrer noopener">
                             {artifact.path}

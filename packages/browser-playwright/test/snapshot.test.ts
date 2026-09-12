@@ -19,7 +19,7 @@ const afterNavigation = `- generic [active] [ref=f1e1]:
     - paragraph [ref=f1e8]:
       - text: "Workspace:"
       - strong [ref=f1e9]: Acme
-    - textbox "Project name" [ref=f1e15]: Projet Zephyr
+    - textbox "Project name" [ref=f1e15]: Project Zephyr
     - alert [ref=f1e20]: "Could not create project (HTTP 500): The project could not be saved."`
 
 /** api-playwright.md §1b, covering properties, states and unreferenced children. */
@@ -51,7 +51,7 @@ describe("parseAiSnapshot", () => {
   it("parses frame-prefixed refs and inline text", () => {
     const elements = parseAiSnapshot(afterNavigation)
     expect(elements.map((e) => e.ref)).toEqual(["f1e1", "f1e6", "f1e8", "f1e9", "f1e15", "f1e20"])
-    expect(elements.find((e) => e.ref === "f1e15")?.text).toBe("Projet Zephyr")
+    expect(elements.find((e) => e.ref === "f1e15")?.text).toBe("Project Zephyr")
     expect(elements.find((e) => e.ref === "f1e20")?.text).toBe(
       `"Could not create project (HTTP 500): The project could not be saved."`
     )

@@ -1,5 +1,14 @@
 # difmp
 
+> [!WARNING]
+> **difmp is under active development, is not stable, and will change in breaking ways without
+> notice.** The package is not published to any registry — every install is a local tarball you
+> built yourself. The shape of `difmp.config.ts` and the layout of a `runs/<run-id>/` directory are
+> both still moving, so a config and a run archive written today may not be readable by a later
+> build. The verification behaviour — when a criterion is judged, and when difmp downgrades a
+> verdict to `inconclusive` — is still being tuned, so verdicts can shift between versions on
+> unchanged scenarios. Pin the tarball you tested and re-read this file before you rebuild.
+
 **difmp** runs end-to-end scenarios that are written as prose instead of as selectors. You describe
 a journey and what you expect at the end, in Markdown with a YAML header; a model drives the browser
 and **difmp owns the tools, the budgets, the verification and the evidence**. Every run leaves a
@@ -16,20 +25,20 @@ A whole scenario:
 ---
 version: 1
 id: project-create
-inputs: { projectName: "Projet {{ run.id }}" }
+inputs: { projectName: "Project {{ run.id }}" }
 verification: |
-  - Le projet {{ projectName }} apparaît dans la liste après sa création.
-  - Le projet {{ projectName }} est toujours présent après un rechargement complet de la page.
+  - The project {{ projectName }} appears in the project list after it is created.
+  - The project {{ projectName }} is still present in the project list after a full page reload.
 ---
 
-Depuis l'accueil, créer un projet nommé {{ projectName }}, puis recharger la page.
+From the home page, create a project named {{ projectName }}, then reload the page.
 ```
 
 What a run looks like:
 
 ```
 PASS  project-create  3.3s  ../scenarios/project-create.e2e.md
-      actions 8/25 indicatives · model calls 14 · tokens 2240
+      actions 8/25 suggested · model calls 14 · tokens 2240
       criteria: 3 · run r_zbh6pn2jmlag2 · report …/runs/r_zbh6pn2jmlag2/report.html
 
 Summary  1 scenario  3.3s
@@ -221,7 +230,7 @@ the result follows it:
 
 ```
 INCO  home  994ms  tests/e2e/home.e2e.md
-      actions 2/25 indicatives · model calls 5 · tokens 800
+      actions 2/25 suggested · model calls 5 · tokens 800
       c1 inconclusive: The home page renders without an error.
          observed: (scripted test double)
          limitation: scripted test double — this is not a model judgement
@@ -277,7 +286,7 @@ export default defineConfig({
 
 ```
 PASS  home  1.0s  tests/e2e/home.e2e.md
-      actions 2/25 indicatives · model calls 5 · tokens 800
+      actions 2/25 suggested · model calls 5 · tokens 800
       criteria: 1 · run r_7rw7hexufsjs2 · report …/runs/r_7rw7hexufsjs2/report.html
 
 Summary  1 scenario  1.0s
@@ -328,19 +337,19 @@ merge keys, bounded aliases, a size cap.
 
 ### The two ways to express expectations
 
-Either a `verification` frontmatter field **or** a `## Résultats attendus` Markdown section (also
-accepted: `## Expected results`) — **never both**, which is a hard error naming both lines.
+Either a `verification` frontmatter field **or** a `## Expected results` Markdown section —
+**never both**, which is a hard error naming both lines.
 
 ```yaml
 verification: |
-  - Le projet {{ projectName }} apparaît dans la liste après sa création.
-  - Le projet {{ projectName }} est toujours présent après un rechargement complet.
+  - The project {{ projectName }} appears in the project list after it is created.
+  - The project {{ projectName }} is still present after a full page reload.
 ```
 
 ```markdown
-## Résultats attendus
+## Expected results
 
-- La page d'accueil s'affiche sans erreur.
+- The home page renders without an error.
 ```
 
 Splitting rule: a top-level Markdown list gives **one criterion per item** (`c1`, `c2`, … in source
@@ -369,9 +378,9 @@ opens a clean browser context at `baseUrl` and the scenario signs in through the
 would. The standard journey uses textual expectations with no TypeScript at all — a TS check is the
 advanced extension, not the norm.
 
-> The example scenarios in this repository are written in **French**, and the tool's own output
-> mixes English labels with the scenario's own language. Nothing in difmp requires either: write
-> scenarios in the language your product speaks.
+> This repository is written in English throughout — scenarios included. Nothing in difmp requires
+> that: the criteria are text handed to a model, so write scenarios in the language your product
+> speaks. Only difmp's own labels are fixed.
 
 ---
 
@@ -517,15 +526,17 @@ silently absent.
 and its absence *is* the information.
 
 `result.json`, `junit.xml` and `report.html` are written whichever reporters you selected — that is
-the layout `difmp report` replays from. The one exception is **Ctrl-C**, which interrupts the CLI
-before the file reporters run: the run itself settles correctly (`result.json` present, status
-`cancelled`) but `junit.xml` and `report.html` are missing. `difmp report <dir>` rebuilds them, and
-the dashboard's Cancel button writes them in the first place.
+the layout `difmp report` replays from. **Ctrl-C is not an exception:** the three files are written
+from a region that survives the interrupt, so an interrupted run still reaches CI with a JUnit file
+and a report, exactly like a cancellation from the dashboard. What Ctrl-C does cost is the console
+block for the scenario it interrupted — the interrupt is re-raised as soon as those files are on
+disk, so the process exits `130` before the console reporter prints anything for that run. Read the
+status from `result.json`, or re-render from the directory with `difmp report <dir>`.
 
 ### The HTML report
 
 `report.html` is a single self-contained file with no remote asset reference. Per criterion it shows
-the expectation, what was observed, the `method` (`modèle` or `code`), the evaluator, and the
+the expectation, what was observed, the `method` (`model` or `code`), the evaluator, and the
 `art_*` ids it relies on. A complete, unedited run directory for a failing case is committed at
 [`docs/example-run/`](docs/example-run/README.md).
 
@@ -709,7 +720,7 @@ built-in defaults  <  difmp.config.ts  <  CLI flags
 
 Only flags you actually pass become overrides; an absent flag leaves the file's value alone. The
 resolved, non-sensitive configuration is printed before launch, with every value parked under a
-credential-looking key replaced by `«redacted»`.
+credential-looking key replaced by `[redacted]`.
 
 ### Scenario discovery
 
@@ -763,8 +774,8 @@ Everything below is about the repository, not about using the tool. `difmp` is t
 `node apps/cli/dist/bin/difmp.js` (after `pnpm build`). If you would rather type `difmp`, alias it
 once: `alias difmp="node $PWD/apps/cli/dist/bin/difmp.js"`.
 
-**The specs and the example scenarios are in French; the code, the comments and this documentation
-are in English.** That split is deliberate and it is the only language rule in the repository.
+**Everything in this repository is in English** — the spec, the example scenarios, the code, the
+comments and this documentation. That is the only language rule.
 
 ### From a clean checkout
 
@@ -861,13 +872,17 @@ so stdout carries the JSON document and everything readable is on stderr — hen
 What you see, after the resolved-configuration block:
 
 ```
-PASS  project-create-checked  3.6s  ../scenarios/project-create-checked.e2e.md
-      actions 8/25 indicatives · model calls 13 · tokens 2080
-      criteria: 3 · run r_eqnizxqj3qxdc · report …/examples/support/runs/r_eqnizxqj3qxdc/report.html
-PASS  project-create-no-fixture  4.6s  ../scenarios/project-create-no-fixture.e2e.md
+PASS  project-create-checked  3.5s  ../scenarios/project-create-checked.e2e.md
+      actions 8/25 suggested · model calls 13 · tokens 2080
+      criteria: 3 · run r_w2o2sch5fj5ka · report …/examples/support/runs/r_w2o2sch5fj5ka/report.html
+PASS  project-create-no-fixture  4.5s  ../scenarios/project-create-no-fixture.e2e.md
+      actions 14/35 suggested · model calls 20 · tokens 3200
+      criteria: 3 · run r_aekqficot3os6 · report …/examples/support/runs/r_aekqficot3os6/report.html
 PASS  project-create  3.2s  ../scenarios/project-create.e2e.md
+      actions 8/25 suggested · model calls 14 · tokens 2240
+      criteria: 3 · run r_5uqiun7h3prtc · report …/examples/support/runs/r_5uqiun7h3prtc/report.html
 
-Summary  3 scenarios  11.3s
+Summary  3 scenarios  11.1s
          3 passed · 0 failed · 0 inconclusive · 0 error · 0 cancelled
 ```
 
@@ -967,11 +982,15 @@ open items, is in [`docs/architecture.md`](docs/architecture.md) §4.
   construction, tool dispatch, policy, budgets and real Playwright — so it proves *difmp* behaves as
   specified. It is not evidence that a model can navigate an application. **No Anthropic API call has
   been made in this repository.**
-* **Ctrl-C skips the file reporters.** The run settles correctly and `result.json` is written, but
-  `junit.xml` and `report.html` are not. `difmp report <dir>` rebuilds them.
+* **Ctrl-C costs you the console block, not the files.** The run settles correctly and all three of
+  `result.json`, `junit.xml` and `report.html` are written before the process exits `130`; the
+  interrupt is re-raised the moment they are on disk, so the console reporter never prints the block
+  for the scenario it interrupted. Read the status from `result.json`, or re-render the directory
+  with `difmp report <dir>`.
 
 Further reading: [`docs/architecture.md`](docs/architecture.md) for the seams, the decisions and the
-limitations · [`docs/spec.md`](docs/spec.md) for the original product brief, in French ·
+limitations · [`docs/spec.md`](docs/spec.md) for the original product brief, translated from the
+French original preserved in the git history ·
 [`docs/internal/design-contracts.md`](docs/internal/design-contracts.md) for the authoritative names
 and shapes · [`docs/internal/api-*.md`](docs/internal) for verified API cheat-sheets of the exact
 dependency versions installed.

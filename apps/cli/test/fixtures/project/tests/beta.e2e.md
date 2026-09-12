@@ -4,9 +4,9 @@ id: beta
 tags: [smoke]
 ---
 
-# Deuxième scénario
+# Second scenario
 
-Observer la page.
+Observe the page.
 
 ## Expected results
 

@@ -3,24 +3,24 @@ import type { TimelineEntry, TimelineKind } from "../state/model.js"
 import { Empty, Panel, durationOf, timeOf } from "./ui.js"
 
 const kindLabel: Record<TimelineKind, string> = {
-  lifecycle: "cycle de vie",
+  lifecycle: "lifecycle",
   action: "action",
   observation: "observation",
-  model: "modèle",
-  verification: "vérification",
-  evidence: "preuve",
-  artifact: "artefact",
-  guidance: "indication",
+  model: "model",
+  verification: "verification",
+  evidence: "evidence",
+  artifact: "artifact",
+  guidance: "guidance",
   budget: "budget",
-  error: "erreur"
+  error: "error"
 }
 
 const FILTERS: ReadonlyArray<{ readonly id: string; readonly label: string; readonly kinds: ReadonlyArray<TimelineKind> }> = [
-  { id: "all", label: "tout", kinds: [] },
+  { id: "all", label: "all", kinds: [] },
   { id: "actions", label: "actions", kinds: ["action"] },
   { id: "observations", label: "observations", kinds: ["observation"] },
-  { id: "verifications", label: "vérifications", kinds: ["verification", "evidence"] },
-  { id: "problems", label: "erreurs & budgets", kinds: ["error", "budget", "guidance"] }
+  { id: "verifications", label: "verifications", kinds: ["verification", "evidence"] },
+  { id: "problems", label: "errors & budgets", kinds: ["error", "budget", "guidance"] }
 ]
 
 export const Timeline = (props: { readonly entries: ReadonlyArray<TimelineEntry> }) => {
@@ -58,13 +58,13 @@ export const Timeline = (props: { readonly entries: ReadonlyArray<TimelineEntry>
             onClick={() => setNewestFirst((v) => !v)}
             data-testid="timeline-order"
           >
-            {newestFirst ? "récent → ancien" : "ancien → récent"}
+            {newestFirst ? "newest → oldest" : "oldest → newest"}
           </button>
         </div>
       }
     >
       {visible.length === 0
-        ? <Empty>Rien à afficher pour ce filtre.</Empty>
+        ? <Empty>Nothing to show for this filter.</Empty>
         : (
           <ol className="timeline" data-testid="timeline-list">
             {visible.map((entry) => (
@@ -82,7 +82,7 @@ export const Timeline = (props: { readonly entries: ReadonlyArray<TimelineEntry>
                   <span className="tl-label">{entry.label}</span>
                   {entry.detail === undefined ? null : <span className="tl-detail">{entry.detail}</span>}
                   {entry.outcome === undefined
-                    ? entry.kind === "action" ? <span className="tl-outcome pending">en cours…</span> : null
+                    ? entry.kind === "action" ? <span className="tl-outcome pending">in progress…</span> : null
                     : <span className="tl-outcome">{entry.outcome}</span>}
                 </span>
                 <span className="tl-dur mono">

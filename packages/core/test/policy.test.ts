@@ -48,7 +48,7 @@ describe("maxActions guidance is indicative, never blocking", () => {
       state = step.state
       if (step.notice !== undefined) notices.push(step.notice.rendering)
     }
-    expect(notices).toEqual(["26 actions / 25 indicatives"])
+    expect(notices).toEqual(["26 actions / 25 suggested"])
     expect(state.used).toBe(40)
     expect(guidanceExceeded(state)).toBe(true)
   })
@@ -56,7 +56,7 @@ describe("maxActions guidance is indicative, never blocking", () => {
   it("renders the threshold the way the spec asks for", () => {
     let state = makeActionGuidance(25)
     for (let i = 0; i < 28; i++) state = recordAction(state).state
-    expect(recordAction({ ...state, notified: false }).notice?.rendering).toBe("29 actions / 25 indicatives")
+    expect(recordAction({ ...state, notified: false }).notice?.rendering).toBe("29 actions / 25 suggested")
   })
 
   it("a 40-action run is still `passed`: the counter never reaches the aggregation", () => {
@@ -233,7 +233,7 @@ describe("navigation origin allow-list", () => {
 describe("criterion hash binding", () => {
   it.effect("rejects a check bound to a criterion whose text changed", () =>
     Effect.gen(function*() {
-      const text = "Le projet reste présent après rechargement."
+      const text = "The project is still present after the reload."
       const hash = "0".repeat(64)
       const error = yield* expectFailure(verifyCriterionBinding({
         checkName: "project-unique-in-storage",

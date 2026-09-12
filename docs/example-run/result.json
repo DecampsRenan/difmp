@@ -22,7 +22,7 @@
       "attemptId": "a1",
       "criteria": [
         {
-          "criterionHash": "0c9d4101b421550814d69cf6d144fb4514d45a046c84c5b203df750f31fc645e",
+          "criterionHash": "e1d7ee9c459cebc0a96b419f4759a353d948a543b218cd3f39ea56f9fd9422d7",
           "criterionId": "c1",
           "evaluatedAtSeq": 34,
           "evaluator": {
@@ -34,15 +34,15 @@
             "art_3",
             "art_4"
           ],
-          "expected": "Le projet Projet r_t2suucd2gj4qi apparaît dans la liste des projets après sa création.",
+          "expected": "The project Project r_tqyz6a2ucpgic appears in the project list after it is created.",
           "limitations": "scripted test double — this is not a model judgement",
           "method": "model",
-          "observed": "la liste affiche le projet ajouté par l'interface après la réponse 201",
+          "observed": "the list shows the project appended by the interface after the 201 response",
           "status": "passed"
         },
         {
           "absence": "established-at-checkpoint",
-          "criterionHash": "ea1a28c45d0115e58a40a983a75ea5645acce7b44b0957e49d907a9daf2bf554",
+          "criterionHash": "042492d68d1934201778207e9595663712473ddd6e1cd234f403268f1e2bba4f",
           "criterionId": "c2",
           "evaluatedAtSeq": 56,
           "evaluator": {
@@ -57,15 +57,15 @@
             "art_6",
             "art_7"
           ],
-          "expected": "Le projet Projet r_t2suucd2gj4qi est toujours présent dans la liste des projets après un rechargement complet de la page.",
+          "expected": "The project Project r_tqyz6a2ucpgic is still present in the project list after a full page reload.",
           "limitations": "scripted test double — this is not a model judgement",
           "method": "model",
-          "observed": "après rechargement, la liste rendue par le serveur ne contient plus le projet",
+          "observed": "after the reload, the list rendered by the server no longer contains the project",
           "status": "failed"
         },
         {
           "absence": "established-at-checkpoint",
-          "criterionHash": "c319e4061581fc4a0554ed52cbb896615dfcc6b1c5a6b910cc212f29778747b9",
+          "criterionHash": "19b1599c1a614df2cb5f274fc72c32755dc66ac26f76bbe987cd5f5c16509b44",
           "criterionId": "c3",
           "evaluatedAtSeq": 61,
           "evaluator": {
@@ -81,41 +81,41 @@
             "art_7",
             "art_8"
           ],
-          "expected": "Après ce rechargement, la liste affichée ne contient qu'une seule entrée portant le nom Projet r_t2suucd2gj4qi. Cette attente porte uniquement sur ce que la liste affiche : elle ne dit rien de ce qui est enregistré côté serveur, et une liste filtrée ou paginée ne permet pas d'en déduire une unicité globale.",
+          "expected": "After that reload, the displayed list contains exactly one entry named Project r_tqyz6a2ucpgic. This expectation is only about what the list displays: it says nothing about what is stored server-side, and a filtered or paginated list is not enough to infer global uniqueness from it.",
           "limitations": "scripted test double — this is not a model judgement",
           "method": "model",
-          "observed": "aucune entrée de ce nom n'est visible après rechargement",
+          "observed": "no entry with that name is visible after the reload",
           "status": "failed"
         }
       ],
-      "durationMs": 3544,
+      "durationMs": 3324,
       "failedCriteria": [
         "c2",
         "c3"
       ],
-      "finishedAt": "2026-09-12T07:27:19.027Z",
+      "finishedAt": "2026-09-12T08:46:18.044Z",
       "model": {
         "calls": 14,
         "inputTokens": 1680,
         "outputTokens": 560,
         "verifierTokens": 480
       },
-      "startedAt": "2026-09-12T07:27:15.483Z",
+      "startedAt": "2026-09-12T08:46:14.720Z",
       "status": "failed"
     }
   ],
-  "contractHash": "05bbe6eaa5aa098df324e01596749968a7b6f382fde9d9ae40a7da8d69a6756a",
-  "durationMs": 3544,
+  "contractHash": "75b8cb2ade6508e0be164a5d9163b33fb25a6ef30abe367c0ac3b2ec5dd6a993",
+  "durationMs": 3324,
   "failedCriteria": [
     "c2",
     "c3"
   ],
   "finalized": true,
-  "finishedAt": "2026-09-12T07:27:19.027Z",
-  "runId": "r_t2suucd2gj4qi",
+  "finishedAt": "2026-09-12T08:46:18.044Z",
+  "runId": "r_tqyz6a2ucpgic",
   "scenarioId": "project-create",
   "schemaVersion": 1,
   "specPath": "../scenarios/project-create.e2e.md",
-  "startedAt": "2026-09-12T07:27:15.483Z",
+  "startedAt": "2026-09-12T08:46:14.720Z",
   "status": "failed"
 }

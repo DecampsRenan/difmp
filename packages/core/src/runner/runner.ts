@@ -1275,7 +1275,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
         role: "user",
         parts: [{
           type: "text",
-          text: "Commence par `observe` pour voir la page, puis agis. Termine par `finish` quand le parcours est fait."
+          text: "Start with `observe` to see the page, then act. Call `finish` once the walkthrough is done."
         }]
       }
     ]
@@ -1444,7 +1444,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             }
             messages.push({
               role: "user",
-              parts: [{ type: "text", text: "Utilise un outil pour progresser, ou appelle `finish`." }]
+              parts: [{ type: "text", text: "Use a tool to make progress, or call `finish`." }]
             })
             continue
           }

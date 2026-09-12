@@ -4,10 +4,10 @@ id: invalid-duplicate-yaml-key
 maxActions: 10
 maxActions: 40
 verification: |
-  - Le projet apparaît dans la liste après création.
+  - The project appears in the list after it is created.
 ---
 
-# Clé YAML dupliquée
+# Duplicate YAML key
 
-`maxActions` est déclaré deux fois. Le parseur YAML fonctionne en mode données strict : la dernière
-valeur ne gagne pas silencieusement, la spec est rejetée.
+`maxActions` is declared twice. The YAML parser runs in strict data mode: the last value does not
+silently win, the spec is rejected.

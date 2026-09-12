@@ -1,7 +1,7 @@
 ---
 version: 2
 id: bad-version
-verification: Une attente.
+verification: An expectation.
 ---
 
-# Corps
+# Body

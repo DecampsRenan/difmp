@@ -22,8 +22,8 @@ const inconclusive = (expected: string, observed: string): CheckResult => ({
 
 const sha256Hex = (text: string): string => createHash("sha256").update(text, "utf8").digest("hex")
 
-/** French/English wordings this check is written to prove. */
-const uniquenessMarkers = ["exactement un", "exactly one", "un seul", "une seule"]
+/** Wordings of the uniqueness statement this check is written to prove. */
+const uniquenessMarkers = ["exactly one", "a single", "only one"]
 
 /**
  * A `checks:` mapping binds this check to a criterion ID, and IDs are positional (`c1`, `c2`, …).

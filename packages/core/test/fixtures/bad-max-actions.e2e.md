@@ -2,7 +2,7 @@
 version: 1
 id: bad-max-actions
 maxActions: 0
-verification: Une attente.
+verification: An expectation.
 ---
 
-# Corps
+# Body

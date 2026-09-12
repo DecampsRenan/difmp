@@ -125,7 +125,7 @@ export const ArtifactAvailableEvent = event("artifactAvailable", {
 export const ActionGuidanceExceededEvent = event("actionGuidanceExceeded", {
   used: Schema.Int,
   guidance: Schema.Int,
-  /** Ready-to-display rendering, e.g. `28 actions / 25 indicatives`. */
+  /** Ready-to-display rendering, e.g. `28 actions / 25 suggested`. */
   rendering: Schema.String
 })
 

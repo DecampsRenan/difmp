@@ -49,7 +49,7 @@ describe("input precedence, end to end through the CLI", () => {
     // Declared only in the config, and a JSON number stays a number.
     expect(contract.inputs["fromConfigOnly"]).toBe("cfg")
     expect(contract.inputs["retries"]).toBe(1)
-    expect(contract.criteria[0]!.text).toBe("Le projet from-spec est visible, source cfg, retries 1.")
+    expect(contract.criteria[0]!.text).toBe("The project from-spec is visible, source cfg, retries 1.")
     // The frozen contract keeps the pre-interpolation source verbatim.
     expect(contract.criteria[0]!.sourceText).toContain("{{ projectName }}")
   })
@@ -63,7 +63,7 @@ describe("input precedence, end to end through the CLI", () => {
     const contract = latestContract(dir)
     expect(contract.inputs["projectName"]).toBe("from-file")
     expect(contract.inputs["retries"]).toBe(7)
-    expect(contract.criteria[0]!.text).toBe("Le projet from-file est visible, source cfg, retries 7.")
+    expect(contract.criteria[0]!.text).toBe("The project from-file is visible, source cfg, retries 7.")
   })
 
   it("--inputs-file < --input, and --input always yields a string", async () => {
@@ -78,7 +78,7 @@ describe("input precedence, end to end through the CLI", () => {
     const contract = latestContract(dir)
     expect(contract.inputs["projectName"]).toBe("from-cli")
     expect(contract.inputs["retries"]).toBe("9")
-    expect(contract.criteria[0]!.text).toBe("Le projet from-cli est visible, source cfg, retries 9.")
+    expect(contract.criteria[0]!.text).toBe("The project from-cli is visible, source cfg, retries 9.")
   })
 
   it("rejects a CLI input key that neither the config nor the spec declares", async () => {
@@ -122,7 +122,7 @@ describe("console and json reporters", () => {
     expect(text).toContain("Resolved configuration")
     expect(text).toContain("maxActions      25 (indicative only)")
     expect(text).toMatch(/PASS {2}alpha {2}\d+(\.\d+)?(ms|s)/)
-    expect(text).toContain("actions 2/25 indicatives")
+    expect(text).toContain("actions 2/25 suggested")
     expect(text).toContain("report.html")
     expect(text).toContain("Summary  1 scenario")
     // Non-TTY output is plain text: no ANSI escape sequences, no spinner frames.
@@ -351,7 +351,7 @@ describe("a run that fails before the contract is frozen is still reported", () 
 
     const html = readFileSync(join(runDir, "report.html"), "utf8")
     expect(html.startsWith("<!doctype html>")).toBe(true)
-    expect(html).toContain("jamais été gelé")
+    expect(html).toContain("never frozen")
   })
 
   it("replays the same outputs through `difmp report <run-directory>`", async () => {

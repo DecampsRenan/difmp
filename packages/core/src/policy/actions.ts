@@ -14,7 +14,7 @@ export interface ActionGuidanceState {
 export interface ActionGuidanceNotice {
   readonly used: number
   readonly guidance: number
-  /** e.g. `28 actions / 25 indicatives` */
+  /** e.g. `28 actions / 25 suggested` */
   readonly rendering: string
   /** One short nudge injected into the agent conversation. Not an instruction to stop. */
   readonly nudge: string
@@ -33,11 +33,11 @@ export const makeActionGuidance = (guidance: number): ActionGuidanceState => ({
 })
 
 export const renderActionGuidance = (used: number, guidance: number): string =>
-  `${used} actions / ${guidance} indicatives`
+  `${used} actions / ${guidance} suggested`
 
 const nudgeFor = (rendering: string): string =>
-  `Seuil indicatif d'actions dépassé (${rendering}). Réévalue brièvement ton approche. ` +
-  `Aucune action n'est refusée et le verdict n'est pas affecté.`
+  `Indicative action threshold crossed (${rendering}). Briefly reassess your approach. ` +
+  `No action is refused and the verdict is not affected.`
 
 /**
  * Count one ACCEPTED browser tool call — observations, screenshots and failed attempts included.

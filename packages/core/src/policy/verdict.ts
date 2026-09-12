@@ -27,7 +27,7 @@ export interface VerdictAdmission {
 }
 
 /**
- * spec §9 — "Ne pas perdre cette information".
+ * spec §9 — "Do not lose this information".
  *
  * The browser agent may call `check` on the same criterion as often as it likes, and nothing stops
  * it from calling it again after a `failed`. Letting the last answer win would give an adversarial

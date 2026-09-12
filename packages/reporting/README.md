@@ -12,7 +12,7 @@ the application under test.
 
 One self-contained file: inline CSS, inline data, relative links to the screenshots and snapshots
 under `attempts/`. It opens offline and makes no network request. It shows the scenario, the frozen
-criteria with their text and `modèle`/`code` method, each verdict with its `expected` / `observed`
+criteria with their text and `model`/`code` method, each verdict with its `expected` / `observed`
 and the evidence it cites, every **downgrade** the harness imposed on the evaluator's answer, the
 budgets and the action count, the timeline, and the adapter that ran.
 
@@ -20,8 +20,9 @@ budgets and the action count, the timeline, and the adapter that ran.
 `escape.ts`, applied at three levels (text, attributes, inline data). Page content is attacker-shaped
 input; it is rendered as data and never as markup.
 
-Cost renders as the literal string `indisponible` unless a price table is supplied. There is no
-pricing anywhere in core, and an estimate presented as a number would be a fabrication.
+`report.html` carries no cost at all: there is no price table anywhere in the harness, and an
+estimate presented as a number would be a fabrication. The live dashboard follows the same rule and
+renders cost as the literal string `unavailable`.
 
 ## `junit.xml`
 

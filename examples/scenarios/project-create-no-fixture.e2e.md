@@ -5,25 +5,25 @@ tags: [projects, login]
 timeout: 120s
 maxActions: 35
 verification: |
-  - Après connexion, la page d'accueil affiche le nom de l'espace de travail de l'utilisateur connecté.
-  - Un projet nommé Projet sans fixture apparaît dans la liste des projets après sa création.
-  - Ce projet est toujours présent dans la liste après un rechargement complet de la page.
+  - After signing in, the home page displays the workspace name of the signed-in user.
+  - A project named Project without fixture appears in the project list after it is created.
+  - That project is still present in the list after a full page reload.
 ---
 
-# Se connecter depuis l'interface, puis créer un projet
+# Sign in through the interface, then create a project
 
-Ce scénario ne déclare ni `fixture` ni `inputs` : les deux sont facultatifs. Le harness ouvre donc un
-contexte navigateur vierge sur l'URL configurée, sans session préparée, et le scénario écrit
-lui-même les valeurs dont il a besoin.
+This scenario declares neither `fixture` nor `inputs`: both are optional. The harness therefore
+opens a blank browser context on the configured URL, with no prepared session, and the scenario
+writes down the values it needs itself.
 
-L'application affiche alors un formulaire de connexion. S'y connecter avec l'adresse
-demo@example.test et le mot de passe demo-password. Ce sont des données de démonstration synthétiques
-de l'application d'exemple locale, créées explicitement avant le run ; ce ne sont pas des secrets, et
-un secret ne s'écrirait jamais dans une spec.
+The application then shows a sign-in form. Sign in with the address demo@example.test and the
+password demo-password. These are synthetic demonstration data belonging to the local example
+application, created explicitly before the run; they are not secrets, and a secret would never be
+written in a spec.
 
-Créer ensuite un projet nommé Projet sans fixture, puis recharger complètement la page.
+Then create a project named Project without fixture, and fully reload the page.
 
-Contrairement à `project-create`, ce scénario teste bien le login : c'est le seul cas où le préparer
-d'avance reviendrait à ne pas tester ce qui est examiné.
+Unlike `project-create`, this scenario really does test the login: it is the one case where
+preparing it in advance would amount to not testing what is under examination.
 
-Les résultats attendus sont décrits dans verification.
+The expected results are described in verification.

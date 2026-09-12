@@ -52,26 +52,26 @@ const criterionAt = (options: JourneyOptions, index: number): string => {
 /** Observe, (reveal,) fill, submit, re-observe, capture. Stops before any `check`. */
 export const createProjectSteps = (options: JourneyOptions): Array<ScriptedStep> => {
   const shape = formShape(options.variant ?? "healthy")
-  const steps: Array<ScriptedStep> = [turn("j'observe la page d'accueil", [observe()])]
+  const steps: Array<ScriptedStep> = [turn("I observe the home page", [observe()])]
   if (shape.reveal !== undefined) {
-    steps.push(turn("j'ouvre le formulaire de création", [
-      clickByName(shape.reveal, { intent: "révéler le formulaire de création" })
+    steps.push(turn("I open the create form", [
+      clickByName(shape.reveal, { intent: "reveal the create form" })
     ]))
     // The dialog is `hidden` until the toggle fires, so its fields are not in the previous snapshot.
-    steps.push(turn("j'observe le formulaire révélé", [observe()]))
+    steps.push(turn("I observe the revealed form", [observe()]))
   }
-  steps.push(turn("je saisis le nom du projet", [fillByName(shape.nameField, options.projectName)]))
-  steps.push(turn("je valide la création", [clickByName(shape.submit, { intent: "créer le projet" })]))
-  steps.push(turn("j'observe la liste après création", [observe()]))
-  steps.push(turn("je capture l'état après création", [screenshot("apres-creation")]))
+  steps.push(turn("I type the project name", [fillByName(shape.nameField, options.projectName)]))
+  steps.push(turn("I submit the creation", [clickByName(shape.submit, { intent: "create the project" })]))
+  steps.push(turn("I observe the list after creation", [observe()]))
+  steps.push(turn("I capture the state after creation", [screenshot("after-creation")]))
   return steps
 }
 
 /** The reload half: navigate back to the base URL, observe, capture. */
 export const reloadSteps = (options: JourneyOptions): Array<ScriptedStep> => [
-  turn("je recharge la page", [navigate(options.baseUrl, "recharger pour observer l'état persisté")]),
-  turn("j'observe la liste après rechargement", [observe()]),
-  turn("je capture l'état après rechargement", [screenshot("apres-rechargement")])
+  turn("I reload the page", [navigate(options.baseUrl, "reload to observe the persisted state")]),
+  turn("I observe the list after the reload", [observe()]),
+  turn("I capture the state after the reload", [screenshot("after-reload")])
 ]
 
 /**
@@ -83,13 +83,13 @@ export const projectCreateScript = (options: JourneyOptions): AgentScript => {
   const variant = options.variant ?? "healthy"
   const steps: Array<ScriptedStep> = [
     ...createProjectSteps(options),
-    turn("je demande l'évaluation de la présence avant rechargement", [check(criterionAt(options, 0))]),
+    turn("I request the evaluation of the presence before reloading", [check(criterionAt(options, 0))]),
     ...reloadSteps(options),
-    turn("je demande l'évaluation des critères restants", [
+    turn("I request the evaluation of the remaining criteria", [
       check(criterionAt(options, 1)),
       check(criterionAt(options, 2))
     ]),
-    turn("terminé", [finish("projet créé, puis liste réobservée après rechargement")])
+    turn("done", [finish("project created, then the list re-observed after the reload")])
   ]
   return {
     id: `project-create/${variant}`,
@@ -109,19 +109,19 @@ export const loginThenCreateScript = (options: JourneyOptions & {
   id: "project-create-no-fixture",
   description: "signs in through the login form, then runs the create-and-reload journey",
   steps: [
-    turn("j'observe la page de connexion", [observe()]),
-    turn("je saisis mes identifiants", [
+    turn("I observe the sign-in page", [observe()]),
+    turn("I type my credentials", [
       fillByName("Email", options.email),
       fillByName("Password", options.password)
     ]),
-    turn("je me connecte", [clickByName("Sign in", { intent: "ouvrir la session" })]),
-    turn("j'observe l'accueil de l'espace de travail", [observe()]),
-    turn("je capture l'état connecté", [screenshot("apres-connexion")]),
-    turn("je demande l'évaluation de la connexion", [check(criterionAt(options, 0))]),
+    turn("I sign in", [clickByName("Sign in", { intent: "open the session" })]),
+    turn("I observe the workspace home page", [observe()]),
+    turn("I capture the signed-in state", [screenshot("after-sign-in")]),
+    turn("I request the evaluation of the sign-in", [check(criterionAt(options, 0))]),
     ...createProjectSteps(options),
-    turn("je demande l'évaluation de la présence avant rechargement", [check(criterionAt(options, 1))]),
+    turn("I request the evaluation of the presence before reloading", [check(criterionAt(options, 1))]),
     ...reloadSteps(options),
-    turn("je demande l'évaluation de la persistance", [check(criterionAt(options, 2))]),
-    turn("terminé", [finish("connexion puis création vérifiées")])
+    turn("I request the evaluation of persistence", [check(criterionAt(options, 2))]),
+    turn("done", [finish("sign-in then creation verified")])
   ]
 })

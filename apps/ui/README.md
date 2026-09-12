@@ -24,12 +24,12 @@ The CLI overrides the four endpoints by injecting one script tag before the bund
 ```
 
 `pricing` is an optional fifth field. It is absent by default and there is no price table anywhere in
-the harness, so **cost renders as the literal string `indisponible`** — never an estimate, never `0`.
+the harness, so **cost renders as the literal string `unavailable`** — never an estimate, never `0`.
 
 ## What it shows, and where each part comes from
 
 The SSE stream carries raw `HarnessEvent`s, one frame per journal line, `id:` = the event `seq`. The
-criteria, however, have to be visible with their **text** and their `modèle` / `code` **method** from
+criteria, however, have to be visible with their **text** and their `model` / `code` **method** from
 the moment the contract is frozen — before any verification has happened — and `contractFrozen`
 carries ids only. So the app fetches `contractUrl` on that event. It also reads a `criteria` field on
 `contractFrozen` and prefers it when present, so widening that event later closes the gap without a
@@ -48,7 +48,7 @@ drives, but that header cannot be set from script; when the browser gives up (`r
 the app opens a fresh `EventSource` and carries the cursor as `?lastEventId=<seq>`. Both are
 supported by the server and mean the same thing.
 
-**Known gap:** the "stream unavailable / Reprendre le flux" path has never executed.
+**Known gap:** the "server unreachable / Resume the stream" path has never executed.
 `context.setOffline(true)` does not tear down a live `EventSource` in Chromium over loopback, so that
 branch could not be driven from a test. The resume contract itself is proven at the two levels that
 matter — header replay, query replay, and a full page reload rebuilding the timeline with no loss and

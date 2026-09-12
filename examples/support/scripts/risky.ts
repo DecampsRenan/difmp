@@ -31,8 +31,8 @@ export const prematureFinishOnFixtureApp = (): AgentScript => ({
   id: "premature-finish",
   description: "observes once, then finishes without requesting a single evaluation",
   steps: [
-    turn("j'observe la page d'accueil", [observe()]),
-    turn("je pense que c'est fait", [finish("le projet me semble créé")])
+    turn("I observe the home page", [observe()]),
+    turn("I think it is done", [finish("the project looks created to me")])
   ]
 })
 
@@ -52,13 +52,13 @@ export const exceedActionsThenSucceed = (options: JourneyOptions & { readonly pa
     ))
   }
   steps.push(...createProjectSteps(options))
-  steps.push(turn("je demande l'évaluation de la présence avant rechargement", [check(criterionAt(options, 0))]))
+  steps.push(turn("I request the evaluation of the presence before reloading", [check(criterionAt(options, 0))]))
   steps.push(...reloadSteps(options))
-  steps.push(turn("je demande l'évaluation des critères restants", [
+  steps.push(turn("I request the evaluation of the remaining criteria", [
     check(criterionAt(options, 1)),
     check(criterionAt(options, 2))
   ]))
-  steps.push(turn("terminé", [finish("parcours long mais complet")]))
+  steps.push(turn("done", [finish("a long but complete journey")]))
   return {
     id: "exceed-actions",
     description: `burns ${padding} extra browser actions, then completes the journey and passes`,
@@ -79,18 +79,18 @@ export const staleObservationOnFixtureApp = (options: JourneyOptions): AgentScri
     id: "stale-observation",
     description: `reuses an expired observationId to click ${JSON.stringify(target)}, then recovers`,
     steps: [
-      turn("première observation", [observe()]),
-      turn("seconde observation", [observe()]),
-      turn("je clique avec une référence périmée", [clickWithStaleObservation(target)]),
-      turn("je ré-observe comme le harness me le demande", [observe()]),
+      turn("first observation", [observe()]),
+      turn("second observation", [observe()]),
+      turn("I click with a stale reference", [clickWithStaleObservation(target)]),
+      turn("I re-observe as the harness asks me to", [observe()]),
       ...createProjectSteps(options),
-      turn("je demande l'évaluation de la présence avant rechargement", [check(criterionAt(options, 0))]),
+      turn("I request the evaluation of the presence before reloading", [check(criterionAt(options, 0))]),
       ...reloadSteps(options),
-      turn("je demande l'évaluation des critères restants", [
+      turn("I request the evaluation of the remaining criteria", [
         check(criterionAt(options, 1)),
         check(criterionAt(options, 2))
       ]),
-      turn("terminé", [finish("référence périmée refusée, puis parcours mené à terme")])
+      turn("done", [finish("stale reference refused, then the journey carried through")])
     ]
   }
 }
@@ -113,13 +113,13 @@ export const slowExplorationScript = (
     steps.push(turn(`exploration ${t + 1}`, calls))
   }
   steps.push(...createProjectSteps(options))
-  steps.push(turn("je demande l'évaluation de la présence avant rechargement", [check(criterionAt(options, 0))]))
+  steps.push(turn("I request the evaluation of the presence before reloading", [check(criterionAt(options, 0))]))
   steps.push(...reloadSteps(options))
-  steps.push(turn("je demande l'évaluation des critères restants", [
+  steps.push(turn("I request the evaluation of the remaining criteria", [
     check(criterionAt(options, 1)),
     check(criterionAt(options, 2))
   ]))
-  steps.push(turn("terminé", [finish("exploration longue puis parcours complet")]))
+  steps.push(turn("done", [finish("a long exploration, then the complete journey")]))
   return {
     id: "slow-exploration",
     description: `${turns} turns of ${perTurn} browser actions, then the journey`,
@@ -137,10 +137,10 @@ export const skipLastCriterion = (options: JourneyOptions): AgentScript => ({
   description: "completes the journey but never requests the last criterion",
   steps: [
     ...createProjectSteps(options),
-    turn("je demande l'évaluation de la présence avant rechargement", [check(criterionAt(options, 0))]),
+    turn("I request the evaluation of the presence before reloading", [check(criterionAt(options, 0))]),
     ...reloadSteps(options),
-    turn("je demande l'évaluation de la persistance", [check(criterionAt(options, 1))]),
-    turn("terminé", [finish("je n'ai pas demandé l'évaluation du dernier critère")])
+    turn("I request the evaluation of persistence", [check(criterionAt(options, 1))]),
+    turn("done", [finish("I did not request the evaluation of the last criterion")])
   ]
 })
 

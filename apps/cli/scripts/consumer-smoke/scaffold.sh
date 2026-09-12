@@ -35,16 +35,16 @@ JSON
 # ---------------------------------------------------------------------------------------------
 cat > "$DIR/public/index.html" <<'HTML'
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head><meta charset="utf-8"><title>Consumer demo</title></head>
 <body>
-  <h1>Espace de travail</h1>
+  <h1>Workspace</h1>
   <form id="f">
-    <label for="n">Nom du projet</label>
+    <label for="n">Project name</label>
     <input id="n" name="n" type="text">
-    <button type="submit">Créer</button>
+    <button type="submit">Create</button>
   </form>
-  <h2>Projets</h2>
+  <h2>Projects</h2>
   <ul id="list"></ul>
   <script>
     document.getElementById("f").addEventListener("submit", function (e) {
@@ -96,14 +96,14 @@ export default defineConfig({
   exclude: ["**/invalid/**"],
   baseUrl,
   allowedOrigins: [baseUrl],
-  inputs: { projectName: "Projet {{ run.id }}" },
+  inputs: { projectName: "Project {{ run.id }}" },
   provider: "scripted",
   providerOptions: {
     scenario: "happy-path",
-    fills: [{ name: "Nom du projet", value: "Projet consommateur" }],
-    submit: "Créer",
+    fills: [{ name: "Project name", value: "Consumer project" }],
+    submit: "Create",
     verdict,
-    observed: "la liste affiche l'entrée créée (test double scripté)"
+    observed: "the list shows the created entry (scripted test double)"
   },
   maxActions: 25,
   outputDir: "runs"
@@ -135,14 +135,14 @@ export default defineConfig({
   exclude: ["**/invalid/**"],
   baseUrl,
   allowedOrigins: [baseUrl],
-  inputs: { projectName: "Projet {{ run.id }}" },
+  inputs: { projectName: "Project {{ run.id }}" },
   provider: "scripted",
   providerOptions: {
     scenario: "happy-path",
-    fills: [{ name: "Nom du projet", value: "Projet consommateur" }],
-    submit: "Créer",
+    fills: [{ name: "Project name", value: "Consumer project" }],
+    submit: "Create",
     verdict,
-    observed: "la liste affiche l'entrée créée (test double scripté)"
+    observed: "the list shows the created entry (scripted test double)"
   },
   maxActions: 25,
   outputDir: "runs"
@@ -161,15 +161,15 @@ tags: [smoke]
 timeout: 90s
 maxActions: 25
 inputs:
-  projectName: "Projet {{ run.id }}"
+  projectName: "Project {{ run.id }}"
 verification: |
-  - Le projet créé apparaît dans la liste des projets de la page.
+  - The created project appears in the project list on the page.
 ---
 
-# Créer un projet depuis un projet consommateur
+# Create a project from a consumer project
 
-Depuis la page d'accueil, saisir un nom dans le champ « Nom du projet » puis valider avec
-« Créer ». Observer ensuite la liste des projets.
+From the home page, type a name into the "Project name" field, then confirm with "Create".
+Then observe the project list.
 MD
 
 cat > "$DIR/tests/invalid/bad-frontmatter.e2e.md" <<'MD'
@@ -178,8 +178,8 @@ version: 1
 id: consumer-invalid
 unknownKey: nope
 verification: |
-  - Ceci ne doit jamais être exécuté.
+  - This must never be executed.
 ---
 
-# Spec invalide
+# Invalid spec
 MD

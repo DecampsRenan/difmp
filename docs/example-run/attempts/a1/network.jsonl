@@ -1,6 +1,6 @@
-{"ts":"2026-09-12T07:27:16.015Z","phase":"request","method":"GET","url":"http://127.0.0.1:40899/","resourceType":"document","isNavigation":true}
-{"ts":"2026-09-12T07:27:16.020Z","phase":"response","method":"GET","url":"http://127.0.0.1:40899/","resourceType":"document","status":200,"ok":true}
-{"ts":"2026-09-12T07:27:16.912Z","phase":"request","method":"POST","url":"http://127.0.0.1:40899/api/projects","resourceType":"fetch","isNavigation":false}
-{"ts":"2026-09-12T07:27:16.928Z","phase":"response","method":"POST","url":"http://127.0.0.1:40899/api/projects","resourceType":"fetch","status":201,"ok":true}
-{"ts":"2026-09-12T07:27:18.120Z","phase":"request","method":"GET","url":"http://127.0.0.1:40899/","resourceType":"document","isNavigation":true}
-{"ts":"2026-09-12T07:27:18.123Z","phase":"response","method":"GET","url":"http://127.0.0.1:40899/","resourceType":"document","status":200,"ok":true}
+{"ts":"2026-09-12T08:46:15.196Z","phase":"request","method":"GET","url":"http://127.0.0.1:37897/","resourceType":"document","isNavigation":true}
+{"ts":"2026-09-12T08:46:15.204Z","phase":"response","method":"GET","url":"http://127.0.0.1:37897/","resourceType":"document","status":200,"ok":true}
+{"ts":"2026-09-12T08:46:16.004Z","phase":"request","method":"POST","url":"http://127.0.0.1:37897/api/projects","resourceType":"fetch","isNavigation":false}
+{"ts":"2026-09-12T08:46:16.006Z","phase":"response","method":"POST","url":"http://127.0.0.1:37897/api/projects","resourceType":"fetch","status":201,"ok":true}
+{"ts":"2026-09-12T08:46:17.078Z","phase":"request","method":"GET","url":"http://127.0.0.1:37897/","resourceType":"document","isNavigation":true}
+{"ts":"2026-09-12T08:46:17.084Z","phase":"response","method":"GET","url":"http://127.0.0.1:37897/","resourceType":"document","status":200,"ok":true}

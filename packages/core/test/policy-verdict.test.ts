@@ -20,8 +20,8 @@ const result = (status: CriterionStatus, overrides: Partial<CriterionResult> = {
   status,
   method: "model",
   evaluator: { kind: "scripted-model" },
-  expected: "le projet apparaît",
-  observed: "observé",
+  expected: "the project appears",
+  observed: "observed",
   evidence: ["art_1"],
   evaluatedAtSeq: 7,
   ...overrides
@@ -38,7 +38,7 @@ describe("admitVerdict — asking again never upgrades a verdict", () => {
   it("keeps a `failed` when a later agent evaluation says `passed`, and keeps the later answer", () => {
     const admission = admitVerdict({
       current: result("failed", { observed: "absent" }),
-      incoming: result("passed", { observed: "présent", evaluatedAtSeq: 11 }),
+      incoming: result("passed", { observed: "present", evaluatedAtSeq: 11 }),
       requestedBy: "agent"
     })
     expect(admission.applied).toBe(false)
@@ -46,7 +46,7 @@ describe("admitVerdict — asking again never upgrades a verdict", () => {
     expect(admission.result.observed).toBe("absent")
     expect(admission.result.reChecks).toEqual([{
       status: "passed",
-      observed: "présent",
+      observed: "present",
       evidence: ["art_1"],
       requestedBy: "agent",
       evaluatedAtSeq: 11,

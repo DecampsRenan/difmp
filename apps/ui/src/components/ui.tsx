@@ -39,7 +39,7 @@ export const Gauge = (props: {
   const ratio = props.limit > 0 ? Math.min(props.used / props.limit, 1) : 0
   const remaining = Math.max(props.limit - props.used, 0)
   const over = props.used > props.limit
-  const fmt = props.format ?? ((n: number) => n.toLocaleString("fr-FR"))
+  const fmt = props.format ?? ((n: number) => n.toLocaleString("en-US"))
   return (
     <div className={`gauge gauge-${props.kind}`} data-testid={props.testId}>
       <div className="gauge-line">
@@ -52,10 +52,10 @@ export const Gauge = (props: {
       <div className="gauge-line gauge-sub">
         <span>
           {props.kind === "blocking"
-            ? `reste ${fmt(remaining)}`
+            ? `${fmt(remaining)} left`
             : over
-            ? `${fmt(props.used - props.limit)} au-delà de l'indication`
-            : `${fmt(remaining)} avant l'indication`}
+            ? `${fmt(props.used - props.limit)} past the threshold`
+            : `${fmt(remaining)} before the threshold`}
         </span>
         {props.footnote === undefined ? null : <span className="gauge-foot">{props.footnote}</span>}
       </div>
@@ -68,7 +68,7 @@ export const Empty = (props: { readonly children: ReactNode }) => <p className="
 export const timeOf = (iso: string): string => {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
-  return date.toLocaleTimeString("fr-FR", { hour12: false }) +
+  return date.toLocaleTimeString("en-GB", { hour12: false }) +
     `.${String(date.getMilliseconds()).padStart(3, "0")}`
 }
 

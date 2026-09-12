@@ -6,8 +6,8 @@ import { expectFailure, expectSuccess } from "./helpers.js"
 const scope = {
   run: { id: "r_abcdefghijklm" },
   attempt: { id: "a1" },
-  inputs: { projectName: "Projet X", count: 3, flag: true },
-  fixture: { workspaceName: "Espace démo" }
+  inputs: { projectName: "Project X", count: 3, flag: true },
+  fixture: { workspaceName: "Demo workspace" }
 }
 
 describe("interpolation", () => {
@@ -20,7 +20,7 @@ describe("interpolation", () => {
         anchor: { line: 1, column: 1 },
         scope
       }))
-      expect(out).toBe("run=r_abcdefghijklm attempt=a1 p=Projet X w=Espace démo")
+      expect(out).toBe("run=r_abcdefghijklm attempt=a1 p=Project X w=Demo workspace")
     }))
 
   it.effect("serialises scalars deterministically", () =>
@@ -40,17 +40,17 @@ describe("interpolation", () => {
   it.effect("rejects an unknown variable, naming it and its source position", () =>
     Effect.gen(function*() {
       const error = yield* expectFailure(interpolate({
-        text: "ligne un\nvaleur {{ inconnue }} ici",
+        text: "line one\nvalue {{ unknown }} here",
         source: "s.e2e.md",
         field: "criteria.c1",
         anchor: { line: 10, column: 3 },
         scope
       }))
-      expect(error.variable).toBe("inconnue")
+      expect(error.variable).toBe("unknown")
       expect(error.field).toBe("criteria.c1")
       expect(error.line).toBe(11)
-      expect(error.column).toBe(8)
-      expect(error.message).toContain("s.e2e.md:11:8")
+      expect(error.column).toBe(7)
+      expect(error.message).toContain("s.e2e.md:11:7")
       expect(error.message).toContain("declared inputs: count, flag, projectName")
     }))
 
@@ -88,7 +88,7 @@ describe("interpolation", () => {
         scope: { run: scope.run, attempt: scope.attempt, inputs: scope.inputs },
         mode: "validate"
       }))
-      expect(out).toBe("w={{ fixture.workspaceName }} p=Projet X")
+      expect(out).toBe("w={{ fixture.workspaceName }} p=Project X")
     }))
 })
 
@@ -96,12 +96,12 @@ describe("input resolution (phase 1)", () => {
   it.effect("resolves reserved variables only", () =>
     Effect.gen(function*() {
       const resolved = yield* expectSuccess(resolveInputs({
-        declared: { projectName: "Projet {{ run.id }}", count: 2 },
+        declared: { projectName: "Project {{ run.id }}", count: 2 },
         source: "s.e2e.md",
         run: { id: "r_abcdefghijklm" },
         attempt: { id: "a1" }
       }))
-      expect(resolved).toEqual({ projectName: "Projet r_abcdefghijklm", count: 2 })
+      expect(resolved).toEqual({ projectName: "Project r_abcdefghijklm", count: 2 })
     }))
 
   it.effect("rejects an input that references a fixture value", () =>

@@ -57,7 +57,7 @@ describe("JUnit status mapping", () => {
   it("adds a run-level <error> for a technical error and documents the cancellation rule", () => {
     const xml = renderJUnitReport(loadFixture("error"))
     expect(xml).toMatch(/<error type="run-error"/)
-    expect(xml).toContain("Aucun &lt;skipped&gt; n&#39;est émis")
+    expect(xml).toContain("No &lt;skipped&gt; is ever emitted")
   })
 
   it("emits no failure and no error for a fully passed run", () => {
@@ -73,7 +73,7 @@ describe("report view", () => {
   it("keeps the indicative action count out of the blocking budgets", () => {
     const view = buildReportView(loadFixture("failed-persistence"))
     const attempt = view.attempts[0]!
-    expect(attempt.actions.rendering).toBe("28 actions / 25 indicatives")
+    expect(attempt.actions.rendering).toBe("28 actions / 25 suggested")
     expect(attempt.actions.exceeded).toBe(true)
     expect(attempt.budgets.map((b) => b.key)).toEqual(["maxModelCalls", "maxTokens", "attemptTimeoutMs"])
     expect(attempt.budgets.some((b) => b.key.toLowerCase().includes("action"))).toBe(false)
@@ -102,7 +102,7 @@ describe("report view", () => {
     const view = buildReportView(loadFixture("inconclusive"))
     const missing = view.artifacts.find((a) => a.artifactId === "art_3")!
     expect(missing.state).toBe("missing")
-    expect(missing.reason).toContain("expiré")
+    expect(missing.reason).toContain("timed out")
     expect(view.artifactCounts).toEqual({ present: 3, missing: 1, failed: 0 })
   })
 
@@ -114,7 +114,7 @@ describe("report view", () => {
   it("marks a scripted double so it is never read as a real model judgement", () => {
     const view = buildReportView(loadFixture("failed-persistence"))
     expect(view.criteria[0]!.evaluatorKind).toBe("scripted-model")
-    expect(view.criteria[0]!.evaluatorLabel).toContain("pas un jugement de modèle réel")
+    expect(view.criteria[0]!.evaluatorLabel).toContain("not a real model judgement")
   })
 
   it("records which branch of the absence rule produced a verdict", () => {
@@ -152,7 +152,7 @@ describe("cancellation", () => {
   const cancelled = decodeResult({
     ...base.result,
     status: "cancelled",
-    reason: "interruption utilisateur (SIGINT) pendant la boucle d'agent",
+    reason: "user interruption (SIGINT) during the agent loop",
     attempts: [{
       attemptId: attempt.attemptId,
       startedAt: attempt.startedAt,
@@ -163,7 +163,7 @@ describe("cancellation", () => {
       model: attempt.model,
       artifacts: attempt.artifacts,
       status: "cancelled",
-      reason: "interruption utilisateur"
+      reason: "user interruption"
     }]
   })
   const input = { ...base, result: cancelled }
@@ -172,7 +172,7 @@ describe("cancellation", () => {
     const xml = renderJUnitReport(input)
     expect(xml).toMatch(/<error type="run-cancelled" message="status=cancelled/)
     expect(xml).not.toContain("<skipped")
-    expect(xml).toContain("une annulation est un &lt;error&gt; au niveau du run")
+    expect(xml).toContain("a cancellation is an &lt;error&gt; at run level")
   })
 
   it("keeps the unevaluated criteria as errors rather than passes", () => {
@@ -211,7 +211,7 @@ describe("run that failed before the contract was frozen", () => {
   it("still renders an HTML report, and says the contract was never frozen", () => {
     const html = renderHtmlReport(input)
     expect(html.startsWith("<!doctype html>")).toBe(true)
-    expect(html).toContain("jamais été gelé")
+    expect(html).toContain("never frozen")
   })
 
   it("falls back to the manifest for the budgets it can no longer read from a contract", () => {
@@ -219,6 +219,6 @@ describe("run that failed before the contract was frozen", () => {
     expect(view.criteria).toEqual([])
     expect(view.scenarioBody).toBe("")
     expect(view.attempts[0]!.budgets.find((b) => b.key === "maxTokens")!.limit).toBe(200_000)
-    expect(view.diagnostics.some((d) => d.source === "contrat")).toBe(true)
+    expect(view.diagnostics.some((d) => d.source === "contract")).toBe(true)
   })
 })

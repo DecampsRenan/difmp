@@ -9,14 +9,14 @@ import { buildReportView, criterionStatusLabel, downgradeLabel } from "./view.js
  * next to every `model` criterion, not once in a footnote.
  */
 const PROBABILISTIC_NOTE =
-  "Évaluation textuelle par modèle : le verdict est probabiliste et argumenté à partir des preuves " +
-  "collectées. Ce n'est pas une assertion déterministe et il peut différer d'une exécution à l'autre."
+  "Textual evaluation by a model: the verdict is probabilistic and argued from the evidence " +
+  "collected. It is not a deterministic assertion and it may differ from one run to the next."
 
 const DETERMINISTIC_NOTE =
-  "Évaluation par code : un check TypeScript enregistré a produit ce verdict de façon déterministe."
+  "Evaluation by code: a registered TypeScript check produced this verdict deterministically."
 
 const SCRIPTED_NOTE =
-  "Double scripté déterministe : réponse de test, jamais un jugement de modèle réel."
+  "Deterministic scripted double: a test answer, never a real model judgement."
 
 const formatDuration = (ms: number): string =>
   ms < 1000 ? `${ms} ms` : ms < 60_000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.floor(ms / 60_000)} min ${
@@ -24,9 +24,9 @@ const formatDuration = (ms: number): string =>
   } s`
 
 const formatBytes = (bytes: number): string =>
-  bytes < 1024 ? `${bytes} o` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} Kio` : `${
+  bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KiB` : `${
     (bytes / (1024 * 1024)).toFixed(1)
-  } Mio`
+  } MiB`
 
 const shortHash = (hash: string): string => hash === "" ? "—" : hash.slice(0, 16)
 
@@ -35,14 +35,14 @@ const badge = (status: string, label: string): string =>
 
 /** Neutral on purpose: the method is not a verdict and must not borrow a status colour. */
 const methodBadge = (method: "model" | "code"): string =>
-  `<span class="badge method">méthode ${h(method)}</span>`
+  `<span class="badge method">method ${h(method)}</span>`
 
 /** A path is data too: only a relative, in-directory path becomes a link. */
 const artifactLink = (artifact: ArtifactView): string => {
-  if (artifact.path === undefined) return `<span class="missing">aucun fichier</span>`
+  if (artifact.path === undefined) return `<span class="missing">no file</span>`
   const href = artifactHref(artifact.path)
   return href === undefined
-    ? `<span class="mono wrap">${h(artifact.path)}</span> <span class="missing">(chemin non relatif, non lié)</span>`
+    ? `<span class="mono wrap">${h(artifact.path)}</span> <span class="missing">(non-relative path, not linked)</span>`
     : `<a class="mono wrap" href="${h(href)}">${h(artifact.path)}</a>`
 }
 
@@ -54,7 +54,7 @@ const definition = (label: string, value: string | undefined, mono = false): str
 const expectationItem = (criterion: CriterionView): string => {
   const source = criterion.sourceText === criterion.expectation
     ? ""
-    : `<dt>Texte source (avant interpolation)</dt><dd><pre>${h(criterion.sourceText)}</pre></dd>`
+    : `<dt>Source text (before interpolation)</dt><dd><pre>${h(criterion.sourceText)}</pre></dd>`
   return `<article class="item">
   <header>
     <b class="mono">${h(criterion.id)}</b>
@@ -63,7 +63,7 @@ const expectationItem = (criterion: CriterionView): string => {
   </header>
   <pre>${h(criterion.expectation)}</pre>
   <dl class="kv">
-    ${definition("Hash du critère (contrat)", shortHash(criterion.contractHash), true)}
+    ${definition("Criterion hash (contract)", shortHash(criterion.contractHash), true)}
     ${source}
   </dl>
 </article>`
@@ -77,13 +77,13 @@ const expectationItem = (criterion: CriterionView): string => {
 const downgradeBlock = (criterion: CriterionView): string => {
   if (criterion.downgrades.length === 0) return ""
   const rows = criterion.downgrades.map((downgrade) =>
-    `<li><b>${h(downgradeLabel(downgrade.reason))}</b> — statut ramené de « ${
+    `<li><b>${h(downgradeLabel(downgrade.reason))}</b> — status "${
       h(criterionStatusLabel(downgrade.from))
-    } » à « ${h(criterionStatusLabel(downgrade.to))} » : ${h(downgrade.detail)}</li>`
+    }" brought down to "${h(criterionStatusLabel(downgrade.to))}": ${h(downgrade.detail)}</li>`
   ).join("")
-  return `<div class="note d-warning"><b>Statut imposé par le harness</b>
+  return `<div class="note d-warning"><b>Status imposed by the harness</b>
   <ul>${rows}</ul>
-  <p>Le verdict affiché n'est pas celui proposé par l'évaluateur : une règle du harness l'a refusé.</p></div>`
+  <p>The verdict shown is not the one the evaluator proposed: a harness rule refused it.</p></div>`
 }
 
 /** spec §9 forbids losing an earlier verdict when the agent asks again. */
@@ -93,12 +93,12 @@ const reCheckBlock = (criterion: CriterionView): string => {
     `<tr><td class="mono">seq ${h(String(reCheck.evaluatedAtSeq))}</td><td>${
       h(criterionStatusLabel(reCheck.status))
     }</td><td>${h(reCheck.requestedBy)}</td><td>${
-      reCheck.applied ? badge("failed", "a remplacé le verdict") : badge("inconclusive", "observation seulement")
+      reCheck.applied ? badge("failed", "replaced the verdict") : badge("inconclusive", "observation only")
     }</td><td class="wrap">${h(reCheck.observed)}</td></tr>`
   ).join("")
-  return `<div class="note d-warning"><b>Évaluations ultérieures de ce critère</b>
+  return `<div class="note d-warning"><b>Later evaluations of this criterion</b>
   <div class="scroll"><table>
-    <thead><tr><th>Événement</th><th>Statut rendu</th><th>Demandé par</th><th>Effet</th><th>Observé</th></tr></thead>
+    <thead><tr><th>Event</th><th>Status returned</th><th>Requested by</th><th>Effect</th><th>Observed</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>
   <p>${h(criterion.reChecks[criterion.reChecks.length - 1]!.note)}</p></div>`
@@ -112,7 +112,7 @@ const evaluationItem = (criterion: CriterionView): string => {
     : `<p class="note deterministic">${h(DETERMINISTIC_NOTE)}</p>`
 
   const evidence = criterion.evidence.length === 0
-    ? `<dd>aucune preuve attachée</dd>`
+    ? `<dd>no evidence attached</dd>`
     : `<dd><ul>${
       criterion.evidence.map((a) =>
         `<li><span class="mono">${h(a.artifactId)}</span> — ${h(a.kind)} — ${artifactLink(a)}</li>`
@@ -121,14 +121,14 @@ const evaluationItem = (criterion: CriterionView): string => {
 
   const dangling = criterion.danglingEvidence.length === 0
     ? ""
-    : `<dt>Références de preuve introuvables</dt><dd class="missing mono">${
+    : `<dt>Evidence references not found</dt><dd class="missing mono">${
       h(criterion.danglingEvidence.join(", "))
     }</dd>`
 
   const mismatch = criterion.hashMismatch
-    ? `<p class="note d-error">Le hash évalué (${
+    ? `<p class="note d-error">The evaluated hash (${
       h(shortHash(criterion.resultHash ?? ""))
-    }) ne correspond pas au hash gelé du contrat (${h(shortHash(criterion.contractHash))}).</p>`
+    }) does not match the frozen contract hash (${h(shortHash(criterion.contractHash))}).</p>`
     : ""
 
   return `<article class="item">
@@ -143,23 +143,23 @@ const evaluationItem = (criterion: CriterionView): string => {
   ${downgradeBlock(criterion)}
   ${reCheckBlock(criterion)}
   <dl class="kv">
-    <dt>Attente évaluée (texte gelé)</dt><dd><pre>${h(criterion.expectation)}</pre></dd>
-    <dt>Attendu (évaluateur)</dt><dd><pre>${h(criterion.expected ?? "—")}</pre></dd>
-    <dt>Observé (évaluateur)</dt><dd><pre>${h(criterion.observed ?? "—")}</pre></dd>
-    ${definition("Limites déclarées", criterion.limitations)}
+    <dt>Expectation evaluated (frozen text)</dt><dd><pre>${h(criterion.expectation)}</pre></dd>
+    <dt>Expected (evaluator)</dt><dd><pre>${h(criterion.expected ?? "—")}</pre></dd>
+    <dt>Observed (evaluator)</dt><dd><pre>${h(criterion.observed ?? "—")}</pre></dd>
+    ${definition("Declared limitations", criterion.limitations)}
     ${
     definition(
-      "Branche de la règle d'absence",
+      "Branch of the absence rule",
       criterion.absence === undefined
         ? undefined
         : criterion.absence === "uncertain-navigation"
-        ? "absence après navigation incertaine → non concluant"
-        : "absence établie au checkpoint prévu → échec"
+        ? "absence after uncertain navigation → inconclusive"
+        : "absence established at the intended checkpoint → failed"
     )
   }
-    ${definition("Évalué à l'événement", criterion.evaluatedAtSeq === undefined ? undefined : `seq ${criterion.evaluatedAtSeq}`)}
-    ${definition("Tentative", criterion.attemptId)}
-    <dt>Preuves</dt>${evidence}
+    ${definition("Evaluated at event", criterion.evaluatedAtSeq === undefined ? undefined : `seq ${criterion.evaluatedAtSeq}`)}
+    ${definition("Attempt", criterion.attemptId)}
+    <dt>Evidence</dt>${evidence}
     ${dangling}
   </dl>
 </article>`
@@ -180,9 +180,9 @@ const timelineRow = (entry: TimelineEntry): string =>
 
 const attemptAccounting = (attempt: AttemptView): string => `<div class="item">
   <header><b class="mono">${h(attempt.attemptId)}</b> ${badge(attempt.status, attempt.status)}</header>
-  <h3>Budgets bloquants — consommé et restant</h3>
+  <h3>Blocking budgets — consumed and remaining</h3>
   <div class="scroll"><table>
-    <thead><tr><th>Budget</th><th>Consommé</th><th>Limite</th><th>Restant</th><th>Note</th></tr></thead>
+    <thead><tr><th>Budget</th><th>Consumed</th><th>Limit</th><th>Remaining</th><th>Note</th></tr></thead>
     <tbody>${
   attempt.budgets.map((b) =>
     `<tr><td>${h(b.label)} <span class="cat">${h(b.key)}</span></td><td class="mono">${h(String(b.used))}</td><td class="mono">${
@@ -191,11 +191,11 @@ const attemptAccounting = (attempt: AttemptView): string => `<div class="item">
   ).join("")
 }</tbody>
   </table></div>
-  <h3>Compteur d'actions — seuil INDICATIF, distinct des budgets</h3>
+  <h3>Action counter — INDICATIVE threshold, distinct from the budgets</h3>
   <p class="mono big">${h(attempt.actions.rendering)}</p>
-  <p class="note">Le seuil <code>maxActions</code> est indicatif : le dépasser n'a rien refusé, n'a dégradé aucun
-  statut et n'entre dans aucun budget bloquant. ${
-  attempt.actions.exceeded ? "Il a été dépassé pendant cette tentative." : "Il n'a pas été dépassé."
+  <p class="note">The <code>maxActions</code> threshold is indicative: crossing it refused nothing, degraded no
+  status and counts towards no blocking budget. ${
+  attempt.actions.exceeded ? "It was crossed during this attempt." : "It was not crossed."
 }</p>
 </div>`
 
@@ -205,8 +205,8 @@ const artifactRow = (artifact: ArtifactView): string => `<tr>
   <td>${h(artifact.kind)}${artifact.label === undefined ? "" : ` <span class="cat">${h(artifact.label)}</span>`}</td>
   <td>${
   artifact.state === "present"
-    ? badge("passed", "présent")
-    : badge(artifact.state === "failed" ? "failed" : "inconclusive", artifact.state === "failed" ? "échec" : "manquant")
+    ? badge("passed", "present")
+    : badge(artifact.state === "failed" ? "failed" : "inconclusive", artifact.state === "failed" ? "failed" : "missing")
 }</td>
   <td>${artifactLink(artifact)}</td>
   <td class="wrap">${h(artifact.reason ?? "")}</td>
@@ -222,11 +222,11 @@ const diagnosticItem = (diagnostic: Diagnostic): string =>
 export const renderHtmlReport = (input: ReportInput): string => renderHtmlFromView(buildReportView(input))
 
 export const renderHtmlFromView = (view: ReportView): string => {
-  const title = `Rapport ${view.scenarioId} — ${view.statusLabel}`
+  const title = `Report ${view.scenarioId} — ${view.statusLabel}`
   const counts = view.counts
 
   return `<!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -248,114 +248,114 @@ export const renderHtmlFromView = (view: ReportView): string => {
   ${
     view.finalized
       ? ""
-      : `<p class="note d-error">Exécution non finalisée : le journal se termine sur une ligne incomplète.
-         Ce rapport peut être partiel.</p>`
+      : `<p class="note d-error">Run not finalized: the journal ends on an incomplete line.
+         This report may be partial.</p>`
   }
   <div class="meta">
     <div><span>Run</span><span class="mono">${h(view.runId)}</span></div>
-    <div><span>Démarré</span><span class="mono">${h(view.startedAt)}</span></div>
-    <div><span>Terminé</span><span class="mono">${h(view.finishedAt)}</span></div>
-    <div><span>Durée</span>${h(formatDuration(view.durationMs))}</div>
-    <div><span>Hash du contrat</span><span class="mono">${h(shortHash(view.contractHash))}</span></div>
-    <div><span>Adaptateur</span><span class="mono">${h(view.model.adapterId)}</span></div>
-    <div><span>Modèle</span><span class="mono">${h(`${view.model.provider}/${view.model.modelId}`)}</span></div>
+    <div><span>Started</span><span class="mono">${h(view.startedAt)}</span></div>
+    <div><span>Finished</span><span class="mono">${h(view.finishedAt)}</span></div>
+    <div><span>Duration</span>${h(formatDuration(view.durationMs))}</div>
+    <div><span>Contract hash</span><span class="mono">${h(shortHash(view.contractHash))}</span></div>
+    <div><span>Adapter</span><span class="mono">${h(view.model.adapterId)}</span></div>
+    <div><span>Model</span><span class="mono">${h(`${view.model.provider}/${view.model.modelId}`)}</span></div>
     <div><span>Base URL</span><span class="mono wrap">${h(view.baseUrl)}</span></div>
     <div><span>Harness / Node</span><span class="mono">${h(`${view.harnessVersion} / ${view.nodeVersion}`)}</span></div>
   </div>
   <div class="tiles">
-    <div class="tile s-passed"><b>${h(String(counts.passed))}</b><span>réussis</span></div>
-    <div class="tile s-failed"><b>${h(String(counts.failed))}</b><span>échoués</span></div>
-    <div class="tile s-inconclusive"><b>${h(String(counts.inconclusive))}</b><span>non concluants</span></div>
-    <div class="tile s-error"><b>${h(String(counts.error))}</b><span>en erreur</span></div>
-    <div class="tile s-pending"><b>${h(String(counts.pending))}</b><span>en attente</span></div>
-    <div class="tile"><b>${h(String(view.artifactCounts.present))}</b><span>artefacts présents</span></div>
+    <div class="tile s-passed"><b>${h(String(counts.passed))}</b><span>passed</span></div>
+    <div class="tile s-failed"><b>${h(String(counts.failed))}</b><span>failed</span></div>
+    <div class="tile s-inconclusive"><b>${h(String(counts.inconclusive))}</b><span>inconclusive</span></div>
+    <div class="tile s-error"><b>${h(String(counts.error))}</b><span>in error</span></div>
+    <div class="tile s-pending"><b>${h(String(counts.pending))}</b><span>pending</span></div>
+    <div class="tile"><b>${h(String(view.artifactCounts.present))}</b><span>artifacts present</span></div>
     <div class="tile"><b>${
     h(String(view.artifactCounts.missing + view.artifactCounts.failed))
-  }</b><span>artefacts manquants</span></div>
+  }</b><span>artifacts missing</span></div>
   </div>
 </section>
 
 <nav>
-  <a href="#attentes">Attentes</a>
-  <a href="#evaluations">Évaluations</a>
-  <a href="#faits">Observations factuelles</a>
-  <a href="#comptes">Budgets et actions</a>
-  <a href="#artefacts">Artefacts</a>
-  <a href="#diagnostics">Hypothèses de diagnostic</a>
+  <a href="#expectations">Expectations</a>
+  <a href="#evaluations">Evaluations</a>
+  <a href="#facts">Factual observations</a>
+  <a href="#accounting">Budgets and actions</a>
+  <a href="#artifacts">Artifacts</a>
+  <a href="#diagnostics">Diagnostic hypotheses</a>
 </nav>
 
-<section class="panel" id="attentes">
-  <h2>Attentes textuelles</h2>
-  <p class="lede">Le texte gelé du contrat, verbatim. Rien ici n'est un résultat : c'est ce qui était demandé,
-  tel que figé avant toute navigation. L'agent navigateur ne peut pas le modifier.</p>
+<section class="panel" id="expectations">
+  <h2>Textual expectations</h2>
+  <p class="lede">The frozen contract text, verbatim. Nothing here is a result: this is what was asked for,
+  as frozen before any navigation. The browsing agent cannot change it.</p>
   ${view.criteria.map(expectationItem).join("\n")}
   ${
   view.criteria.length === 0
-    ? `<p class="note">Aucune attente n'a été gelée : le run s'est arrêté avant l'étape 3 de §6 (contrat jamais gelé).
-  Ce rapport décrit un échec d'infrastructure, pas un verdict sur le produit.</p>`
+    ? `<p class="note">No expectation was frozen: the run stopped before step 3 of §6 (contract never frozen).
+  This report describes an infrastructure failure, not a verdict on the product.</p>`
     : ""
 }
-  <h3>Corps du scénario (interpolé)</h3>
+  <h3>Scenario body (interpolated)</h3>
   <pre>${h(view.scenarioBody)}</pre>
 </section>
 
 <section class="panel" id="evaluations">
-  <h2>Évaluations</h2>
-  <p class="lede">Les verdicts, avec leur méthode et leur évaluateur. Une évaluation par modèle est un jugement
-  textuel probabiliste ; une évaluation par code est une assertion déterministe. Les deux sont distinguées
-  explicitement ci-dessous.</p>
+  <h2>Evaluations</h2>
+  <p class="lede">The verdicts, with their method and their evaluator. An evaluation by a model is a probabilistic
+  textual judgement; an evaluation by code is a deterministic assertion. The two are told apart
+  explicitly below.</p>
   ${view.criteria.map(evaluationItem).join("\n")}
-  ${view.criteria.length === 0 ? `<p class="note">Aucun critère n'a pu être évalué.</p>` : ""}
+  ${view.criteria.length === 0 ? `<p class="note">No criterion could be evaluated.</p>` : ""}
 </section>
 
-<section class="panel" id="faits">
-  <h2>Observations factuelles</h2>
-  <p class="lede">La chronologie journalisée des actions, observations, vérifications et erreurs. Ce sont des
-  faits enregistrés pendant l'exécution, sans interprétation.</p>
+<section class="panel" id="facts">
+  <h2>Factual observations</h2>
+  <p class="lede">The journalled chronology of actions, observations, verifications and errors. These are
+  facts recorded during the run, with no interpretation.</p>
   <div class="scroll"><table>
-    <thead><tr><th>Seq</th><th>Horodatage</th><th>Catégorie</th><th>Événement</th><th>Détails</th></tr></thead>
+    <thead><tr><th>Seq</th><th>Timestamp</th><th>Category</th><th>Event</th><th>Details</th></tr></thead>
     <tbody>${view.timeline.map(timelineRow).join("")}</tbody>
   </table></div>
-  ${view.timeline.length === 0 ? `<p class="note">Aucun événement journalisé.</p>` : ""}
+  ${view.timeline.length === 0 ? `<p class="note">No event journalled.</p>` : ""}
 </section>
 
-<section class="panel" id="comptes">
-  <h2>Budgets bloquants et compteur d'actions</h2>
-  <p class="lede">Deux choses distinctes, présentées séparément : les budgets bloquants terminent l'exécution
-  lorsqu'ils sont épuisés ; le seuil d'actions est purement indicatif et ne modifie jamais un verdict.</p>
+<section class="panel" id="accounting">
+  <h2>Blocking budgets and action counter</h2>
+  <p class="lede">Two distinct things, presented separately: the blocking budgets end the run when they are
+  exhausted; the action threshold is purely indicative and never changes a verdict.</p>
   ${view.attempts.map(attemptAccounting).join("\n")}
-  ${view.attempts.length === 0 ? `<p class="note">Aucune tentative enregistrée.</p>` : ""}
+  ${view.attempts.length === 0 ? `<p class="note">No attempt recorded.</p>` : ""}
 </section>
 
-<section class="panel" id="artefacts">
-  <h2>Inventaire des artefacts</h2>
-  <p class="lede">Chaque artefact attendu, présent ou non. Un échec de capture est listé avec sa raison, jamais
-  dissimulé. Les liens sont des chemins relatifs au répertoire du run.</p>
+<section class="panel" id="artifacts">
+  <h2>Artifact inventory</h2>
+  <p class="lede">Every expected artifact, present or not. A capture failure is listed with its reason, never
+  hidden. The links are paths relative to the run directory.</p>
   <div class="scroll"><table>
-    <thead><tr><th>Id</th><th>Tentative</th><th>Type</th><th>État</th><th>Fichier</th><th>Raison</th><th>Taille</th><th>Horodatage</th></tr></thead>
+    <thead><tr><th>Id</th><th>Attempt</th><th>Type</th><th>State</th><th>File</th><th>Reason</th><th>Size</th><th>Timestamp</th></tr></thead>
     <tbody>${view.artifacts.map(artifactRow).join("")}</tbody>
   </table></div>
-  ${view.artifacts.length === 0 ? `<p class="note">Aucun artefact enregistré.</p>` : ""}
+  ${view.artifacts.length === 0 ? `<p class="note">No artifact recorded.</p>` : ""}
 </section>
 
 <section class="panel" id="diagnostics">
-  <h2>Hypothèses de diagnostic</h2>
-  <p class="lede">Interprétations et signaux, pas des faits observés : raisons d'un statut, budgets épuisés,
-  limites déclarées par les évaluateurs, artefacts manquants.</p>
+  <h2>Diagnostic hypotheses</h2>
+  <p class="lede">Interpretations and signals, not observed facts: reasons for a status, exhausted budgets,
+  limitations declared by the evaluators, missing artifacts.</p>
   ${
     view.diagnostics.length === 0
-      ? `<p class="note d-info">Aucun signal de diagnostic enregistré.</p>`
+      ? `<p class="note d-info">No diagnostic signal recorded.</p>`
       : view.diagnostics.map(diagnosticItem).join("\n")
   }
 </section>
 
 <footer>
-  <p>Rapport autonome : il s'ouvre hors ligne depuis <code>file://</code> et ne charge aucune ressource externe.
-  Les gros artefacts restent des fichiers voisins, référencés en chemins relatifs.</p>
-  <p>Ouvrir <code>attempts/&lt;tentative&gt;/trace.zip</code> reste une action externe documentée :
-  <code>npx playwright show-trace &lt;chemin&gt;</code>, ou <code>trace.playwright.dev</code>.</p>
-  <p>Limites : traces, vidéos et captures DOM peuvent contenir des données de la page et ne sont pas anonymisées.
-  La liste d'origines autorisées est un contrôle au niveau des outils, pas un isolement réseau.</p>
+  <p>Standalone report: it opens offline from <code>file://</code> and loads no external resource.
+  Large artifacts stay as neighbouring files, referenced by relative paths.</p>
+  <p>Opening <code>attempts/&lt;attempt&gt;/trace.zip</code> remains a documented external action:
+  <code>npx playwright show-trace &lt;path&gt;</code>, or <code>trace.playwright.dev</code>.</p>
+  <p>Limitations: traces, videos and DOM captures may contain page data and are not anonymized.
+  The allow-list of origins is a tool-level control, not network isolation.</p>
   <script type="application/json" id="harness-report-data">${embedJson(view)}</script>
 </footer>
 

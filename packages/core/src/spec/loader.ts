@@ -133,7 +133,7 @@ export const parseSpec = (input: {
     if (!hasVerification && section === undefined) {
       return yield* fail(
         specPath,
-        "no expectations found — provide a `verification` string or a `## Résultats attendus` / `## Expected results` section",
+        "no expectations found — provide a `verification` string or an `## Expected results` section",
         { field: "verification", line: split.frontmatterLine }
       )
     }

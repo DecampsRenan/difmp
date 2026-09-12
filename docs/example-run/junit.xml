@@ -1,47 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="harness" tests="3" failures="2" errors="0" skipped="0" time="3.544">
-  <testsuite name="project-create" package="../scenarios/project-create.e2e.md" tests="3" failures="2" errors="0" skipped="0" time="3.544" timestamp="2026-09-12T07:27:15.483Z" hostname="harness">
+<testsuites name="harness" tests="3" failures="2" errors="0" skipped="0" time="3.324">
+  <testsuite name="project-create" package="../scenarios/project-create.e2e.md" tests="3" failures="2" errors="0" skipped="0" time="3.324" timestamp="2026-09-12T08:46:14.720Z" hostname="harness">
     <properties>
-      <property name="harness.runId" value="r_t2suucd2gj4qi"/>
+      <property name="harness.runId" value="r_tqyz6a2ucpgic"/>
       <property name="harness.status" value="failed"/>
       <property name="harness.specPath" value="../scenarios/project-create.e2e.md"/>
-      <property name="harness.contractHash" value="05bbe6eaa5aa098df324e01596749968a7b6f382fde9d9ae40a7da8d69a6756a"/>
+      <property name="harness.contractHash" value="75b8cb2ade6508e0be164a5d9163b33fb25a6ef30abe367c0ac3b2ec5dd6a993"/>
       <property name="harness.provider" value="scripted"/>
       <property name="harness.model" value="scripted-double"/>
       <property name="harness.adapter" value="scripted"/>
       <property name="harness.finalized" value="true"/>
-      <property name="harness.actions.a1" value="8 actions / 25 indicatives"/>
+      <property name="harness.actions.a1" value="8 actions / 25 suggested"/>
       <property name="harness.artifacts.present" value="11"/>
       <property name="harness.artifacts.missing" value="0"/>
       <property name="harness.artifacts.failed" value="0"/>
     </properties>
-    <testcase name="c1 — Le projet Projet r_t2suucd2gj4qi apparaît dans la liste des projets après sa création." classname="project-create.model" time="0.000"/>
-    <testcase name="c2 — Le projet Projet r_t2suucd2gj4qi est toujours présent dans la liste des projets après un rechargement complet de la page." classname="project-create.model" time="0.000">
-      <failure type="criterion-failed" message="status=failed — après rechargement, la liste rendue par le serveur ne contient plus le projet">critère: c2
-statut réel: failed
-méthode: model
-évaluateur: double scripté déterministe (pas un jugement de modèle réel)
-avertissement: évaluation textuelle probabiliste, ce n&#39;est pas une assertion déterministe
-attente (texte gelé du contrat): Le projet Projet r_t2suucd2gj4qi est toujours présent dans la liste des projets après un rechargement complet de la page.
-attendu: Le projet Projet r_t2suucd2gj4qi est toujours présent dans la liste des projets après un rechargement complet de la page.
-observé: après rechargement, la liste rendue par le serveur ne contient plus le projet
-limites: scripted test double — this is not a model judgement
-branche d&#39;absence: established-at-checkpoint
-preuves: art_1, art_2, art_3, art_4, art_5, art_6, art_7</failure>
+    <testcase name="c1 — The project Project r_tqyz6a2ucpgic appears in the project list after it is created." classname="project-create.model" time="0.000"/>
+    <testcase name="c2 — The project Project r_tqyz6a2ucpgic is still present in the project list after a full page reload." classname="project-create.model" time="0.000">
+      <failure type="criterion-failed" message="status=failed — after the reload, the list rendered by the server no longer contains the project">criterion: c2
+actual status: failed
+method: model
+evaluator: deterministic scripted double (not a real model judgement)
+warning: probabilistic textual evaluation, this is not a deterministic assertion
+expectation (frozen contract text): The project Project r_tqyz6a2ucpgic is still present in the project list after a full page reload.
+expected: The project Project r_tqyz6a2ucpgic is still present in the project list after a full page reload.
+observed: after the reload, the list rendered by the server no longer contains the project
+limitations: scripted test double — this is not a model judgement
+absence branch: established-at-checkpoint
+evidence: art_1, art_2, art_3, art_4, art_5, art_6, art_7</failure>
     </testcase>
-    <testcase name="c3 — Après ce rechargement, la liste affichée ne contient qu&#39;une seule entrée portant le nom Projet r_t2suucd2gj4qi. Cette attente porte uniquement sur ce que la liste affiche : elle ne dit rien de c…" classname="project-create.model" time="0.000">
-      <failure type="criterion-failed" message="status=failed — aucune entrée de ce nom n&#39;est visible après rechargement">critère: c3
-statut réel: failed
-méthode: model
-évaluateur: double scripté déterministe (pas un jugement de modèle réel)
-avertissement: évaluation textuelle probabiliste, ce n&#39;est pas une assertion déterministe
-attente (texte gelé du contrat): Après ce rechargement, la liste affichée ne contient qu&#39;une seule entrée portant le nom Projet r_t2suucd2gj4qi. Cette attente porte uniquement sur ce que la liste affiche : elle ne dit rien de ce qui est enregistré côté serveur, et une liste filtrée ou paginée ne permet pas d&#39;en déduire une unicité globale.
-attendu: Après ce rechargement, la liste affichée ne contient qu&#39;une seule entrée portant le nom Projet r_t2suucd2gj4qi. Cette attente porte uniquement sur ce que la liste affiche : elle ne dit rien de ce qui est enregistré côté serveur, et une liste filtrée ou paginée ne permet pas d&#39;en déduire une unicité globale.
-observé: aucune entrée de ce nom n&#39;est visible après rechargement
-limites: scripted test double — this is not a model judgement
-branche d&#39;absence: established-at-checkpoint
-preuves: art_1, art_2, art_3, art_4, art_5, art_6, art_7, art_8</failure>
+    <testcase name="c3 — After that reload, the displayed list contains exactly one entry named Project r_tqyz6a2ucpgic. This expectation is only about what the list displays: it says nothing about what is stored server…" classname="project-create.model" time="0.000">
+      <failure type="criterion-failed" message="status=failed — no entry with that name is visible after the reload">criterion: c3
+actual status: failed
+method: model
+evaluator: deterministic scripted double (not a real model judgement)
+warning: probabilistic textual evaluation, this is not a deterministic assertion
+expectation (frozen contract text): After that reload, the displayed list contains exactly one entry named Project r_tqyz6a2ucpgic. This expectation is only about what the list displays: it says nothing about what is stored server-side, and a filtered or paginated list is not enough to infer global uniqueness from it.
+expected: After that reload, the displayed list contains exactly one entry named Project r_tqyz6a2ucpgic. This expectation is only about what the list displays: it says nothing about what is stored server-side, and a filtered or paginated list is not enough to infer global uniqueness from it.
+observed: no entry with that name is visible after the reload
+limitations: scripted test double — this is not a model judgement
+absence branch: established-at-checkpoint
+evidence: art_1, art_2, art_3, art_4, art_5, art_6, art_7, art_8</failure>
     </testcase>
-    <system-out>Convention JUnit du harness : un critère `failed` est un &lt;failure&gt; (le produit contredit l&#39;attente) ; `inconclusive`, `pending` et `error` sont des &lt;error&gt; (indéterminé ou technique) ; une annulation est un &lt;error&gt; au niveau du run. Aucun &lt;skipped&gt; n&#39;est émis : un résultat indéterminé ne doit jamais apparaître en vert.</system-out>
+    <system-out>JUnit convention of the harness: a `failed` criterion is a &lt;failure&gt; (the product contradicts the expectation); `inconclusive`, `pending` and `error` are &lt;error&gt; (indeterminate or technical); a cancellation is an &lt;error&gt; at run level. No &lt;skipped&gt; is ever emitted: an indeterminate result must never show up green.</system-out>
   </testsuite>
 </testsuites>

@@ -7,35 +7,35 @@
     "projects"
   ],
   "fixtureName": "authenticated-workspace",
-  "body": "\n# Créer un projet\n\nDepuis l'accueil de l'espace de travail Espace r_t2suucd2gj4qi-a1, créer un projet nommé\nProjet r_t2suucd2gj4qi.\n\nUtiliser le parcours proposé à un utilisateur standard.\n\nRecharger ensuite la page pour observer l'état réellement conservé par l'application.\n\nLes résultats attendus sont décrits dans verification.\n",
+  "body": "\n# Create a project\n\nFrom the home page of the Workspace r_tqyz6a2ucpgic-a1 workspace, create a project named\nProject r_tqyz6a2ucpgic.\n\nUse the journey offered to a standard user.\n\nThen reload the page to observe the state the application actually kept.\n\nThe expected results are described in verification.\n",
   "criteria": [
     {
       "id": "c1",
-      "text": "Le projet Projet r_t2suucd2gj4qi apparaît dans la liste des projets après sa création.",
-      "sourceText": "Le projet {{ projectName }} apparaît dans la liste des projets après sa création.",
+      "text": "The project Project r_tqyz6a2ucpgic appears in the project list after it is created.",
+      "sourceText": "The project {{ projectName }} appears in the project list after it is created.",
       "line": 11,
       "column": 5,
       "method": "model"
     },
     {
       "id": "c2",
-      "text": "Le projet Projet r_t2suucd2gj4qi est toujours présent dans la liste des projets après un rechargement complet de la page.",
-      "sourceText": "Le projet {{ projectName }} est toujours présent dans la liste des projets après un rechargement complet de la page.",
+      "text": "The project Project r_tqyz6a2ucpgic is still present in the project list after a full page reload.",
+      "sourceText": "The project {{ projectName }} is still present in the project list after a full page reload.",
       "line": 12,
       "column": 5,
       "method": "model"
     },
     {
       "id": "c3",
-      "text": "Après ce rechargement, la liste affichée ne contient qu'une seule entrée portant le nom Projet r_t2suucd2gj4qi. Cette attente porte uniquement sur ce que la liste affiche : elle ne dit rien de ce qui est enregistré côté serveur, et une liste filtrée ou paginée ne permet pas d'en déduire une unicité globale.",
-      "sourceText": "Après ce rechargement, la liste affichée ne contient qu'une seule entrée portant le nom {{ projectName }}. Cette attente porte uniquement sur ce que la liste affiche : elle ne dit rien de ce qui est enregistré côté serveur, et une liste filtrée ou paginée ne permet pas d'en déduire une unicité globale.",
+      "text": "After that reload, the displayed list contains exactly one entry named Project r_tqyz6a2ucpgic. This expectation is only about what the list displays: it says nothing about what is stored server-side, and a filtered or paginated list is not enough to infer global uniqueness from it.",
+      "sourceText": "After that reload, the displayed list contains exactly one entry named {{ projectName }}. This expectation is only about what the list displays: it says nothing about what is stored server-side, and a filtered or paginated list is not enough to infer global uniqueness from it.",
       "line": 13,
       "column": 5,
       "method": "model"
     }
   ],
   "inputs": {
-    "projectName": "Projet r_t2suucd2gj4qi"
+    "projectName": "Project r_tqyz6a2ucpgic"
   },
   "maxActions": 25,
   "budgets": {
@@ -50,12 +50,12 @@
     "maxEvidenceRequests": 1
   },
   "hashes": {
-    "spec": "e880ac1ae62012d7d05f905cc64446eb3593f98a9b5ac41d12a28070c76b97c3",
-    "contract": "05bbe6eaa5aa098df324e01596749968a7b6f382fde9d9ae40a7da8d69a6756a",
+    "spec": "5a711199aba56d24f6c4da771727ba21424be28257513826ebcb8721050ca744",
+    "contract": "75b8cb2ade6508e0be164a5d9163b33fb25a6ef30abe367c0ac3b2ec5dd6a993",
     "criteria": {
-      "c1": "0c9d4101b421550814d69cf6d144fb4514d45a046c84c5b203df750f31fc645e",
-      "c2": "ea1a28c45d0115e58a40a983a75ea5645acce7b44b0957e49d907a9daf2bf554",
-      "c3": "c319e4061581fc4a0554ed52cbb896615dfcc6b1c5a6b910cc212f29778747b9"
+      "c1": "e1d7ee9c459cebc0a96b419f4759a353d948a543b218cd3f39ea56f9fd9422d7",
+      "c2": "042492d68d1934201778207e9595663712473ddd6e1cd234f403268f1e2bba4f",
+      "c3": "19b1599c1a614df2cb5f274fc72c32755dc66ac26f76bbe987cd5f5c16509b44"
     },
     "prompts": {}
   }

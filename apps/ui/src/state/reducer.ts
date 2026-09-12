@@ -116,7 +116,7 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
   switch (event.type) {
     case "runStarted":
       return {
-        ...row({ kind: "lifecycle", tone: "info", label: "Run démarré", detail: event.specPath }),
+        ...row({ kind: "lifecycle", tone: "info", label: "Run started", detail: event.specPath }),
         specPath: event.specPath,
         scenarioId: event.scenarioId,
         harnessVersion: event.harnessVersion,
@@ -128,7 +128,7 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "lifecycle",
           tone: "neutral",
-          label: "Configuration résolue",
+          label: "Configuration resolved",
           ...(event.configPath === undefined ? {} : { detail: event.configPath })
         }),
         config: event.config,
@@ -154,8 +154,10 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "lifecycle",
           tone: "info",
-          label: "Contrat gelé",
-          detail: `${event.criterionIds.length} critère(s) · ${event.contractHash.slice(0, 16)}`
+          label: "Contract frozen",
+          detail: `${event.criterionIds.length} ${event.criterionIds.length === 1 ? "criterion" : "criteria"} · ${
+            event.contractHash.slice(0, 16)
+          }`
         }),
         criteria,
         contractHash: event.contractHash,
@@ -165,7 +167,7 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
 
     case "fixtureReady":
       return {
-        ...row({ kind: "lifecycle", tone: "neutral", label: `Fixture prête : ${event.fixtureName}` }),
+        ...row({ kind: "lifecycle", tone: "neutral", label: `Fixture ready: ${event.fixtureName}` }),
         fixture: { name: event.fixtureName, publicValues: event.publicValues }
       }
 
@@ -174,8 +176,8 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "lifecycle",
           tone: event.timedOut ? "warn" : "neutral",
-          label: `Fixture nettoyée : ${event.fixtureName}`,
-          detail: `${event.cleanupsRun} finaliseur(s)${event.timedOut ? " — délai dépassé" : ""}`
+          label: `Fixture cleaned: ${event.fixtureName}`,
+          detail: `${event.cleanupsRun} finalizer(s)${event.timedOut ? " — timed out" : ""}`
         }),
         ...(base.fixture === undefined ? {} : {
           fixture: {
@@ -187,7 +189,7 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
 
     case "browserContextOpened":
       return {
-        ...row({ kind: "lifecycle", tone: "neutral", label: "Contexte navigateur ouvert", detail: event.baseUrl }),
+        ...row({ kind: "lifecycle", tone: "neutral", label: "Browser context opened", detail: event.baseUrl }),
         baseUrl: event.baseUrl,
         capture: event.capture
       }
@@ -198,7 +200,7 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
           kind: "observation",
           tone: "neutral",
           label: `Observation ${event.observationId}`,
-          detail: `${event.title || "(sans titre)"} — ${event.url} · ${event.elementCount} élément(s)`
+          detail: `${event.title || "(untitled)"} — ${event.url} · ${event.elementCount} element(s)`
         }),
         observationCount: base.observationCount + 1
       }
@@ -208,7 +210,7 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "model",
           tone: "neutral",
-          label: `Appel modèle (${event.role})`,
+          label: `Model call (${event.role})`,
           detail: `${event.provider} / ${event.model}`
         }),
         model: { ...base.model, started: base.model.started + 1 }
@@ -221,8 +223,8 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "model",
           tone: "neutral",
-          label: `Réponse modèle (${event.role})`,
-          detail: `${input + output} jetons · ${event.toolCalls} appel(s) d'outil${
+          label: `Model reply (${event.role})`,
+          detail: `${input + output} tokens · ${event.toolCalls} tool call(s)${
             event.finishReason === undefined ? "" : ` · ${event.finishReason}`
           }`,
           ...(event.durationMs === undefined ? {} : { durationMs: event.durationMs })
@@ -274,7 +276,7 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
       )
       const outcomeText = event.outcome === "ok"
         ? "ok"
-        : `erreur${event.code === undefined ? "" : ` (${event.code})`}${
+        : `error${event.code === undefined ? "" : ` (${event.code})`}${
           event.message === undefined ? "" : ` — ${truncate(event.message, 160)}`
         }`
       return {
@@ -293,9 +295,9 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "evidence",
           tone: "info",
-          label: `Preuves demandées · ${event.criterionId}`,
+          label: `Evidence requested · ${event.criterionId}`,
           criterionId: event.criterionId,
-          detail: `par ${event.requestedBy}${event.note === undefined ? "" : ` — ${truncate(event.note)}`}`
+          detail: `by ${event.requestedBy}${event.note === undefined ? "" : ` — ${truncate(event.note)}`}`
         }),
         criteria: upsertCriterion(base.criteria, event.criterionId, (current) => ({
           ...current,
@@ -311,10 +313,10 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "verification",
           tone,
-          label: `Vérification ${event.criterionId} — ${result.status}`,
+          label: `Verification ${event.criterionId} — ${result.status}`,
           criterionId: event.criterionId,
           detail: truncate(result.observed),
-          outcome: result.method === "code" ? "méthode : code" : "méthode : modèle",
+          outcome: result.method === "code" ? "method: code" : "method: model",
           ...(event.durationMs === undefined ? {} : { durationMs: event.durationMs })
         }),
         criteria: upsertCriterion(base.criteria, event.criterionId, (current) => ({
@@ -345,7 +347,7 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "artifact",
           tone: event.state === "present" ? "neutral" : "warn",
-          label: `Artefact ${event.artifactId} (${event.kind}) — ${event.state}`,
+          label: `Artifact ${event.artifactId} (${event.kind}) — ${event.state}`,
           ...(detail === undefined ? {} : { detail }),
           ...(owner === undefined ? {} : { actionId: owner.actionId })
         }),
@@ -358,8 +360,8 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "guidance",
           tone: "info",
-          label: "Seuil indicatif d'actions dépassé",
-          detail: `${event.rendering} — indication, aucune action refusée, aucun statut dégradé`
+          label: "Indicative action threshold crossed",
+          detail: `${event.rendering} — guidance only, no action refused, no status degraded`
         }),
         guidance: { used: event.used, guidance: event.guidance, rendering: event.rendering }
       }
@@ -369,7 +371,7 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "budget",
           tone: "bad",
-          label: `Budget bloquant épuisé : ${event.budget}`,
+          label: `Blocking budget exhausted: ${event.budget}`,
           detail: `${event.used} / ${event.limit}${event.detail === undefined ? "" : ` — ${event.detail}`}`
         }),
         budgetBreaches: [
@@ -388,8 +390,8 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "error",
           tone: "warn",
-          label: "Progression bloquée",
-          detail: `${event.reason} · ${event.repeatedActions} action(s) répétée(s)`
+          label: "Progress stalled",
+          detail: `${event.reason} · ${event.repeatedActions} repeated action(s)`
         }),
         stalls: [...base.stalls, { seq: event.seq, reason: event.reason, repeatedActions: event.repeatedActions }]
       }
@@ -399,7 +401,7 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "error",
           tone: event.fatal ? "bad" : "warn",
-          label: `Erreur (${event.stage})${event.fatal ? " — fatale" : ""}`,
+          label: `Error (${event.stage})${event.fatal ? " — fatal" : ""}`,
           detail: event.cause === undefined ? event.reason : `${event.reason} — ${truncate(event.cause)}`
         }),
         errors: [
@@ -420,8 +422,8 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "lifecycle",
           tone: "warn",
-          label: "Annulation demandée",
-          detail: `${event.reason} (source : ${event.source})`
+          label: "Cancellation requested",
+          detail: `${event.reason} (source: ${event.source})`
         }),
         cancellation: { reason: event.reason, source: event.source }
       }
@@ -435,9 +437,9 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         ...row({
           kind: "lifecycle",
           tone: event.status === "passed" ? "ok" : event.status === "failed" ? "bad" : "warn",
-          label: `Run terminé — ${event.status}`,
-          detail: `${event.criteriaCount} critère(s)${
-            event.failedCriteria.length === 0 ? "" : ` · échecs : ${event.failedCriteria.join(", ")}`
+          label: `Run finished — ${event.status}`,
+          detail: `${event.criteriaCount} ${event.criteriaCount === 1 ? "criterion" : "criteria"}${
+            event.failedCriteria.length === 0 ? "" : ` · failures: ${event.failedCriteria.join(", ")}`
           }`
         }),
         criteria,

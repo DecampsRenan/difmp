@@ -1,9 +1,9 @@
 ---
 id: invalid-missing-version
 verification: |
-  - Le projet apparaît dans la liste après création.
+  - The project appears in the list after it is created.
 ---
 
-# Version absente
+# Missing version
 
-`version` est obligatoire : c'est elle qui dit au harness quel contrat de spec lire.
+`version` is mandatory: it is what tells the harness which spec contract to read.

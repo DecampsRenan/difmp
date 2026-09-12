@@ -9,7 +9,7 @@ import { fixtureAppScripts } from "./index.js"
  * The `scripts` registry of `difmp.config.ts`, for the deterministic (scripted) adapter.
  *
  * A script is registered as a FACTORY rather than as a finished object because it has to name the
- * value the run will really type into the form — `Projet {{ run.id }}` is only a concrete string
+ * value the run will really type into the form — `Project {{ run.id }}` is only a concrete string
  * once the run id exists — and the criterion ids of the spec being run. The harness calls the
  * factory once the run id is minted and the inputs are resolved (`ScriptFactoryContext`).
  *
@@ -17,7 +17,7 @@ import { fixtureAppScripts } from "./index.js"
  */
 
 /** Project name used by the fixture-free scenario, which declares no `inputs` on purpose. */
-const noFixtureProjectName = "Projet sans fixture"
+const noFixtureProjectName = "Project without fixture"
 
 const projectNameOf = (ctx: ScriptFactoryContext, fallback: string): string => {
   const value = ctx.inputs["projectName"]
@@ -39,7 +39,7 @@ const optionsFor = (ctx: ScriptFactoryContext, variant: Variant): FixtureAppScri
   baseUrl: ctx.baseUrl,
   projectName: projectNameOf(
     ctx,
-    ctx.scenarioId === "project-create-no-fixture" ? noFixtureProjectName : `Projet ${ctx.runId}`
+    ctx.scenarioId === "project-create-no-fixture" ? noFixtureProjectName : `Project ${ctx.runId}`
   ),
   variant,
   criterionIds: ctx.criterionIds

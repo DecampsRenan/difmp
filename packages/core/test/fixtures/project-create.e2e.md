@@ -6,18 +6,18 @@ fixture: authenticated-workspace
 timeout: 90s
 maxActions: 25
 inputs:
-  projectName: "Projet {{ run.id }}"
+  projectName: "Project {{ run.id }}"
 verification: |
-  - Le projet {{ projectName }} apparaît dans la liste après création.
-  - Le projet reste présent après rechargement de la page.
-  - La liste contient exactement un projet portant ce nom après rechargement.
+  - The project {{ projectName }} appears in the list after it is created.
+  - The project is still present after the page is reloaded.
+  - The list contains exactly one project with that name after the reload.
 ---
 
-# Créer un projet
+# Create a project
 
-Depuis l'accueil, créer un projet nommé {{ projectName }}
-dans l'espace de travail courant.
+From the home page, create a project named {{ projectName }}
+in the current workspace.
 
-Utiliser le parcours proposé à un utilisateur standard.
+Use the journey offered to a standard user.
 
-Les résultats attendus sont décrits dans verification.
+The expected results are described in verification.

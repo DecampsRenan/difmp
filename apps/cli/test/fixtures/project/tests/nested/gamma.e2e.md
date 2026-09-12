@@ -4,10 +4,10 @@ id: gamma
 tags: [slow]
 ---
 
-# Scénario imbriqué
+# Nested scenario
 
-Observer la page.
+Observe the page.
 
-## Résultats attendus
+## Expected results
 
-- La page est accessible.
+- The page is reachable.

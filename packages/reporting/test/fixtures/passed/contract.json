@@ -1,23 +1,23 @@
 {
   "schemaVersion": 1,
-  "specPath": "tests/e2e/creation-projet.e2e.md",
-  "id": "creation-projet",
-  "tags": ["smoke", "projets"],
+  "specPath": "tests/e2e/project-create.e2e.md",
+  "id": "project-create",
+  "tags": ["smoke", "projects"],
   "fixtureName": "authenticated-workspace",
-  "body": "Depuis le tableau de bord, créer un projet nommé « Projet r_k4m2xq7ab3cdz » puis vérifier qu'il apparaît dans la liste des projets de l'espace de travail.",
+  "body": "From the dashboard, create a project named \"Project r_k4m2xq7ab3cdz\" and check that it appears in the workspace's project list.",
   "criteria": [
     {
       "id": "c1",
-      "text": "Le projet « Projet r_k4m2xq7ab3cdz » apparaît dans la liste des projets après sa création.",
-      "sourceText": "Le projet « {{ projectName }} » apparaît dans la liste des projets après sa création.",
+      "text": "The project \"Project r_k4m2xq7ab3cdz\" appears in the project list after it is created.",
+      "sourceText": "The project \"{{ projectName }}\" appears in the project list after it is created.",
       "line": 14,
       "column": 3,
       "method": "model"
     },
     {
       "id": "c2",
-      "text": "Le projet « Projet r_k4m2xq7ab3cdz » est persisté côté serveur et survit à un rechargement.",
-      "sourceText": "Le projet « {{ projectName }} » est persisté côté serveur et survit à un rechargement.",
+      "text": "The project \"Project r_k4m2xq7ab3cdz\" is persisted server-side and survives a reload.",
+      "sourceText": "The project \"{{ projectName }}\" is persisted server-side and survives a reload.",
       "line": 15,
       "column": 3,
       "method": "code",
@@ -25,7 +25,7 @@
     }
   ],
   "inputs": {
-    "projectName": "Projet r_k4m2xq7ab3cdz"
+    "projectName": "Project r_k4m2xq7ab3cdz"
   },
   "maxActions": 25,
   "budgets": {

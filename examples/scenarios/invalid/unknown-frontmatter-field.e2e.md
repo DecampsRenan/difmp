@@ -3,10 +3,10 @@ version: 1
 id: invalid-unknown-frontmatter-field
 retries: 3
 verification: |
-  - Le projet apparaît dans la liste après création.
+  - The project appears in the list after it is created.
 ---
 
-# Champ de frontmatter inconnu
+# Unknown frontmatter field
 
-`retries` n'existe pas dans le contrat de frontmatter. Une clé inconnue est rejetée plutôt
-qu'ignorée : sinon une faute de frappe sur `maxActions` passerait inaperçue.
+`retries` does not exist in the frontmatter contract. An unknown key is rejected rather than
+ignored: otherwise a typo on `maxActions` would go unnoticed.

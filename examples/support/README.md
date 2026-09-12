@@ -86,7 +86,7 @@ or create it afterwards through the guarded seed API:
 ```bash
 curl -sS -X POST http://127.0.0.1:3000/__seed/workspace \
   -H "x-seed-token: $FIXTURE_APP_SEED_TOKEN" -H 'content-type: application/json' \
-  -d '{"workspaceName":"Espace de démonstration","email":"demo@example.test","password":"demo-password"}'
+  -d '{"workspaceName":"Demo workspace","email":"demo@example.test","password":"demo-password"}'
 ```
 
 ## 2. `difmp.config.ts`
@@ -99,7 +99,7 @@ What it sets, and why:
 - **`baseUrl` / `allowedOrigins`** — the fixture app, and nothing else. The origin allow-list is a
   *tool-level* check applied to `navigate`; it is not network isolation. A page can still load
   third-party subresources — see §5.
-- **`inputs.projectName: "Projet {{ run.id }}"`** — a project-level default, the lowest-priority
+- **`inputs.projectName: "Project {{ run.id }}"`** — a project-level default, the lowest-priority
   layer of `config < spec < --inputs-file < --input`. `{{ run.id }}` makes the name unique per run.
 - **`fixtures` / `checks` / `scripts`** — the registries. A spec references a **name**; it can never
   name a module path, and a name that is not registered is a hard error listing what is. `scripts`
@@ -144,7 +144,7 @@ The session token is never in `public`, so it cannot reach a prompt, a report or
 criterion. The seed token is read with `ctx.secrets("FIXTURE_APP_SEED_TOKEN")` — from the
 environment, never from an input — and is redacted out of any error message that quotes a response.
 
-Every attempt gets its own workspace (`Espace <runId>-<attemptId>`) and its own user. A shared
+Every attempt gets its own workspace (`Workspace <runId>-<attemptId>`) and its own user. A shared
 tenant would not be isolation, because these scenarios write to the application.
 
 **Cleanups are registered at acquisition time.** The moment the seed call returns, the fixture
@@ -227,7 +227,7 @@ against a concrete application.
   keyed by name, each as a `ScriptedProviderScript` (browsing script + canned verifier answers).
 - `scripts/registry.ts` — the same cases as the `scripts` **registry** of `difmp.config.ts`. Each
   entry is a FACTORY, because a script has to type the value the run will really use
-  (`Projet {{ run.id }}` is only a string once the run id exists) and to name the criteria of the
+  (`Project {{ run.id }}` is only a string once the run id exists) and to name the criteria of the
   spec being run; the harness calls it with `ScriptFactoryContext` after minting the run id,
   resolving the inputs and before opening the browser.
 

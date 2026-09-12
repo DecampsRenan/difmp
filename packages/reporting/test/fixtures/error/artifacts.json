@@ -3,8 +3,8 @@
   "runId": "r_x3v7bqs2mnk5d",
   "artifacts": [
     { "artifactId": "art_1", "attemptId": "a1", "kind": "trace", "path": "attempts/a1/trace.zip", "state": "present", "bytes": 220114, "ts": "2026-03-04T13:05:38.300Z" },
-    { "artifactId": "art_2", "attemptId": "a1", "kind": "aria-snapshot", "label": "liste des projets", "path": "attempts/a1/screenshots/obs_7.aria.txt", "state": "present", "bytes": 2201, "ts": "2026-03-04T13:05:29.800Z", "sourceSeq": 9 },
-    { "artifactId": "art_3", "attemptId": "a1", "kind": "screenshot", "label": "<img src=x onerror=\"document.title='PWNED-LABEL'\">", "state": "failed", "reason": "page.screenshot a échoué : Target page, context or browser has been closed <script>document.title='PWNED-REASON'</script>", "ts": "2026-03-04T13:05:38.400Z", "sourceSeq": 12 },
-    { "artifactId": "art_4", "attemptId": "a1", "kind": "video", "state": "missing", "reason": "vidéo non finalisée : le contexte a été fermé avant l'écriture du fichier", "ts": "2026-03-04T13:05:38.450Z" }
+    { "artifactId": "art_2", "attemptId": "a1", "kind": "aria-snapshot", "label": "project list", "path": "attempts/a1/screenshots/obs_7.aria.txt", "state": "present", "bytes": 2201, "ts": "2026-03-04T13:05:29.800Z", "sourceSeq": 9 },
+    { "artifactId": "art_3", "attemptId": "a1", "kind": "screenshot", "label": "<img src=x onerror=\"document.title='PWNED-LABEL'\">", "state": "failed", "reason": "page.screenshot failed: Target page, context or browser has been closed <script>document.title='PWNED-REASON'</script>", "ts": "2026-03-04T13:05:38.400Z", "sourceSeq": 12 },
+    { "artifactId": "art_4", "attemptId": "a1", "kind": "video", "state": "missing", "reason": "video not finalised: the context was closed before the file was written", "ts": "2026-03-04T13:05:38.450Z" }
   ]
 }

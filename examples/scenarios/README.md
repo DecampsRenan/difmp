@@ -4,8 +4,8 @@ Three `*.e2e.md` scenarios that run, and four that must be **rejected**. They ta
 [`examples/fixture-app`](../fixture-app/README.md) through
 [`examples/support`](../support/README.md)'s `difmp.config.ts`.
 
-The scenarios are written in French, like the spec. The harness itself is language-agnostic: the body
-and the criteria are text handed to a model, and the frontmatter keys are the only fixed vocabulary.
+The harness itself is language-agnostic: the body and the criteria are text handed to a model, and
+the frontmatter keys are the only fixed vocabulary.
 
 | spec | shows |
 | --- | --- |
@@ -22,7 +22,7 @@ expectation is judged from evidence, and "exactly one exists" is not something a
 can prove. `project-create-checked` is the scenario that makes the stronger claim, and it does so
 through a server-side probe the browsing agent has no access to.
 
-The project name is `Projet {{ run.id }}`, so two runs never collide in one workspace.
+The project name is `Project {{ run.id }}`, so two runs never collide in one workspace.
 
 ## The four invalid specs
 

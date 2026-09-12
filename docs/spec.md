@@ -1,45 +1,49 @@
-# Initialiser un harness de tests E2E exécutés par des agents
+# Initialising a harness for E2E tests executed by agents
 
-Ce document est le brief d’implémentation à transmettre à un agent de développement. Réalise le projet décrit ici jusqu’à obtenir une première tranche fonctionnelle exécutée et vérifiée. Ne t’arrête pas à un squelette de fichiers ou à une proposition d’architecture.
+> **Translated from French.** This document is the owner's original implementation brief. It was
+> written and committed in French; what follows is an English translation of that text, unchanged in
+> substance. The French original is preserved in the git history: `git log --follow -p docs/spec.md`.
 
-## 1. Objectif
+This document is the implementation brief to hand to a development agent. Build the project described here until you have a first functional slice that has been executed and verified. Do not stop at a skeleton of files or at an architecture proposal.
 
-Construire un harness TypeScript avec Effect v4 qui exécute des scénarios E2E écrits en Markdown avec frontmatter YAML. Un agent choisit les actions de navigation ; le harness contrôle les outils, les budgets, les vérifications et la collecte des preuves.
+## 1. Objective
 
-L’utilisateur doit pouvoir lancer un scénario localement ou en CI, suivre ce qui se passe, puis comprendre un échec depuis un rapport et ses artefacts.
+Build a TypeScript harness with Effect v4 that executes E2E scenarios written in Markdown with YAML frontmatter. An agent chooses the navigation actions; the harness controls the tools, the budgets, the verifications and the evidence collection.
 
-Le premier jalon est un scénario « créer un projet puis le retrouver après rechargement » qui réussit sur une application saine, détecte une régression réelle et produit des preuves précises.
+The user must be able to launch a scenario locally or in CI, follow what is happening, then understand a failure from a report and its artifacts.
 
-## 2. Décisions retenues
+The first milestone is a "create a project then find it again after a reload" scenario that passes on a healthy application, detects a real regression and produces precise evidence.
 
-- Langage : TypeScript en mode strict.
-- Runtime d’orchestration : Effect v4, version exacte épinglée et lockfile commité. Vérifier les API de la version installée ; ne pas copier des exemples Effect v3.
-- Runtime système : Node.js, dans une version LTS supportée par les dépendances retenues et fixée dans le dépôt et en CI. Le runner, la CLI et le serveur live s’exécutent sous Node.js. Déclarer les versions prises en charge dans `engines.node`.
-- Gestionnaire de paquets du dépôt : pnpm, version fixée dans `packageManager`, workspace pnpm et `pnpm-lock.yaml` commité. Installation CI avec `pnpm install --frozen-lockfile`. Le package distribué doit rester installable et utilisable avec npm, pnpm ou Yarn, sans imposer pnpm aux projets consommateurs.
-- Distribution : package installable dans un projet tiers, exposant un binaire `harness` via le champ `bin`, utilisable dans les scripts `package.json` comme Vitest, Jest ou Mocha. `harness` est un nom provisoire ; vérifier le nom disponible avant une éventuelle publication, qui est hors périmètre.
-- Format des specs : fichiers `*.e2e.md`, frontmatter YAML entre `---`, corps Markdown libre.
-- Validation des contrats : Effect Schema.
-- Vérification par défaut : attentes en texte libre, évaluées à partir de preuves collectées. Aucun profil TS obligatoire. Des checks TS restent une extension facultative pour les invariants nécessitant une preuve déterministe.
-- `inputs` et `fixture` sont facultatifs. `maxActions` est un indicateur de durée du parcours, jamais une limite bloquante.
-- Navigateur du MVP : Chromium via la bibliothèque Playwright appelée directement depuis TypeScript.
-- Interface : application web locale React/TypeScript, avec suivi via SSE et rapport HTML autonome après exécution.
-- Stockage initial : fichiers locaux. Aucun service de base de données requis.
-- Exécution initiale : un scénario à la fois, avec contexte navigateur et données isolés par tentative.
-- L’agent agit par outils structurés contrôlés par le harness. Il n’a pas de terminal, d’accès aux sources de l’application ni d’outil d’exécution JavaScript arbitraire.
+## 2. Decisions taken
 
-Ces choix constituent le point de départ. Résous les détails courants de manière autonome et documente les décisions. Demande une clarification uniquement si une ambiguïté empêche réellement l’implémentation.
+- Language: TypeScript in strict mode.
+- Orchestration runtime: Effect v4, exact version pinned and lockfile committed. Verify the APIs of the installed version; do not copy Effect v3 examples.
+- System runtime: Node.js, in an LTS version supported by the chosen dependencies and fixed in the repository and in CI. The runner, the CLI and the live server execute under Node.js. Declare the supported versions in `engines.node`.
+- Repository package manager: pnpm, version fixed in `packageManager`, pnpm workspace and `pnpm-lock.yaml` committed. CI installation with `pnpm install --frozen-lockfile`. The distributed package must remain installable and usable with npm, pnpm or Yarn, without imposing pnpm on consumer projects.
+- Distribution: a package installable in a third-party project, exposing a `harness` binary through the `bin` field, usable in `package.json` scripts like Vitest, Jest or Mocha. `harness` is a provisional name; check the available name before any eventual publication, which is out of scope.
+- Spec format: `*.e2e.md` files, YAML frontmatter between `---`, free-form Markdown body.
+- Contract validation: Effect Schema.
+- Default verification: free-text expectations, evaluated from collected evidence. No mandatory TS profile. TS checks remain an optional extension for invariants that require deterministic proof.
+- `inputs` and `fixture` are optional. `maxActions` is an indicator of the journey's length, never a blocking limit.
+- MVP browser: Chromium through the Playwright library called directly from TypeScript.
+- Interface: a local React/TypeScript web application, with live tracking over SSE and a standalone HTML report after execution.
+- Initial storage: local files. No database service required.
+- Initial execution: one scenario at a time, with browser context and data isolated per attempt.
+- The agent acts through structured tools controlled by the harness. It has no terminal, no access to the application's sources and no arbitrary JavaScript execution tool.
 
-## 3. Périmètre du MVP
+These choices are the starting point. Resolve the ordinary details autonomously and document the decisions. Ask for a clarification only if an ambiguity genuinely prevents implementation.
 
-Livrer une tranche verticale complète : lecture d’une spec, préparation des fixtures, boucle agent, actions navigateur, vérifications, journal durable, interface live, rapport et exécution CI.
+## 3. MVP scope
 
-Inclure un adaptateur modèle réel configurable, ainsi qu’un adaptateur scripté déterministe pour tester le harness sans appel externe. Le rapport doit identifier explicitement l’adaptateur utilisé. Un test avec adaptateur scripté ne constitue pas une validation de la capacité d’un modèle à naviguer.
+Deliver a complete vertical slice: reading a spec, preparing the fixtures, the agent loop, browser actions, verifications, a durable journal, the live interface, the report and CI execution.
 
-Reporter après le MVP : exploration ouverte, compilation du texte en code d’assertion, génération de tests Playwright permanents, drivers agent-browser/Playwright CLI, exécution distribuée, plusieurs navigateurs, multi-agent, comptes utilisateurs du dashboard et reprise d’une session navigateur après crash. L’évaluation des attentes textuelles fait bien partie du MVP.
+Include a configurable real model adapter, as well as a deterministic scripted adapter to test the harness without an external call. The report must explicitly identify the adapter used. A test with the scripted adapter does not constitute a validation of a model's ability to navigate.
 
-## 4. Format de scénario
+Defer past the MVP: open exploration, compiling the text into assertion code, generating permanent Playwright tests, agent-browser/Playwright CLI drivers, distributed execution, several browsers, multi-agent, dashboard user accounts and resuming a browser session after a crash. Evaluating textual expectations is very much part of the MVP.
 
-Exemple de référence :
+## 4. Scenario format
+
+Reference example:
 
 ```markdown
 ---
@@ -50,183 +54,183 @@ fixture: authenticated-workspace
 timeout: 90s
 maxActions: 25
 inputs:
-  projectName: "Projet {{ run.id }}"
+  projectName: "Project {{ run.id }}"
 verification: |
-  - Le projet {{ projectName }} apparaît dans la liste après création.
-  - Le projet reste présent après rechargement de la page.
-  - La liste contient exactement un projet portant ce nom après rechargement.
+  - The project {{ projectName }} appears in the list after creation.
+  - The project is still present after reloading the page.
+  - The list contains exactly one project with that name after the reload.
 ---
 
-# Créer un projet
+# Create a project
 
-Depuis l’accueil, créer un projet nommé {{ projectName }}
-dans l’espace de travail courant.
+From the home page, create a project named {{ projectName }}
+in the current workspace.
 
-Utiliser le parcours proposé à un utilisateur standard.
+Use the journey offered to a standard user.
 
-Les résultats attendus sont décrits dans verification.
+The expected results are described in verification.
 ```
 
-### Règles de parsing
+### Parsing rules
 
-- `version` et `id` sont obligatoires. Le corps Markdown doit être non vide.
-- `tags`, `inputs`, `fixture`, `timeout`, `maxActions` et `checks` sont facultatifs. Les paramètres d’exécution absents héritent de la configuration du projet.
-- Les attentes doivent être présentes dans le champ `verification` sous forme de chaîne, ou dans une section Markdown `## Résultats attendus`. Rejeter la présence des deux sources pour éviter toute ambiguïté. Aucun `verification.profile` n’est requis ni pris en charge dans ce contrat.
-- Dans les attentes, une liste Markdown de premier niveau définit un critère par item ; un paragraphe sans liste constitue un critère global. Affecter des identifiants stables dans le contrat (`c1`, `c2`…) et préserver les textes, l’ordre et les positions source. La validation structurelle ne fait pas d’appel modèle et n’invente aucune attente.
-- Rejeter les champs inconnus, clés YAML dupliquées, identifiants de scénarios dupliqués et versions non prises en charge.
-- Utiliser un parseur YAML en mode données, sans tags exécutables, avec des limites de taille et d’alias.
-- `timeout`, lorsqu’il est fourni, doit être une durée positive reconnue ; `maxActions`, lorsqu’il est fourni, un entier strictement positif décrivant un seuil indicatif.
-- Les noms des fixtures et des éventuels checks TS se résolvent dans des registres du projet. Ils ne sont jamais interprétés comme du code ni comme des chemins d’import libres.
-- Les erreurs doivent désigner le fichier, le champ et, lorsque possible, la ligne concernée.
-- Garder le texte d’origine et le contrat normalisé dans les artefacts.
+- `version` and `id` are mandatory. The Markdown body must be non-empty.
+- `tags`, `inputs`, `fixture`, `timeout`, `maxActions` and `checks` are optional. Execution parameters that are absent inherit from the project configuration.
+- The expectations must be present in the `verification` field as a string, or in a `## Expected results` Markdown section. Reject the presence of both sources to avoid any ambiguity. No `verification.profile` is required or supported in this contract.
+- Within the expectations, a top-level Markdown list defines one criterion per item; a paragraph with no list constitutes a single global criterion. Assign stable identifiers in the contract (`c1`, `c2`…) and preserve the texts, the order and the source positions. Structural validation makes no model call and invents no expectation.
+- Reject unknown fields, duplicate YAML keys, duplicate scenario identifiers and unsupported versions.
+- Use a YAML parser in data mode, with no executable tags, with size and alias limits.
+- `timeout`, when supplied, must be a recognised positive duration; `maxActions`, when supplied, a strictly positive integer describing an indicative threshold.
+- The names of the fixtures and of any TS checks resolve in project registries. They are never interpreted as code nor as free-form import paths.
+- Errors must name the file, the field and, where possible, the line concerned.
+- Keep the original text and the normalised contract in the artifacts.
 
-### Inputs : les données du scénario
+### Inputs: the scenario's data
 
-`inputs` déclare les valeurs non sensibles que le scénario utilise : nom du projet, recherche, quantité, code de produit ou rôle de démonstration. Ils sont facultatifs : un scénario peut simplement écrire ses valeurs dans son texte. Ils évitent les répétitions et permettent de lancer le même scénario avec d’autres données.
+`inputs` declares the non-sensitive values the scenario uses: a project name, a search, a quantity, a product code or a demonstration role. They are optional: a scenario can simply write its values into its text. They avoid repetition and make it possible to run the same scenario with other data.
 
-Exemple : `projectName: "Projet {{ run.id }}"` fournit un nom unique à utiliser dans les actions et les attentes. `run.id` et `attempt.id` sont créés par le harness, jamais demandés à l’utilisateur.
+Example: `projectName: "Project {{ run.id }}"` supplies a unique name to use in the actions and the expectations. `run.id` and `attempt.id` are created by the harness, never asked of the user.
 
-Accepter dans le MVP des inputs scalaires (chaîne, nombre, booléen), sérialisés de façon déterministe dans le texte. Permettre des valeurs par défaut dans la configuration et des remplacements avec `--input key=value` (chaîne) ou `--inputs-file <json>` (valeurs typées). Priorité : configuration < spec < fichier JSON < options CLI. Rejeter les clés CLI/fichier non déclarées dans la configuration ou la spec.
+Accept scalar inputs in the MVP (string, number, boolean), serialised deterministically into the text. Allow default values in the configuration and overrides with `--input key=value` (string) or `--inputs-file <json>` (typed values). Precedence: configuration < spec < JSON file < CLI options. Reject CLI/file keys not declared in the configuration or the spec.
 
-Implémenter uniquement des substitutions de données, sans moteur d’expression : `{{ run.id }}`, `{{ attempt.id }}`, les clés déclarées dans `inputs` et, si une fixture existe, ses valeurs publiques sous `{{ fixture.<clé> }}`. Résoudre d’abord les inputs avec les variables réservées, préparer la fixture avec ces inputs, puis substituer le corps et les attentes avec les inputs résolus et les valeurs publiques de fixture. Les inputs ne peuvent pas dépendre des sorties de fixture ; rejeter les variables absentes et les dépendances cycliques. Ne pas interpréter récursivement des valeurs arbitraires.
+Implement data substitutions only, with no expression engine: `{{ run.id }}`, `{{ attempt.id }}`, the keys declared in `inputs` and, if a fixture exists, its public values under `{{ fixture.<key> }}`. Resolve the inputs first with the reserved variables, prepare the fixture with those inputs, then substitute the body and the expectations with the resolved inputs and the fixture's public values. Inputs cannot depend on fixture outputs; reject absent variables and cyclic dependencies. Do not recursively interpret arbitrary values.
 
-Les secrets sont fournis aux fixtures par configuration d’environnement. Ils ne doivent pas devenir des inputs ordinaires ni apparaître dans les prompts ou rapports.
+Secrets are supplied to the fixtures through environment configuration. They must not become ordinary inputs nor appear in prompts or reports.
 
-### Vérifications textuelles et contrat figé
+### Textual verifications and the frozen contract
 
-Le texte original des attentes est le contrat. Il est figé et identifié avant la navigation, après interpolation. L’agent navigateur ne peut pas le modifier. Il peut demander une collecte de preuves via `check`, mais ne choisit pas le verdict.
+The original text of the expectations is the contract. It is frozen and identified before navigation, after interpolation. The browser agent cannot modify it. It can request evidence collection through `check`, but it does not choose the verdict.
 
-Le service `Verifier` évalue chaque critère à partir du texte et des observations brutes horodatées. Pour le mode textuel, utiliser un appel modèle dédié avec un contexte distinct de la conversation de navigation ; le même fournisseur et modèle peuvent être utilisés. Il ne s’agit pas d’un système multi-agent concurrent. Le vérificateur reçoit les preuves utiles et le critère, pas seulement le résumé de l’agent navigateur.
+The `Verifier` service evaluates each criterion from the text and the raw timestamped observations. For the textual mode, use a dedicated model call with a context distinct from the navigation conversation; the same provider and model may be used. This is not a concurrent multi-agent system. The verifier receives the useful evidence and the criterion, not just the browser agent's summary.
 
-La réponse structurée contient `criterionId`, état, attendu, observé, références de preuves et éventuelles limites. Le harness vérifie le schéma, l’existence des références et leur appartenance à la tentative. Il agrège les résultats sans laisser le navigateur les réécrire. Un critère sans preuve suffisante reste `inconclusive` ; une formulation vague ne doit pas être transformée en seuil inventé.
+The structured response contains `criterionId`, state, expected, observed, evidence references and any limitations. The harness verifies the schema, the existence of the references and their membership in the attempt. It aggregates the results without letting the browser rewrite them. A criterion without sufficient evidence stays `inconclusive`; vague wording must not be turned into an invented threshold.
 
-Le contrôle structurel des références ne garantit pas que le jugement sémantique du modèle soit correct. Identifier `method: model` dans le rapport. Une évaluation textuelle est probabiliste et peut produire des faux positifs ou négatifs ; ne pas la présenter comme une assertion déterministe.
+The structural control of the references does not guarantee that the model's semantic judgement is correct. Identify `method: model` in the report. A textual evaluation is probabilistic and can produce false positives or negatives; do not present it as a deterministic assertion.
 
-Lorsque nécessaire, un auteur peut ajouter un mapping facultatif `checks: { c3: project-unique-in-storage }`. Le nom référence un check TS de confiance, associé à ce critère, qui collecte et vérifie un invariant métier. Son résultat fait autorité pour ce critère et est marqué `method: code`. Aucun check TS n’est requis pour un scénario ordinaire. Inclure le texte du critère dans le contrat du check ou vérifier son hash afin qu’une réorganisation des attentes ne réassocie pas silencieusement le check à un autre critère.
+Where necessary, an author can add an optional `checks: { c3: project-unique-in-storage }` mapping. The name references a trusted TS check, associated with that criterion, which collects and verifies a business invariant. Its result is authoritative for that criterion and is marked `method: code`. No TS check is required for an ordinary scenario. Include the criterion's text in the check's contract or verify its hash so that reordering the expectations does not silently rebind the check to another criterion.
 
-### Fixture : la préparation et le nettoyage
+### Fixture: preparation and cleanup
 
-Une fixture est une fonction TS de support réutilisable, enregistrée dans `harness.config.ts`, que le harness exécute avant le scénario. Par exemple, `authenticated-workspace` crée un espace de travail isolé, prépare un utilisateur connecté, puis rend son état de session au navigateur. Elle peut utiliser une API de seed ou les outils de test du projet ; elle n’est pas décidée par l’agent.
+A fixture is a reusable TS support function, registered in `harness.config.ts`, that the harness executes before the scenario. For example, `authenticated-workspace` creates an isolated workspace, prepares a signed-in user, then hands its session state to the browser. It can use a seed API or the project's test tooling; it is not decided by the agent.
 
-Son contrat prévoit les identifiants de tentative, inputs résolus et accès aux secrets, puis expose séparément des valeurs publiques (par exemple `workspaceName`), un état navigateur privé (par exemple `storageState`) et un nettoyage géré par scope. Le nettoyage est enregistré dès l’acquisition de chaque ressource pour couvrir une préparation partiellement échouée.
+Its contract provides the attempt identifiers, the resolved inputs and access to the secrets, then exposes separately some public values (for example `workspaceName`), a private browser state (for example `storageState`) and a scope-managed cleanup. The cleanup is registered as soon as each resource is acquired, to cover a partially failed preparation.
 
-Sans `fixture`, ouvrir un contexte navigateur vierge à l’URL configurée. Le scénario peut alors tester le login depuis l’interface. Avec une fixture connectée, il teste directement le parcours métier. Ne pas préparer à l’avance le comportement précisément soumis au test.
+Without a `fixture`, open a blank browser context at the configured URL. The scenario can then test the login from the interface. With a signed-in fixture, it tests the business journey directly. Do not prepare in advance the very behaviour under test.
 
-Après réussite, échec ou annulation, nettoyer les ressources de la tentative avec un délai borné. Des comptes ou tenants partagés ne constituent pas une isolation des données : utiliser des ressources par tentative dès qu’un scénario modifie l’application.
+After success, failure or cancellation, clean up the attempt's resources with a bounded delay. Shared accounts or tenants do not constitute data isolation: use per-attempt resources as soon as a scenario modifies the application.
 
-## 5. Architecture et organisation
+## 5. Architecture and organisation
 
-Préférer un workspace compact :
+Prefer a compact workspace:
 
 ```text
 apps/
-  cli/                   # Commandes, serveur local et assemblage des layers
-  ui/                    # Suivi live React
+  cli/                   # Commands, local server and layer assembly
+  ui/                    # React live tracking
 packages/
-  core/                  # Schémas, runner, services, politique et événements
-  browser-playwright/    # Driver navigateur et acquisition des preuves
-  agent-runtime/         # Boucle agent, adaptateur modèle, adaptateur scripté
-  reporting/             # JSON, JUnit et HTML autonome
+  core/                  # Schemas, runner, services, policy and events
+  browser-playwright/    # Browser driver and evidence acquisition
+  agent-runtime/         # Agent loop, model adapter, scripted adapter
+  reporting/             # JSON, JUnit and standalone HTML
 examples/
-  fixture-app/           # Application démonstratrice et défauts injectables
-  scenarios/             # Specs Markdown
-  support/               # Fixtures et checks TS facultatifs de démonstration
+  fixture-app/           # Demonstration application and injectable defects
+  scenarios/             # Markdown specs
+  support/               # Optional demonstration fixtures and TS checks
 docs/
 ```
 
-Les noms peuvent évoluer si cela simplifie le dépôt. Éviter la multiplication de packages pour des modules minuscules. Le cœur ne doit dépendre ni de React ni des détails d’un fournisseur de modèle.
+The names may evolve if that simplifies the repository. Avoid multiplying packages for tiny modules. The core must depend neither on React nor on the details of a model provider.
 
-### Services Effect
+### Effect services
 
-| Service | Responsabilité |
+| Service | Responsibility |
 | --- | --- |
-| `SpecLoader` | Lire, parser, normaliser et valider les specs |
-| `FixtureManager` | Préparer et nettoyer les données et l’authentification |
-| `AgentRuntime` | Obtenir une prochaine action structurée depuis le modèle |
-| `BrowserDriver` | Observer le navigateur et exécuter les actions autorisées |
-| `Verifier` | Évaluer les attentes textuelles ou checks TS facultatifs depuis les preuves |
-| `RunStore` | Persister le manifeste, les événements, résultats et artefacts |
-| `Reporter` | Produire les exports JSON, JUnit et HTML |
+| `SpecLoader` | Read, parse, normalise and validate the specs |
+| `FixtureManager` | Prepare and clean up the data and the authentication |
+| `AgentRuntime` | Obtain a next structured action from the model |
+| `BrowserDriver` | Observe the browser and execute the permitted actions |
+| `Verifier` | Evaluate the textual expectations or optional TS checks from the evidence |
+| `RunStore` | Persist the manifest, the events, the results and the artifacts |
+| `Reporter` | Produce the JSON, JUnit and HTML exports |
 
-Utiliser `Context.Service` et des layers explicites conformément à la version Effect v4 installée. Utiliser les scopes pour les ressources, des erreurs typées, une concurrence structurée et des timeouts bornés.
+Use `Context.Service` and explicit layers in accordance with the installed Effect v4 version. Use scopes for resources, typed errors, structured concurrency and bounded timeouts.
 
-Employer les services de plateforme Node.js compatibles avec la version Effect v4 retenue. Vérifier sous les versions Node.js annoncées le lancement Playwright, les signaux, les fichiers, SSE et la finalisation des vidéos. Ne pas introduire de dépendance à un runtime alternatif.
+Use the Node.js platform services compatible with the chosen Effect v4 version. Under the announced Node.js versions, verify the Playwright launch, the signals, the files, SSE and video finalisation. Do not introduce a dependency on an alternative runtime.
 
-Les SDK Promise doivent être encapsulés avec traduction des erreurs. L’interruption d’un Effect ne garantit pas l’annulation d’une Promise sous-jacente : utiliser les mécanismes d’annulation disponibles et fermer les ressources pour empêcher les actions tardives.
+Promise SDKs must be wrapped with error translation. Interrupting an Effect does not guarantee cancellation of an underlying Promise: use the available cancellation mechanisms and close the resources to prevent late actions.
 
-## 6. Boucle d’exécution
+## 6. Execution loop
 
-Ordre attendu :
+Expected order:
 
-1. Valider la spec, la configuration, les registres et les capacités nécessaires.
-2. Créer les identifiants du run et de la tentative, puis persister le manifeste initial.
-3. Préparer la fixture facultative, résoudre et figer les attentes, puis ouvrir un contexte navigateur isolé.
-4. Démarrer les captures, logs console et réseau avant les actions du scénario.
-5. Fournir à l’agent le scénario résolu, les critères, les outils, le seuil indicatif d’actions et les budgets bloquants explicitement configurés.
-6. Observer, demander une action structurée, valider sa politique, journaliser son début, l’exécuter puis journaliser son résultat.
-7. Collecter les preuves aux checkpoints demandés et à la fin ; le `Verifier` évalue les critères par appel modèle dédié ou check TS facultatif.
-8. Calculer le résultat depuis les critères et l’état d’exécution.
-9. Finaliser les preuves, fermer le navigateur, nettoyer les fixtures et produire les rapports.
+1. Validate the spec, the configuration, the registries and the required capabilities.
+2. Create the run and attempt identifiers, then persist the initial manifest.
+3. Prepare the optional fixture, resolve and freeze the expectations, then open an isolated browser context.
+4. Start the captures, the console and network logs before the scenario's actions.
+5. Give the agent the resolved scenario, the criteria, the tools, the indicative action threshold and the explicitly configured blocking budgets.
+6. Observe, request a structured action, validate its policy, journal its start, execute it then journal its result.
+7. Collect the evidence at the requested checkpoints and at the end; the `Verifier` evaluates the criteria through a dedicated model call or an optional TS check.
+8. Compute the result from the criteria and the execution state.
+9. Finalise the evidence, close the browser, clean up the fixtures and produce the reports.
 
-Une demande `finish` du modèle déclenche la vérification finale ; elle ne suffit jamais à déclarer le succès.
+A `finish` request from the model triggers the final verification; it is never enough on its own to declare success.
 
-Prévoir des preuves à différents moments : un critère de persistance a besoin d’une observation avant et après rechargement. L’agent navigateur peut réaliser ces étapes et demander un `check`. Si les preuves manquent, le vérificateur renvoie une demande de preuve structurée ; le runner peut continuer la navigation dans les budgets disponibles, sans modifier l’attente. Les éventuels checks TS peuvent effectuer des sondes contrôlées, toutes journalisées comme opérations du harness.
+Plan for evidence at different moments: a persistence criterion needs an observation before and after the reload. The browser agent can carry out those steps and request a `check`. If the evidence is missing, the verifier returns a structured evidence request; the runner can continue navigating within the available budgets, without modifying the expectation. Any TS checks can perform controlled probes, all journalled as harness operations.
 
-## 7. Outils et limites de l’agent
+## 7. Tools and limits of the agent
 
-Outils minimaux : `observe`, `click`, `fill`, `press`, `scroll`, `screenshot`, `check` et `finish`. Ajouter une navigation explicite si nécessaire, soumise à la politique d’origines.
+Minimum tools: `observe`, `click`, `fill`, `press`, `scroll`, `screenshot`, `check` and `finish`. Add an explicit navigation if needed, subject to the origins policy.
 
-- Les arguments et résultats de chaque outil sont validés par Schema.
-- `observe` renvoie une représentation compacte de la page, son URL, un `observationId` et des références d’éléments utilisables.
-- Une action ciblée transporte l’`observationId` et la référence d’élément. Rejeter les références périmées ou ambiguës et demander une nouvelle observation.
-- Privilégier rôles, noms accessibles et locators stables. Ne pas exposer l’objet Playwright `Page` au modèle.
-- `check` référence un critère textuel existant et déclenche sa collecte/évaluation ; l’agent navigateur ne peut pas fournir son propre verdict.
-- Le contenu de l’application est une donnée observée, jamais une instruction autorisant de nouveaux outils ou un changement du scénario.
-- Enregistrer une courte intention d’action si le modèle la fournit ; ne pas demander de raisonnement interne détaillé.
+- Each tool's arguments and results are validated by Schema.
+- `observe` returns a compact representation of the page, its URL, an `observationId` and usable element references.
+- A targeted action carries the `observationId` and the element reference. Reject stale or ambiguous references and request a new observation.
+- Prefer roles, accessible names and stable locators. Do not expose the Playwright `Page` object to the model.
+- `check` references an existing textual criterion and triggers its collection/evaluation; the browser agent cannot supply its own verdict.
+- The application's content is observed data, never an instruction authorising new tools or a change of scenario.
+- Record a short action intent if the model supplies one; do not ask for detailed internal reasoning.
 
-`maxActions` est un seuil indicatif, malgré son nom conservé à la demande de l’utilisateur. Compter les appels aux outils navigateur de l’agent acceptés pour exécution, y compris observations, captures et tentatives échouées ; compter séparément appels modèle et opérations de vérification. Lors du premier dépassement, émettre `actionGuidanceExceeded`, afficher « 28 actions / 25 indicatives » et inviter l’agent à réévaluer brièvement son approche. Le run continue : aucune action n’est refusée, aucun statut n’est dégradé et aucune approbation n’est requise pour ce seul motif. Une réussite en 40 actions reste `passed`. Ne pas introduire de limite bloquante cachée dérivée de ce seuil.
+`maxActions` is an indicative threshold, despite the name kept at the user's request. Count the agent's browser tool calls accepted for execution, including observations, captures and failed attempts; count model calls and verification operations separately. On the first time it is exceeded, emit `actionGuidanceExceeded`, display "28 actions / 25 suggested" and invite the agent to briefly reassess its approach. The run continues: no action is refused, no status is downgraded and no approval is required on that ground alone. A success in 40 actions stays `passed`. Do not introduce a hidden blocking limit derived from that threshold.
 
-Les garde-fous bloquants sont distincts, explicites et configurables : timeout global de tentative, timeout par opération, maximum d’appels modèle et budget de tokens. Inclure les appels du vérificateur dans la consommation et réserver une marge pour l’évaluation finale. Documenter les valeurs par défaut et afficher la configuration résolue avant le lancement. La détection d’une boucle peut émettre un signal de progression insuffisante ; elle ne transforme pas le dépassement de `maxActions` en arrêt forcé.
+The blocking guard rails are distinct, explicit and configurable: global attempt timeout, per-operation timeout, maximum model calls and token budget. Include the verifier's calls in the consumption and reserve a margin for the final evaluation. Document the default values and display the resolved configuration before launch. Loop detection may emit an insufficient-progress signal; it does not turn exceeding `maxActions` into a forced stop.
 
-Les origines de navigation et les éventuels services tiers autorisés sont définis dans la configuration du harness. Une vérification d’URL au niveau des outils n’est pas une isolation réseau complète : documenter cette limite et utiliser un environnement CI maîtrisé.
+The navigation origins and any permitted third-party services are defined in the harness configuration. A URL check at tool level is not full network isolation: document that limitation and use a controlled CI environment.
 
-Ne jamais répéter automatiquement une action mutante sur simple timeout : une création peut avoir abouti même si sa réponse a été perdue. Vérifier l’état avant toute reprise. Les retries de transport doivent être bornés et réservés aux opérations pour lesquelles ils sont appropriés.
+Never automatically repeat a mutating action on a mere timeout: a creation may have succeeded even if its response was lost. Verify the state before any retry. Transport retries must be bounded and reserved for the operations they are appropriate for.
 
-## 8. Modèle et configuration
+## 8. Model and configuration
 
-Définir une interface de fournisseur permettant de demander une réponse structurée avec outils, de recevoir les informations de consommation disponibles et d’annuler un appel lorsque le fournisseur le permet.
+Define a provider interface that makes it possible to request a structured response with tools, to receive the available consumption information and to cancel a call when the provider allows it.
 
-Implémenter un adaptateur réel pour un fournisseur disposant de ces capacités. Choisir et documenter ce fournisseur selon les SDK et accès disponibles au moment de l’initialisation ; ne pas figer un nom de modèle dans le code métier. Le fournisseur, le modèle et les options sont configurables.
+Implement a real adapter for a provider that has those capabilities. Choose and document that provider according to the SDKs and access available at initialisation time; do not freeze a model name into the business code. The provider, the model and the options are configurable.
 
-Les clés restent dans des variables d’environnement. Fournir `.env.example` sans valeur sensible. Si aucune clé n’est disponible, terminer et tester la tranche avec l’adaptateur scripté, puis indiquer précisément la commande permettant le smoke test réel. Ne pas présenter ce smoke test comme effectué.
+The keys stay in environment variables. Supply a `.env.example` with no sensitive value. If no key is available, finish and test the slice with the scripted adapter, then state precisely the command that allows the real smoke test. Do not present that smoke test as having been carried out.
 
-La configuration de projet `harness.config.ts` porte notamment : discovery `include`/`exclude`, URL de base, origines permises, inputs par défaut, fixtures et checks facultatifs, fournisseur/modèle, seuil indicatif d’actions, budgets bloquants, politique de capture et dossier des résultats. Exporter un helper typé `defineConfig`. Charger ce module TS comme code de confiance du projet, jamais depuis un nom arbitraire contenu dans une spec. Ne pas obliger à créer un registre de support si le scénario utilise seulement du texte.
+The project configuration `harness.config.ts` carries, among other things: `include`/`exclude` discovery, the base URL, the permitted origins, the default inputs, the optional fixtures and checks, the provider/model, the indicative action threshold, the blocking budgets, the capture policy and the results directory. Export a typed `defineConfig` helper. Load that TS module as trusted project code, never from an arbitrary name contained in a spec. Do not force the creation of a support registry if the scenario uses only text.
 
-Persister les paramètres résolus non sensibles, les versions des dépendances principales, l’identité du modèle, le hash des prompts, de la spec et du contrat. Des paramètres figés améliorent la traçabilité sans rendre un LLM déterministe.
+Persist the resolved non-sensitive parameters, the versions of the main dependencies, the model's identity, the hash of the prompts, of the spec and of the contract. Frozen parameters improve traceability without making an LLM deterministic.
 
-## 9. Résultats et vérifications
+## 9. Results and verifications
 
-Le résultat d’une tentative est une union discriminée :
+An attempt's result is a discriminated union:
 
-| Statut | Sens |
+| Status | Meaning |
 | --- | --- |
-| `passed` | Tous les critères obligatoires ont été vérifiés avec les preuves requises |
-| `failed` | Une observation contredit un critère obligatoire du produit |
-| `inconclusive` | Les preuves ne permettent pas de conclure, ou un budget bloquant est épuisé avant de pouvoir conclure ; dépasser `maxActions` n’est pas un motif |
-| `error` | Échec de fixture, fournisseur, navigateur, stockage ou infrastructure |
-| `cancelled` | Annulation explicite de l’exécution |
+| `passed` | Every mandatory criterion was verified with the required evidence |
+| `failed` | An observation contradicts a mandatory product criterion |
+| `inconclusive` | The evidence does not allow a conclusion, or a blocking budget is exhausted before a conclusion could be reached; exceeding `maxActions` is not a ground |
+| `error` | Fixture, provider, browser, storage or infrastructure failure |
+| `cancelled` | Explicit cancellation of the execution |
 
-Chaque critère a son propre état : `pending`, `passed`, `failed`, `inconclusive` ou `error`, ainsi que sa méthode `model` ou `code`. Un run peut conserver un critère en échec même si une erreur d’infrastructure survient ensuite. Ne pas perdre cette information dans le statut agrégé. Dans les tests internes, identifier également les réponses du vérificateur scripté pour ne pas les confondre avec un jugement de modèle réel.
+Each criterion has its own state: `pending`, `passed`, `failed`, `inconclusive` or `error`, as well as its method, `model` or `code`. A run can keep a failed criterion even if an infrastructure error occurs afterwards. Do not lose that information in the aggregated status. In the internal tests, also identify the scripted verifier's responses so as not to confuse them with a real model judgement.
 
-Politique d’agrégation du MVP : annulation explicite → `cancelled` ; sinon erreur bloquante d’exécution ou de preuve obligatoire → `error` ; sinon critère obligatoire échoué → `failed` ; sinon critère non résolu → `inconclusive` ; sinon `passed`.
+MVP aggregation policy: explicit cancellation → `cancelled`; otherwise a blocking execution or mandatory-evidence error → `error`; otherwise a failed mandatory criterion → `failed`; otherwise an unresolved criterion → `inconclusive`; otherwise `passed`.
 
-Séparer dans les rapports : observations factuelles, attentes textuelles, évaluations et hypothèses de diagnostic. Le modèle évaluateur peut produire un verdict sémantique étayé, mais l’agent navigateur ne peut pas le modifier. Le harness valide la structure et agrège les résultats ; il ne prétend pas rendre déterministe l’évaluation du texte.
+Separate in the reports: factual observations, textual expectations, evaluations and diagnostic hypotheses. The evaluating model may produce a supported semantic verdict, but the browser agent cannot modify it. The harness validates the structure and aggregates the results; it does not claim to make the evaluation of the text deterministic.
 
-Une absence de locator après navigation incertaine produit généralement `inconclusive`. Une absence établie au checkpoint prévu par un critère peut produire `failed`. Implémenter explicitement cette différence.
+A missing locator after uncertain navigation generally produces `inconclusive`. An established absence at the checkpoint a criterion provides for can produce `failed`. Implement that difference explicitly.
 
-## 10. Journal et artefacts
+## 10. Journal and artifacts
 
-Structure cible :
+Target structure:
 
 ```text
 runs/<run-id>/
@@ -245,65 +249,65 @@ runs/<run-id>/
     network.jsonl
 ```
 
-Les fichiers optionnels absents sont signalés dans un inventaire d’artefacts avec leur état et la raison. Un échec de capture ne doit jamais être dissimulé.
+Optional files that are absent are flagged in an artifact inventory with their state and the reason. A capture failure must never be concealed.
 
-Tous les événements ont : `schemaVersion`, `runId`, `attemptId` si applicable, `seq` croissant par run, horodatage UTC, durée monotone lorsque pertinente, type et payload typé. Les événements d’action portent un `actionId` ; les vérifications portent un `criterionId` ; les preuves sont reliées par `artifactId` et, lorsque possible, par numéro d’événement.
+Every event has: `schemaVersion`, `runId`, `attemptId` where applicable, a `seq` increasing per run, a UTC timestamp, a monotonic duration where relevant, a type and a typed payload. Action events carry an `actionId`; verifications carry a `criterionId`; evidence is linked by `artifactId` and, where possible, by event number.
 
-Événements minimum : démarrage, fixture prête si applicable, observation obtenue, appel modèle commencé/terminé avec rôle navigateur ou vérificateur, action commencée/terminée, demande de preuve, vérification terminée, artefact disponible, `actionGuidanceExceeded`, budget bloquant épuisé, erreur, annulation demandée et run terminé.
+Minimum events: start, fixture ready where applicable, observation obtained, model call started/finished with the browser or verifier role, action started/finished, evidence request, verification finished, artifact available, `actionGuidanceExceeded`, blocking budget exhausted, error, cancellation requested and run finished.
 
-Le journal append-only est écrit avant diffusion live. Sérialiser les écritures pour maintenir l’ordre. Écrire les fichiers de résultat par remplacement atomique. Au rechargement d’un run interrompu, tolérer une dernière ligne JSONL incomplète et signaler que l’exécution n’a pas été finalisée.
+The append-only journal is written before the live broadcast. Serialise the writes to maintain the order. Write the result files by atomic replacement. When reloading an interrupted run, tolerate a last incomplete JSONL line and signal that the execution was not finalised.
 
-Enregistrer la trace dès la première tentative, puis appliquer la politique de conservation à la fin. L’API `context.tracing` de Playwright ne contient pas automatiquement les assertions du harness : elles doivent rester présentes dans notre journal et corrélées aux actions de vérification.
+Record the trace from the first attempt, then apply the retention policy at the end. Playwright's `context.tracing` API does not automatically contain the harness's assertions: they must remain present in our journal and correlated with the verification actions.
 
-La vidéo est configurable et complémentaire. Elle doit être finalisée après fermeture du contexte. Les captures aux checkpoints et à l’échec sont prioritaires. La vue live du MVP peut afficher la dernière capture ; un screencast continu n’est pas requis.
+The video is configurable and complementary. It must be finalised after the context is closed. Captures at the checkpoints and on failure take priority. The MVP's live view may display the last capture; a continuous screencast is not required.
 
-Les logs textuels doivent exclure les secrets connus. Les traces, vidéos et DOM peuvent contenir des données sensibles : utiliser des fixtures synthétiques pour la démonstration, documenter la rétention et ne pas promettre une anonymisation complète de ces formats.
+The textual logs must exclude the known secrets. The traces, videos and DOM can contain sensitive data: use synthetic fixtures for the demonstration, document the retention and do not promise complete anonymisation of those formats.
 
-## 11. Interface live et rapport
+## 11. Live interface and report
 
-L’interface doit afficher :
+The interface must display:
 
-- Le scénario, son statut, le run et la tentative courants.
-- Les critères de réussite et leurs états.
-- La dernière capture, avec son horodatage et son action associée.
-- Une timeline des actions, observations, vérifications et erreurs.
-- Les budgets bloquants consommés et restants, et séparément le nombre d’actions comparé au seuil indicatif ; coût uniquement si calculable, sinon « indisponible ».
-- Les preuves et les liens vers les artefacts disponibles.
-- Une commande d’annulation fonctionnelle.
+- The scenario, its status, the current run and attempt.
+- The success criteria and their states.
+- The last capture, with its timestamp and its associated action.
+- A timeline of the actions, observations, verifications and errors.
+- The blocking budgets consumed and remaining, and separately the number of actions compared to the indicative threshold; cost only if computable, otherwise "unavailable".
+- The evidence and the links to the available artifacts.
+- A working cancel command.
 
-Utiliser SSE pour les événements, avec reprise depuis un curseur/`Last-Event-ID` et replay depuis le journal. Une reconnexion ne doit ni perdre ni dupliquer les événements affichés. Limiter les files d’attente des clients lents sans bloquer le runner ; le replay permet de rattraper les événements.
+Use SSE for the events, with resumption from a cursor/`Last-Event-ID` and replay from the journal. A reconnection must neither lose nor duplicate the displayed events. Bound the queues of slow clients without blocking the runner; the replay allows the events to be caught up.
 
-Le serveur local écoute sur loopback par défaut. Aucune connexion au dashboard ne doit être nécessaire à la progression d’un run. La CI peut fonctionner sans serveur UI.
+The local server listens on loopback by default. No connection to the dashboard must be necessary for a run to progress. CI can work with no UI server.
 
-Le rapport HTML doit s’ouvrir hors ligne et afficher le verdict, les critères, les faits, la timeline et les références de preuves. Intégrer le résumé et les données nécessaires au HTML ; conserver les gros artefacts comme fichiers relatifs. L’ouverture de `trace.zip` dans Playwright Trace Viewer peut rester une action externe documentée.
+The HTML report must open offline and display the verdict, the criteria, the facts, the timeline and the evidence references. Embed the summary and the data needed into the HTML; keep the large artifacts as relative files. Opening `trace.zip` in the Playwright Trace Viewer may remain a documented external action.
 
-Échapper les contenus venant du scénario, du modèle, des pages et des logs. Le MVP ne propose pas de prise de contrôle manuelle du navigateur.
+Escape the content coming from the scenario, the model, the pages and the logs. The MVP does not offer manual takeover of the browser.
 
-## 12. CLI et CI
+## 12. CLI and CI
 
-La CLI est l’interface principale du produit. Elle doit fonctionner depuis n’importe quel projet consommateur après installation comme dépendance de développement, sans cloner le dépôt du harness et sans écrire de script d’orchestration. Le dashboard est une option du runner.
+The CLI is the product's main interface. It must work from any consumer project after installation as a development dependency, without cloning the harness repository and without writing an orchestration script. The dashboard is an option of the runner.
 
-Distribuer un package contenant un exécutable JavaScript compilé déclaré dans `bin`, son shebang Node.js (`#!/usr/bin/env node`), ses dépendances nécessaires et les assets UI/rapport. Fournir les déclarations TypeScript des API publiques, notamment `defineConfig`. Résoudre ces assets depuis le package installé et les specs/configurations depuis le projet consommateur. Ne pas dépendre de chemins du workspace de développement. Préparer le package et le tester via une archive locale ; ne pas le publier.
+Distribute a package containing a compiled JavaScript executable declared in `bin`, its Node.js shebang (`#!/usr/bin/env node`), its necessary dependencies and the UI/report assets. Supply the TypeScript declarations of the public APIs, notably `defineConfig`. Resolve those assets from the installed package and the specs/configurations from the consumer project. Do not depend on development workspace paths. Prepare the package and test it through a local archive; do not publish it.
 
-Prévoir explicitement le chargement de `harness.config.ts` et des modules TS de support sous les versions Node.js prises en charge : utiliser un mécanisme de chargement/transpilation documenté dont les dépendances sont incluses à l’exécution. Ne pas supposer que Node.js exécute nativement toute syntaxe TypeScript ni demander au consommateur d’installer un loader global. Documenter le format de modules du package et tester son usage depuis des projets consommateurs ESM et CommonJS ; une CLI compilée ESM est acceptable sans imposer la conversion du projet consommateur.
+Explicitly plan for loading `harness.config.ts` and the TS support modules under the supported Node.js versions: use a documented loading/transpilation mechanism whose dependencies are included at runtime. Do not assume that Node.js natively executes every TypeScript syntax, nor ask the consumer to install a global loader. Document the package's module format and test its use from ESM and CommonJS consumer projects; an ESM-compiled CLI is acceptable without imposing conversion on the consumer project.
 
-Contrat de commandes à implémenter :
+Command contract to implement:
 
 ```text
-harness [fichier-ou-dossier-ou-glob...]
-harness run [fichier-ou-dossier-ou-glob...]
+harness [file-or-dir-or-glob...]
+harness run [file-or-dir-or-glob...]
 harness list [--tag smoke]
-harness validate [fichier-ou-dossier-ou-glob...]
+harness validate [file-or-dir-or-glob...]
 harness report <run-directory>
 harness --help
 harness --version
 ```
 
-`harness` seul est un alias de `harness run` : découverte des `**/*.e2e.md`, exclusion des dépendances et résultats, exécution unique puis sortie. Respecter `include`/`exclude` et les globs passés comme arguments, y compris lorsqu’ils sont quotés. Trier les specs pour obtenir un ordre stable. Aucun watch automatique et aucun prompt interactif requis en CI. Un mode watch pourra être ajouté après le MVP.
+`harness` alone is an alias of `harness run`: discovery of the `**/*.e2e.md`, exclusion of the dependencies and results, a single execution then exit. Honour `include`/`exclude` and the globs passed as arguments, including when they are quoted. Sort the specs to obtain a stable order. No automatic watch and no interactive prompt required in CI. A watch mode may be added after the MVP.
 
-Options de `run` minimum : `--config`, `--tag`, `--input key=value` répétable, `--inputs-file`, `--reporter` répétable (`console`, `json`, `junit`), `--output`, `--ui`, `--provider`. Ne pas réinventer le parsing des arguments si une bibliothèque compatible Node.js/Effect convient. Les options CLI d’exécution priment sur la configuration ; documenter les priorités.
+Minimum options for `run`: `--config`, `--tag`, repeatable `--input key=value`, `--inputs-file`, repeatable `--reporter` (`console`, `json`, `junit`), `--output`, `--ui`, `--provider`. Do not reinvent argument parsing if a Node.js/Effect-compatible library is suitable. The CLI execution options take precedence over the configuration; document the precedence.
 
-Dans un projet consommateur, l’usage cible après installation du package est :
+In a consumer project, the target usage after installing the package is:
 
 ```json
 {
@@ -321,97 +325,97 @@ npx --no-install harness run tests/e2e
 pnpm exec harness run tests/e2e
 ```
 
-Ces commandes supposent le package déjà installé localement comme dépendance de développement. Adapter le nom au binaire effectivement distribué. L’exemple npx désactive l’installation implicite pour éviter d’exécuter un package homonyme public non vérifié. Fournir également les commandes d’installation et d’exécution équivalentes pour npm, pnpm et Yarn dans le README.
+These commands assume the package is already installed locally as a development dependency. Adapt the name to the binary actually distributed. The npx example disables implicit installation to avoid executing an unverified public package of the same name. Also supply the equivalent installation and execution commands for npm, pnpm and Yarn in the README.
 
-`validate` et `list` ne lancent ni modèle ni navigateur. `validate` vérifie les références de variables connues sans exiger l’existence de valeurs publiques de fixture avant setup, puis valide ces valeurs après setup lors de `run`. `run` fonctionne sans interface par défaut. `report` reconstruit le HTML à partir des données persistées sans rejouer le scénario.
+`validate` and `list` start neither a model nor a browser. `validate` checks the references of known variables without requiring the existence of fixture public values before setup, then validates those values after setup during `run`. `run` works with no interface by default. `report` rebuilds the HTML from the persisted data without replaying the scenario.
 
-Le reporter console doit fournir le nom des scénarios, leurs états, durées, seuils indicatifs dépassés, un résumé global et le chemin du rapport. En sortie non-TTY, produire un texte stable sans animation. Le mode reporter JSON doit garder stdout exploitable par une machine et envoyer les diagnostics techniques sur stderr.
+The console reporter must supply the scenarios' names, their states, durations, indicative thresholds exceeded, a global summary and the report's path. In non-TTY output, produce stable text with no animation. The JSON reporter mode must keep stdout machine-usable and send the technical diagnostics to stderr.
 
-Codes de sortie : `0` si tous les scénarios sélectionnés passent ; `1` pour un résultat `failed` ou `inconclusive` ; `2` pour configuration invalide ou erreur d’exécution ; `130` pour interruption utilisateur. Aucune spec sélectionnée doit être une erreur explicite, jamais un succès silencieux.
+Exit codes: `0` if every selected scenario passes; `1` for a `failed` or `inconclusive` result; `2` for an invalid configuration or an execution error; `130` for a user interrupt. No spec selected must be an explicit error, never a silent success.
 
-Exporter JUnit : critères produit échoués comme failures ; erreurs techniques et résultats indéterminés comme errors, avec statut réel préservé dans le message et dans le JSON. Documenter le traitement des annulations. Ne pas transformer un résultat indéterminé en skipped vert.
+JUnit export: failed product criteria as failures; technical errors and indeterminate results as errors, with the real status preserved in the message and in the JSON. Document the treatment of cancellations. Do not turn an indeterminate result into a green skipped.
 
-Fournir un workflow GitHub Actions démonstrateur installant les versions Node.js et pnpm fixées, puis exécutant `pnpm install --frozen-lockfile`, typecheck, tests du harness et scénarios avec adaptateur scripté via la CLI distribuée. Utiliser Vitest pour les tests internes du projet ; le harness conserve son propre runner de scénarios et sa propre CLI. Installer Chromium et ses dépendances Linux avec la version Playwright du projet et vérifier le parcours réel sous Node.js. Documenter toute dépendance système externe nécessaire. Publier les artefacts même après échec, tant que le runner CI le permet.
+Supply a demonstration GitHub Actions workflow that installs the fixed Node.js and pnpm versions, then runs `pnpm install --frozen-lockfile`, the typecheck, the harness's tests and scenarios with the scripted adapter through the distributed CLI. Use Vitest for the project's internal tests; the harness keeps its own scenario runner and its own CLI. Install Chromium and its Linux dependencies with the project's Playwright version and verify the real journey under Node.js. Document any external system dependency needed. Publish the artifacts even after a failure, as far as the CI runner allows.
 
-Un job modèle réel doit être optionnel, explicitement activé et alimenté par des secrets CI ; il ne doit pas être requis pour contribuer au harness. Aucun retry de scénario automatique dans le MVP. Préparer les identifiants de tentatives sans implémenter prématurément cette fonctionnalité.
+A real-model job must be optional, explicitly enabled and fed by CI secrets; it must not be required in order to contribute to the harness. No automatic scenario retry in the MVP. Prepare the attempt identifiers without prematurely implementing that feature.
 
-## 13. Démonstration et tests significatifs
+## 13. Demonstration and meaningful tests
 
-Construire une petite application de démonstration avec données persistées côté serveur, un espace de travail isolé et un formulaire de création de projet. L’authentification de démonstration peut être préparée par fixture ; le scénario ne teste pas le login.
+Build a small demonstration application with server-side persisted data, an isolated workspace and a project creation form. The demonstration authentication can be prepared by a fixture; the scenario does not test the login.
 
-Le scénario de démonstration exprime ses attentes en texte : présence avant rechargement, présence après rechargement et un seul projet de ce nom visible dans la liste. Il doit fonctionner sans `profile` ni check TS. L’exhaustivité des preuves d’unicité dépend de la liste (filtrage, pagination) ; le modèle ne doit pas déduire une unicité globale d’une vue partielle.
+The demonstration scenario expresses its expectations in text: presence before the reload, presence after the reload and a single project of that name visible in the list. It must work without a `profile` and without a TS check. The exhaustiveness of the uniqueness evidence depends on the list (filtering, pagination); the model must not infer global uniqueness from a partial view.
 
-Ajouter un exemple avancé distinct avec check TS facultatif démontrant exactement une création persistée pour l’identifiant de la tentative. Cette preuve peut utiliser une sonde serveur réservée au check, documentée comme telle. L’agent navigateur n’a pas accès à cette sonde. Ne pas imposer cette extension au scénario textuel de base.
+Add a distinct advanced example with an optional TS check demonstrating exactly one persisted creation for the attempt's identifier. That evidence may use a server probe reserved for the check, documented as such. The browser agent has no access to that probe. Do not impose that extension on the base textual scenario.
 
-Prévoir quatre variantes reproductibles :
+Provide four reproducible variants:
 
-1. Application saine : le scénario passe.
-2. Création refusée avec réponse HTTP 500 : le critère de création échoue avec preuve réseau et état UI.
-3. Faux succès visuel : le projet apparaît localement mais disparaît après rechargement ; le critère de persistance échoue.
-4. Disposition modifiée avec mêmes possibilités fonctionnelles : le parcours reste réalisable. Cette variante sert notamment à évaluer la robustesse du modèle réel lorsqu’il est disponible.
+1. Healthy application: the scenario passes.
+2. Creation refused with an HTTP 500 response: the creation criterion fails with network evidence and UI state.
+3. False visual success: the project appears locally but disappears after the reload; the persistence criterion fails.
+4. Modified layout with the same functional possibilities: the journey remains achievable. That variant serves in particular to assess the real model's robustness when it is available.
 
-Tester également les comportements à risque du harness :
+Also test the harness's risky behaviours:
 
-- Spec invalide rejetée avant lancement du navigateur.
-- `finish` demandé prématurément sans faux positif.
-- Critère obligatoire non évalué interdisant `passed`.
-- Référence périmée rejetée sans clic sur un autre élément.
-- Dépassement de `maxActions` émettant un avertissement unique et laissant réussir un parcours plus long, sans refus d’outil ni dégradation du verdict.
-- Budget bloquant distinct atteint mettant fin à la boucle, sans requêtes ou actions tardives.
-- Vérification textuelle sans profil TS, avec preuves appartenant au run ; preuves absentes ou références inventées ne donnant jamais `passed`.
-- Fixture omise fonctionnant avec contexte vierge ; fixture présente préparée et nettoyée après réussite, échec ou annulation.
-- Inputs remplacés suivant les priorités documentées, variables absentes rejetées et secrets non injectés au modèle.
-- Annulation avec fermeture des ressources et conservation des preuves disponibles.
-- Échec de sauvegarde d’une preuve obligatoire empêchant un succès silencieux.
-- Déconnexion puis reconnexion SSE avec reprise ordonnée.
-- Export JUnit et codes de sortie conservant la distinction produit/infrastructure/indéterminé.
-- Rapport reconstruit sans appel modèle.
-- Package construit puis installé avec npm dans un répertoire consommateur temporaire extérieur au workspace : discovery, config TS, scripts package.json, binaire, assets du rapport et codes de sortie fonctionnent sans dépendances de développement transitives cachées. Vérifier aussi les invocations pnpm et Yarn, ainsi que le chargement des configurations depuis des projets ESM et CommonJS.
+- An invalid spec rejected before the browser is launched.
+- `finish` requested prematurely with no false positive.
+- A mandatory criterion left unevaluated forbidding `passed`.
+- A stale reference rejected without clicking on another element.
+- Exceeding `maxActions` emitting a single warning and letting a longer journey succeed, with no tool refusal and no verdict downgrade.
+- A distinct blocking budget being reached ending the loop, with no late requests or actions.
+- Textual verification with no TS profile, with evidence belonging to the run; missing evidence or invented references never yielding `passed`.
+- An omitted fixture working with a blank context; a fixture that is present prepared and cleaned up after success, failure or cancellation.
+- Inputs overridden following the documented precedence, absent variables rejected and secrets not injected into the model.
+- A cancellation with the resources closed and the available evidence retained.
+- A failure to save a mandatory piece of evidence preventing a silent success.
+- An SSE disconnection then reconnection with ordered resumption.
+- The JUnit export and the exit codes preserving the product/infrastructure/indeterminate distinction.
+- A report rebuilt without a model call.
+- The package built then installed with npm in a temporary consumer directory outside the workspace: discovery, TS config, package.json scripts, the binary, the report assets and the exit codes work with no hidden transitive development dependencies. Also verify the pnpm and Yarn invocations, as well as loading the configurations from ESM and CommonJS projects.
 
-Utiliser l’adaptateur scripté pour tester les décisions du harness de façon reproductible, avec de vrais appels Playwright contre l’application de démonstration. Fournir aussi des réponses scriptées du vérificateur pour vérifier les contrats et cas de preuves manquantes. Ces tests ne valident pas la qualité sémantique d’un modèle réel : ajouter un smoke test réel facultatif sur les variantes et signaler séparément son résultat. Réserver les assertions unitaires aux contrats et invariants utiles. Ne pas écrire des tests qui recopient simplement l’implémentation.
+Use the scripted adapter to test the harness's decisions reproducibly, with real Playwright calls against the demonstration application. Also supply scripted verifier responses to verify the contracts and the missing-evidence cases. Those tests do not validate the semantic quality of a real model: add an optional real smoke test on the variants and report its result separately. Reserve the unit assertions for the useful contracts and invariants. Do not write tests that merely copy out the implementation.
 
-## 14. Ordre d’implémentation
+## 14. Implementation order
 
-1. Initialiser le workspace, les versions, TypeScript, les scripts et les schémas.
-2. Implémenter validation de spec, registres et configuration.
-3. Construire la fixture-app, le driver Playwright et le contrat de vérification textuelle fondé sur les preuves.
-4. Exécuter une tranche complète avec adaptateur scripté, journal et résultat JSON.
-5. Ajouter les captures, trace, rapport HTML et JUnit.
-6. Implémenter l’adaptateur réel, l’évaluation textuelle dédiée et la boucle modèle/outils avec seuil indicatif et budgets bloquants séparés.
-7. Ajouter le serveur SSE, l’interface live et l’annulation.
-8. Construire le package CLI, le tester depuis un projet consommateur, vérifier les variantes défectueuses et les sorties CI, puis documenter l’usage.
+1. Initialise the workspace, the versions, TypeScript, the scripts and the schemas.
+2. Implement spec validation, the registries and the configuration.
+3. Build the fixture-app, the Playwright driver and the evidence-based textual verification contract.
+4. Execute a complete slice with the scripted adapter, the journal and the JSON result.
+5. Add the captures, the trace, the HTML report and JUnit.
+6. Implement the real adapter, the dedicated textual evaluation and the model/tools loop with the indicative threshold and the blocking budgets kept separate.
+7. Add the SSE server, the live interface and cancellation.
+8. Build the CLI package, test it from a consumer project, verify the defective variants and the CI outputs, then document the usage.
 
-Garder le dépôt exécutable entre ces étapes. Si une dépendance annoncée n’existe pas ou si une API a changé, vérifier sa documentation officielle, adapter le code et consigner la décision. Ne pas inventer de méthode de bibliothèque.
+Keep the repository executable between those steps. If an announced dependency does not exist or if an API has changed, check its official documentation, adapt the code and record the decision. Do not invent a library method.
 
-## 15. Définition de terminé
+## 15. Definition of done
 
-Le projet est initialisé lorsque :
+The project is initialised when:
 
-- Une installation depuis un checkout vierge suit le README avec des commandes exactes.
-- Node.js est le runtime vérifié du runner, de la CLI et du serveur live, avec une plage de versions supportées explicite.
-- Le package CLI s’utilise comme dépendance de développement dans un projet tiers, avec discovery et scripts package.json, sans cloner le harness.
-- Le typecheck, les tests pertinents et le workflow démonstrateur passent.
-- Une spec Markdown/YAML produit un run complet sur la fixture-app.
-- Le parcours standard utilise des vérifications en texte, sans profil TS obligatoire ; inputs et fixture sont réellement facultatifs.
-- Un run dépassant `maxActions` peut réussir et conserve son verdict normal.
-- Les variantes saine, HTTP 500 et faux succès ont les résultats attendus, preuves à l’appui.
-- Un rapport consultable explique précisément le critère contredit et référence ses artefacts.
-- L’interface live suit une exécution et peut l’annuler proprement.
-- Aucun fournisseur de modèle ni secret n’est nécessaire aux tests reproductibles du projet.
-- Un adaptateur modèle réel est implémenté, avec procédure de smoke test ; son exécution réelle est rapportée honnêtement selon les accès disponibles.
-- Les limites connues et les décisions sont décrites dans `docs/architecture.md`.
+- An installation from a clean checkout follows the README with exact commands.
+- Node.js is the verified runtime of the runner, the CLI and the live server, with an explicit range of supported versions.
+- The CLI package is usable as a development dependency in a third-party project, with discovery and package.json scripts, without cloning the harness.
+- The typecheck, the relevant tests and the demonstration workflow pass.
+- A Markdown/YAML spec produces a complete run on the fixture-app.
+- The standard journey uses text verifications, with no mandatory TS profile; inputs and fixture are genuinely optional.
+- A run that exceeds `maxActions` can succeed and keeps its normal verdict.
+- The healthy, HTTP 500 and false-success variants have the expected results, backed by evidence.
+- A readable report explains precisely which criterion was contradicted and references its artifacts.
+- The live interface follows an execution and can cancel it cleanly.
+- No model provider and no secret is necessary for the project's reproducible tests.
+- A real model adapter is implemented, with a smoke test procedure; its actual execution is reported honestly according to the available access.
+- The known limitations and the decisions are described in `docs/architecture.md`.
 
-Dans la réponse finale de l’agent d’implémentation, fournir les commandes de lancement, les chemins des fichiers importants, les vérifications réellement effectuées, un exemple de dossier de run et les éventuels points restant bloqués. Ne pas affirmer qu’un test a été exécuté s’il ne l’a pas été.
+In the implementation agent's final answer, supply the launch commands, the paths of the important files, the verifications actually carried out, an example of a run directory and any points that remain blocked. Do not claim that a test has been run if it has not.
 
-## 16. Références techniques
+## 16. Technical references
 
-Les capacités ci-dessous ont été consultées pendant le cadrage du 11 septembre 2026. Vérifier les API de la version installée lors de l’implémentation.
+The capabilities below were consulted during the scoping of 11 September 2026. Verify the APIs of the installed version during implementation.
 
-- [Effect v4 et statut de publication](https://effect.website/)
-- [Migration des services Effect v4](https://github.com/Effect-TS/effect/blob/main/migration/services.md)
-- [API de trace Playwright et limite concernant les assertions](https://playwright.dev/docs/api/class-tracing)
+- [Effect v4 and publication status](https://effect.website/)
+- [Effect v4 services migration](https://github.com/Effect-TS/effect/blob/main/migration/services.md)
+- [Playwright trace API and the limitation regarding assertions](https://playwright.dev/docs/api/class-tracing)
 - [Playwright Trace Viewer](https://playwright.dev/docs/trace-viewer)
-- [Playwright en CI](https://playwright.dev/docs/ci)
-- [Playwright CLI pour agents, option future](https://playwright.dev/docs/getting-started-cli)
-- [Dashboard agent-browser, option future](https://agent-browser.dev/dashboard)
-- [Vidéo agent-browser](https://agent-browser.dev/recording)
+- [Playwright in CI](https://playwright.dev/docs/ci)
+- [Playwright CLI for agents, future option](https://playwright.dev/docs/getting-started-cli)
+- [agent-browser dashboard, future option](https://agent-browser.dev/dashboard)
+- [agent-browser video](https://agent-browser.dev/recording)

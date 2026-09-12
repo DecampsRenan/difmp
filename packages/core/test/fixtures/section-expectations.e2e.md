@@ -3,15 +3,15 @@ version: 1
 id: section-expectations
 ---
 
-# Parcours
+# Journey
 
-Faire quelque chose de simple.
+Do something simple.
 
-## Résultats attendus
+## Expected results
 
-Le tableau de bord affiche le solde à jour
-après la validation du formulaire.
+The dashboard shows the up-to-date balance
+after the form is submitted.
 
 ## Notes
 
-Ceci n'est pas une attente.
+This is not an expectation.

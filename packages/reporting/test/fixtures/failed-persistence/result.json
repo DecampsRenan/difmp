@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "runId": "r_p7q3znm5tk2ab",
-  "specPath": "tests/e2e/creation-projet.e2e.md",
-  "scenarioId": "creation-projet",
+  "specPath": "tests/e2e/project-create.e2e.md",
+  "scenarioId": "project-create",
   "contractHash": "2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
   "startedAt": "2026-03-04T10:02:11.500Z",
   "finishedAt": "2026-03-04T10:02:44.120Z",
@@ -28,10 +28,10 @@
           "status": "passed",
           "method": "model",
           "evaluator": { "kind": "scripted-model" },
-          "expected": "La liste des projets contient une entrée intitulée « Projet r_p7q3znm5tk2ab ».",
-          "observed": "L'instantané art_2 montre l'entrée juste après la soumission, avant tout rechargement.",
+          "expected": "The project list contains an entry titled \"Project r_p7q3znm5tk2ab\".",
+          "observed": "Snapshot art_2 shows the entry right after the submission, before any reload.",
           "evidence": ["art_2"],
-          "limitations": "Observation prise avant rechargement : elle ne dit rien de la persistance serveur.",
+          "limitations": "Observation taken before the reload: it says nothing about server-side persistence.",
           "evaluatedAtSeq": 14
         },
         {
@@ -40,8 +40,8 @@
           "status": "failed",
           "method": "code",
           "evaluator": { "kind": "code", "checkName": "project-unique-in-storage" },
-          "expected": "GET /__probe/projects renvoie exactement une entrée nommée « Projet r_p7q3znm5tk2ab ».",
-          "observed": "0 entrée trouvée. Après rechargement de /projects la liste est vide : le serveur n'a jamais enregistré le projet.",
+          "expected": "GET /__probe/projects returns exactly one entry named \"Project r_p7q3znm5tk2ab\".",
+          "observed": "0 entries found. After reloading /projects the list is empty: the server never recorded the project.",
           "evidence": ["art_3"],
           "absence": "established-at-checkpoint",
           "evaluatedAtSeq": 18

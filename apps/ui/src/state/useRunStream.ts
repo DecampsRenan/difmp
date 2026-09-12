@@ -97,7 +97,7 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
 
     /** A frame we cannot use is counted and logged rather than silently swallowed. */
     const drop = (raw: string, why: string) => {
-      console.warn(`[difmp-ui] trame ignorée (${why}) :`, raw.slice(0, 200))
+      console.warn(`[difmp-ui] frame dropped (${why}):`, raw.slice(0, 200))
       dispatch({ kind: "malformed" })
     }
 
@@ -200,7 +200,7 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
     void fetch(config.cancelUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ reason: "annulation demandée depuis l'interface" })
+      body: JSON.stringify({ reason: "cancellation requested from the dashboard" })
     })
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
@@ -210,7 +210,7 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
         setCancel({
           pending: false,
           requested: false,
-          error: error instanceof Error ? error.message : "échec de la requête d'annulation"
+          error: error instanceof Error ? error.message : "the cancellation request failed"
         })
       })
   }, [config.cancelUrl])

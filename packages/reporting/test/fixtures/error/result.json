@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "runId": "r_x3v7bqs2mnk5d",
-  "specPath": "tests/e2e/creation-projet-hostile.e2e.md",
-  "scenarioId": "creation-projet-hostile",
+  "specPath": "tests/e2e/project-create-hostile.e2e.md",
+  "scenarioId": "project-create-hostile",
   "contractHash": "6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a",
   "startedAt": "2026-03-04T13:05:00.000Z",
   "finishedAt": "2026-03-04T13:05:38.702Z",
@@ -10,7 +10,7 @@
   "finalized": false,
   "status": "error",
   "stage": "browser",
-  "reason": "le contexte navigateur s'est fermé pendant la capture : Target page, context or browser has been closed </script><script>document.title='PWNED-ERROR'</script>",
+  "reason": "the browser context closed during the capture: Target page, context or browser has been closed </script><script>document.title='PWNED-ERROR'</script>",
   "attempts": [
     {
       "attemptId": "a1",
@@ -19,7 +19,7 @@
       "durationMs": 38110,
       "status": "error",
       "stage": "browser",
-      "reason": "le contexte navigateur s'est fermé pendant la capture",
+      "reason": "the browser context closed during the capture",
       "actions": { "used": 31, "guidance": 25, "guidanceExceeded": true },
       "model": { "calls": 14, "inputTokens": 41220, "outputTokens": 3980, "verifierTokens": 7400 },
       "artifacts": ["art_1", "art_2"],
@@ -30,8 +30,8 @@
           "status": "failed",
           "method": "model",
           "evaluator": { "kind": "model", "provider": "anthropic", "model": "claude-sonnet-5" },
-          "expected": "Le nom du projet apparaît comme texte littéral, balises comprises.",
-          "observed": "L'instantané aria montre une image cassée et aucun texte : le nom a été interprété comme du HTML. Extrait rendu par la page : </script><script>document.title='PWNED-MODEL'</script><svg onload=\"document.title='PWNED-MODEL2'\">",
+          "expected": "The project name appears as literal text, tags included.",
+          "observed": "The aria snapshot shows a broken image and no text: the name was interpreted as HTML. Fragment rendered by the page: </script><script>document.title='PWNED-MODEL'</script><svg onload=\"document.title='PWNED-MODEL2'\">",
           "evidence": ["art_2", "art_9"],
           "absence": "established-at-checkpoint",
           "evaluatedAtSeq": 11
@@ -42,10 +42,10 @@
           "status": "pending",
           "method": "code",
           "evaluator": { "kind": "code", "checkName": "project-unique-in-storage" },
-          "expected": "Le nom du projet est stocké tel quel côté serveur.",
+          "expected": "The project name is stored verbatim server-side.",
           "observed": "",
           "evidence": [],
-          "limitations": "Le navigateur s'est fermé avant que la sonde puisse être exécutée.",
+          "limitations": "The browser closed before the probe could run.",
           "evaluatedAtSeq": 0
         }
       ]

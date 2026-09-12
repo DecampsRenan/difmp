@@ -56,8 +56,8 @@ export const App = () => {
       </main>
 
       <footer className="app-foot">
-        Tous les contenus issus du scénario, du modèle, des pages et des journaux sont rendus comme du texte.
-        Le MVP ne propose pas de prise de contrôle manuelle du navigateur.
+        Everything coming from the scenario, the model, the pages and the journals is rendered as text.
+        The MVP offers no manual takeover of the browser.
       </footer>
     </div>
   )

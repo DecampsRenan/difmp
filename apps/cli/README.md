@@ -110,8 +110,8 @@ screenshot → ask for every criterion → finish), steered by the remaining opt
 ```ts
 providerOptions: {
   scenario: "happy-path",                    // or "premature-finish"
-  fills: [{ name: "Nom du projet", value: "Démo" }],
-  submit: "Créer",                           // accessible name of the submit control
+  fills: [{ name: "Project name", value: "Demo" }],
+  submit: "Create project",                  // accessible name of the submit control
   verdict: "passed"                          // default: "inconclusive" — evidence is never assumed
 }
 ```

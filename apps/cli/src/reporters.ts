@@ -69,11 +69,11 @@ export const renderRunLines = (outcome: RunOutcome): ReadonlyArray<string> => {
     // maxActions is INDICATIVE: crossing it is surfaced, never a refusal and never a status change.
     if (actions.guidanceExceeded) {
       lines.push(
-        `      ! ${actions.used} actions / ${actions.guidance} indicatives — indicative threshold only, the verdict is unchanged`
+        `      ! ${actions.used} actions / ${actions.guidance} suggested — indicative threshold only, the verdict is unchanged`
       )
     } else if (actions.used > 0 || attempt.model.calls > 0) {
       lines.push(
-        `      actions ${actions.used}/${actions.guidance} indicatives · model calls ${attempt.model.calls} · tokens ${
+        `      actions ${actions.used}/${actions.guidance} suggested · model calls ${attempt.model.calls} · tokens ${
           attempt.model.inputTokens + attempt.model.outputTokens
         }`
       )

@@ -24,7 +24,7 @@ export interface FakeBrowserOptions {
 }
 
 export const fakeBrowser = (options: FakeBrowserOptions = {}) => {
-  const elements = options.elements ?? [{ ref: "e1", role: "button", name: "Créer" }]
+  const elements = options.elements ?? [{ ref: "e1", role: "button", name: "Create" }]
   const captures: Array<CaptureOutcome> = []
   let url = "http://127.0.0.1:3000/"
   const session: BrowserSession = {
@@ -146,7 +146,7 @@ export const scriptedVerifier = (
     })
   )
 
-export const fakeFixtures = (publicValues: Record<string, string> = { workspaceName: "Espace démo" }) => {
+export const fakeFixtures = (publicValues: Record<string, string> = { workspaceName: "Demo workspace" }) => {
   const cleanups: Array<string> = []
   const layer = Layer.succeed(
     FixtureManager,

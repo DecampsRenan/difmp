@@ -13,11 +13,11 @@ const statusTone: Record<string, string> = {
 }
 
 const connectionLabel: Record<ConnectionState, string> = {
-  connecting: "connexion…",
-  live: "flux en direct",
-  reconnecting: "reconnexion…",
-  closed: "flux clos (run terminé)",
-  unavailable: "serveur injoignable"
+  connecting: "connecting…",
+  live: "live stream",
+  reconnecting: "reconnecting…",
+  closed: "stream closed (run finished)",
+  unavailable: "server unreachable"
 }
 
 const connectionTone: Record<ConnectionState, string> = {
@@ -45,7 +45,7 @@ export const Header = (props: {
     <header className="app-head">
       <div className="head-main">
         <div className="head-title">
-          <h1 data-testid="scenario-id">{model.scenarioId ?? "scénario inconnu"}</h1>
+          <h1 data-testid="scenario-id">{model.scenarioId ?? "unknown scenario"}</h1>
           <Badge tone={statusTone[model.status] ?? "neutral"}>
             <span data-testid="run-status">{model.status}</span>
           </Badge>
@@ -59,15 +59,15 @@ export const Header = (props: {
           <dd data-testid="run-id">{model.runId ?? "—"}</dd>
         </div>
         <div>
-          <dt>Tentative</dt>
+          <dt>Attempt</dt>
           <dd data-testid="attempt-id">{model.attemptId ?? "—"}</dd>
         </div>
         <div>
-          <dt>Démarré</dt>
+          <dt>Started</dt>
           <dd>{model.startedAt === undefined ? "—" : timeOf(model.startedAt)}</dd>
         </div>
         <div>
-          <dt>Durée</dt>
+          <dt>Duration</dt>
           <dd data-testid="elapsed">{durationOf(props.elapsedMs)}</dd>
         </div>
       </dl>
@@ -85,14 +85,14 @@ export const Header = (props: {
           data-malformed-dropped={model.malformed}
           data-last-seq={model.lastSeq}
           data-connect-attempts={props.attempts}
-          title="Événements appliqués / doublons ignorés à la reprise / dernier seq"
+          title="Events applied / duplicates dropped on resume / last seq"
         >
-          {model.applied} évén. · {model.duplicates} doublon(s) ignoré(s) · seq {model.lastSeq}
+          {model.applied} event(s) · {model.duplicates} duplicate(s) dropped · seq {model.lastSeq}
         </span>
         {props.connection === "unavailable"
           ? (
             <button type="button" className="btn btn-ghost" onClick={props.onReconnect} data-testid="reconnect-button">
-              Reprendre le flux
+              Resume the stream
             </button>
           )
           : null}
@@ -104,18 +104,18 @@ export const Header = (props: {
           data-testid="cancel-button"
         >
           {props.cancel.pending
-            ? "Annulation…"
+            ? "Cancelling…"
             : props.cancel.requested
-            ? "Annulation demandée"
+            ? "Cancellation requested"
             : finished
-            ? "Run terminé"
-            : "Annuler le run"}
+            ? "Run finished"
+            : "Cancel the run"}
         </button>
       </div>
 
       {props.cancel.error === undefined
         ? null
-        : <p className="head-error" data-testid="cancel-error">Annulation impossible : {props.cancel.error}</p>}
+        : <p className="head-error" data-testid="cancel-error">Cancellation failed: {props.cancel.error}</p>}
     </header>
   )
 }

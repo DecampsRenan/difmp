@@ -59,7 +59,7 @@ export default defineConfig({
   baseUrl: "http://127.0.0.1:3000",
   allowedOrigins: ["http://127.0.0.1:3000"],   // navigation policy; baseUrl origin always allowed
   // data
-  inputs: { projectName: "Projet {{ run.id }}" },   // project-level defaults (lowest priority)
+  inputs: { projectName: "Project {{ run.id }}" },   // project-level defaults (lowest priority)
   // registries — names referenced by specs resolve HERE, never as import paths
   fixtures: { "authenticated-workspace": myFixture },
   checks:   { "project-unique-in-storage": myCheck },
@@ -123,9 +123,11 @@ run falls back to the built-in defaults rather than silently adopting settings n
   verification?: string, checks?: Record<criterionId, checkName> }
 ```
 
-Expectations come from EITHER `verification` OR a `## Résultats attendus` (also accept
-`## Expected results`) Markdown section — never both (hard error). Splitting rule: top-level
-Markdown list ⇒ one criterion per item; no list ⇒ the whole paragraph block is one criterion.
+Expectations come from EITHER `verification` OR a `## Expected results` Markdown section — never
+both (hard error). The heading is matched case- and accent-insensitively; `## Résultats attendus`
+is still accepted as an undocumented compatibility alias for specs written before the repository
+became English-only. Splitting rule: top-level Markdown list ⇒ one criterion per item; no list ⇒
+the whole paragraph block is one criterion.
 
 ```ts
 interface ScenarioContract {
@@ -214,15 +216,16 @@ when a cancellation interrupts the action mid-flight.
 
 `maxActions` counts **accepted browser tool calls** (observations, screenshots and failed attempts
 included). Model calls and verification operations are counted SEPARATELY and never against it.
-On the FIRST crossing only: emit `actionGuidanceExceeded`, surface `"28 actions / 25 indicatives"`,
+On the FIRST crossing only: emit `actionGuidanceExceeded`, surface `"28 actions / 25 suggested"`,
 and inject one short nudge into the agent conversation. Nothing is refused, no status is degraded,
 no approval is required. A run that passes in 40 actions is `passed`.
 
 Blocking budgets are the separate, configurable ones in §3 `budgets`. Exhausting one ends the loop
 and yields `inconclusive` (not `failed`) **for every criterion it stopped the run from concluding**,
 with no late actions or requests permitted afterwards. A run whose criteria had all already resolved
-when the budget fired keeps its verdict — spec §9 says "budget épuisé *avant de pouvoir conclure*",
-and `aggregate.ts` implements that reading: the budget is not itself a verdict.
+when the budget fired keeps its verdict — spec §9 says a blocking budget is exhausted *before a
+conclusion could be reached*, and `aggregate.ts` implements that reading: the budget is not itself a
+verdict.
 The agent is TOLD these budgets in its system prompt, next to the indicative threshold and
 explicitly distinguished from it (spec §6 step 5).
 
@@ -345,7 +348,7 @@ uncertain until the page is navigated to and observed again.
 criterion is evaluated, but the result is recorded as an entry in `reChecks`, not as a replacement:
 it only replaces the recorded status when it is strictly WORSE (`passed` < `inconclusive` < `error`
 < `failed`). So a regression observed later is never hidden, and a `failed` can never become
-`passed` because the agent asked again (spec §9, "ne pas perdre cette information").
+`passed` because the agent asked again (spec §9, "do not lose that information").
 `inconclusive` and `error` are not decisions — re-evaluating them replaces them in either
 direction, which is how an agent that captured the missing evidence settles a criterion. The
 runner's own final pass evaluates `pending` criteria only.
@@ -478,7 +481,7 @@ type ScriptFactory = (ctx: {
 ```
 
 A FACTORY, not a finished script: a deterministic walkthrough has to type the value the run will
-really use (`Projet {{ run.id }}` is only a string once the run id exists) and to name the criteria
+really use (`Project {{ run.id }}` is only a string once the run id exists) and to name the criteria
 of the spec being run. The CLI resolves `providerOptions.script` against this registry after minting
 the run id and resolving the inputs, and before opening the browser. Core declares the context and
 keeps the return value opaque (`ScriptFactory<A = unknown>`), so `@difmp/core` still depends on no
@@ -503,7 +506,7 @@ JUnit mapping: product criterion failures ⇒ `<failure>`; technical errors and 
 Never emit a green `skipped` for an indeterminate result.
 
 **Retained `harness` wire names — deliberate, and the rename does NOT touch them.** Persisted run
-artefacts keep the pre-rename identifiers so `difmp report` replays a run archived before the rename
+artifacts keep the pre-rename identifiers so `difmp report` replays a run archived before the rename
 and so a CI job that already parses these keys keeps working:
 
 | where | name | source |
@@ -649,4 +652,4 @@ to close this properly, pick one:
   already reads that field when present and prefers it over the fetch.
 
 `pricing` is absent by default and there is no price table anywhere in core, so **cost renders as
-the literal string `indisponible`** — never an estimate, never `0`.
+the literal string `unavailable`** — never an estimate, never `0`.

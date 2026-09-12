@@ -74,7 +74,7 @@ export interface EvidencePersistenceCheck {
 }
 
 /**
- * spec §13: "échec de sauvegarde d'une preuve obligatoire empêchant un succès silencieux".
+ * spec §13: "a failure to save mandatory evidence must prevent a silent success".
  *
  * Mandatory evidence is the evidence the harness itself requires in order to conclude a criterion:
  * the checkpoint capture taken when the criterion is evaluated (unless captures are disabled), and

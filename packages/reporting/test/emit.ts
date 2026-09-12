@@ -19,7 +19,7 @@ for (const name of fixtureNames) {
   }
   for (const artifact of input.inventory.artifacts) {
     if (artifact.state === "present" && artifact.path !== undefined) {
-      write(artifact.path, `contenu de démonstration pour ${artifact.artifactId}\n`)
+      write(artifact.path, `demo content for ${artifact.artifactId}\n`)
     }
   }
   write("result.json", renderJsonReport(input))

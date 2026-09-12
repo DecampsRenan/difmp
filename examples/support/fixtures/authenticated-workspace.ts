@@ -36,7 +36,7 @@ export const authenticatedWorkspace: Fixture = async (ctx): Promise<FixtureResul
 
   const base = new URL(ctx.baseUrl)
   // Per-attempt tenant: a shared workspace would not be data isolation (spec §4).
-  const workspaceName = `Espace ${ctx.runId}-${ctx.attemptId}`
+  const workspaceName = `Workspace ${ctx.runId}-${ctx.attemptId}`
   const email = `agent-${ctx.runId}-${ctx.attemptId}@example.test`
 
   const response = await fetch(new URL("/__seed/workspace", base), {

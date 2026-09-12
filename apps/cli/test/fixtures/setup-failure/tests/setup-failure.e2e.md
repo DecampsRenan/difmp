@@ -4,10 +4,10 @@ id: setup-failure
 fixture: broken-seed
 ---
 
-# Parcours qui ne démarre jamais
+# A journey that never starts
 
-Ouvrir l'application et créer un projet.
+Open the application and create a project.
 
-## Résultats attendus
+## Expected results
 
-- Le projet apparaît dans la liste.
+- The project appears in the list.

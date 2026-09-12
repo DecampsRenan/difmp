@@ -21,7 +21,7 @@ const frozen = Effect.gen(function*() {
     config: project.config,
     runId: "r_abcdefghijklm",
     attemptId: "a1",
-    inputs: { projectName: "Projet démo" }
+    inputs: { projectName: "Demo project" }
   }))
 })
 
@@ -38,7 +38,7 @@ describe("system prompt", () => {
         baseUrl: "http://127.0.0.1:3000",
         allowedOrigins: ["http://127.0.0.1:3000"]
       })
-      expect(prompt).toContain("Budgets bloquants")
+      expect(prompt).toContain("Blocking budgets")
       expect(prompt).toContain("90 s")
       expect(prompt).toContain("12")
       expect(prompt).toContain("90000")
@@ -53,13 +53,13 @@ describe("system prompt", () => {
         baseUrl: "http://127.0.0.1:3000",
         allowedOrigins: ["http://127.0.0.1:3000"]
       })
-      const threshold = prompt.indexOf("Seuil indicatif d'actions")
-      const budgets = prompt.indexOf("Budgets bloquants")
+      const threshold = prompt.indexOf("Indicative action threshold")
+      const budgets = prompt.indexOf("Blocking budgets")
       expect(threshold).toBeGreaterThan(-1)
       expect(budgets).toBeGreaterThan(threshold)
       // The threshold says it stops nothing; the budgets say they stop the run.
-      expect(prompt).toContain("le dépassement n'interrompt rien")
-      expect(prompt).toContain("ARRÊTE le run")
+      expect(prompt).toContain("crossing it interrupts nothing")
+      expect(prompt).toContain("STOPS the run")
       expect(prompt).toContain("`inconclusive`")
     }).pipe(Effect.provide(platform)))
 })

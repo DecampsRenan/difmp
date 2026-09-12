@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "specPath": "tests/e2e/recherche-projet.e2e.md",
-  "id": "recherche-projet",
-  "tags": ["recherche"],
-  "body": "Rechercher « Atlas » dans la barre de recherche et vérifier que seuls les projets correspondants restent affichés.",
+  "specPath": "tests/e2e/project-search.e2e.md",
+  "id": "project-search",
+  "tags": ["search"],
+  "body": "Search for \"Atlas\" in the search bar and check that only the matching projects stay displayed.",
   "criteria": [
     {
       "id": "c1",
-      "text": "Après la recherche, seuls les projets dont le nom contient « Atlas » restent affichés.",
-      "sourceText": "Après la recherche, seuls les projets dont le nom contient « {{ query }} » restent affichés.",
+      "text": "After the search, only the projects whose name contains \"Atlas\" stay displayed.",
+      "sourceText": "After the search, only the projects whose name contains \"{{ query }}\" stay displayed.",
       "line": 11,
       "column": 3,
       "method": "model"
     },
     {
       "id": "c2",
-      "text": "Le compteur de résultats affiche le nombre exact de projets correspondants.",
-      "sourceText": "Le compteur de résultats affiche le nombre exact de projets correspondants.",
+      "text": "The results counter shows the exact number of matching projects.",
+      "sourceText": "The results counter shows the exact number of matching projects.",
       "line": 12,
       "column": 3,
       "method": "model"

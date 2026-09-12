@@ -165,7 +165,7 @@ describe("runner", () => {
         hashes: { criteria: Record<string, string> }
       }
       // Inputs and fixture values are resolved in the frozen text.
-      expect(contract.criteria[0]!.text).toContain(`Projet ${runId}`)
+      expect(contract.criteria[0]!.text).toContain(`Project ${runId}`)
       expect(Object.keys(contract.hashes.criteria)).toEqual(["c1", "c2", "c3"])
     }).pipe(Effect.provide(platform)))
 
@@ -182,7 +182,7 @@ describe("runner", () => {
       })
       const warnings = out.events.filter((e) => e.type === "actionGuidanceExceeded")
       expect(warnings).toHaveLength(1)
-      expect(warnings[0]).toMatchObject({ rendering: "26 actions / 25 indicatives" })
+      expect(warnings[0]).toMatchObject({ rendering: "26 actions / 25 suggested" })
       expect(out.result.attempts[0]!.actions.used).toBe(40)
       expect(out.result.attempts[0]!.actions.guidanceExceeded).toBe(true)
       expect(out.result.status).toBe("passed")
@@ -209,7 +209,7 @@ describe("runner", () => {
       const out = yield* execute({
         spec: loaded,
         turns: [{ toolCalls: [finish] }],
-        fallbackVerdict: { status: "failed", observed: "le projet n'apparaît pas" },
+        fallbackVerdict: { status: "failed", observed: "the project does not appear" },
         fixtures: { "authenticated-workspace": async () => ({ public: {} }) }
       })
       expect(out.result.status).toBe("failed")

@@ -1,30 +1,30 @@
 {
   "schemaVersion": 1,
-  "specPath": "tests/e2e/creation-projet.e2e.md",
-  "id": "creation-projet",
-  "tags": ["smoke", "projets"],
+  "specPath": "tests/e2e/project-create.e2e.md",
+  "id": "project-create",
+  "tags": ["smoke", "projects"],
   "fixtureName": "authenticated-workspace",
-  "body": "Variante « persistance cassée » : le formulaire affiche le projet créé mais le serveur ne l'enregistre pas.",
+  "body": "The \"broken persistence\" variant: the form shows the created project, but the server does not record it.",
   "criteria": [
     {
       "id": "c1",
-      "text": "Le projet « Projet r_p7q3znm5tk2ab » apparaît dans la liste des projets après sa création.",
-      "sourceText": "Le projet « {{ projectName }} » apparaît dans la liste des projets après sa création.",
+      "text": "The project \"Project r_p7q3znm5tk2ab\" appears in the project list after it is created.",
+      "sourceText": "The project \"{{ projectName }}\" appears in the project list after it is created.",
       "line": 14,
       "column": 3,
       "method": "model"
     },
     {
       "id": "c2",
-      "text": "Le projet « Projet r_p7q3znm5tk2ab » est persisté côté serveur et survit à un rechargement.",
-      "sourceText": "Le projet « {{ projectName }} » est persisté côté serveur et survit à un rechargement.",
+      "text": "The project \"Project r_p7q3znm5tk2ab\" is persisted server-side and survives a reload.",
+      "sourceText": "The project \"{{ projectName }}\" is persisted server-side and survives a reload.",
       "line": 15,
       "column": 3,
       "method": "code",
       "checkName": "project-unique-in-storage"
     }
   ],
-  "inputs": { "projectName": "Projet r_p7q3znm5tk2ab" },
+  "inputs": { "projectName": "Project r_p7q3znm5tk2ab" },
   "maxActions": 25,
   "budgets": {
     "attemptTimeoutMs": 120000,

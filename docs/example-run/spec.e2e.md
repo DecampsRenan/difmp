@@ -6,20 +6,20 @@ fixture: authenticated-workspace
 timeout: 90s
 maxActions: 25
 inputs:
-  projectName: "Projet {{ run.id }}"
+  projectName: "Project {{ run.id }}"
 verification: |
-  - Le projet {{ projectName }} apparaît dans la liste des projets après sa création.
-  - Le projet {{ projectName }} est toujours présent dans la liste des projets après un rechargement complet de la page.
-  - Après ce rechargement, la liste affichée ne contient qu'une seule entrée portant le nom {{ projectName }}. Cette attente porte uniquement sur ce que la liste affiche : elle ne dit rien de ce qui est enregistré côté serveur, et une liste filtrée ou paginée ne permet pas d'en déduire une unicité globale.
+  - The project {{ projectName }} appears in the project list after it is created.
+  - The project {{ projectName }} is still present in the project list after a full page reload.
+  - After that reload, the displayed list contains exactly one entry named {{ projectName }}. This expectation is only about what the list displays: it says nothing about what is stored server-side, and a filtered or paginated list is not enough to infer global uniqueness from it.
 ---
 
-# Créer un projet
+# Create a project
 
-Depuis l'accueil de l'espace de travail {{ fixture.workspaceName }}, créer un projet nommé
+From the home page of the {{ fixture.workspaceName }} workspace, create a project named
 {{ projectName }}.
 
-Utiliser le parcours proposé à un utilisateur standard.
+Use the journey offered to a standard user.
 
-Recharger ensuite la page pour observer l'état réellement conservé par l'application.
+Then reload the page to observe the state the application actually kept.
 
-Les résultats attendus sont décrits dans verification.
+The expected results are described in verification.

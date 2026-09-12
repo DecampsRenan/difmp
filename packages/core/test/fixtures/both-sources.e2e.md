@@ -2,13 +2,13 @@
 version: 1
 id: both-sources
 verification: |
-  - Une attente dans le frontmatter.
+  - An expectation in the frontmatter.
 ---
 
-# Parcours
+# Journey
 
-Un corps.
+A body.
 
 ## Expected results
 
-- Une attente dans une section.
+- An expectation in a section.

@@ -3,7 +3,7 @@ version: 1
 id: secret-leak
 fixture: leaky
 verification: |
-  - La page affiche {{ fixture.harmless }} et la valeur {{ fixture.leaked }}.
+  - The page shows {{ fixture.harmless }} and the value {{ fixture.leaked }}.
 ---
 
-Ouvrir la page et constater {{ fixture.leaked }}.
+Open the page and observe {{ fixture.leaked }}.

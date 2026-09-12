@@ -1,8 +1,8 @@
 ---
 version: 1
 id: bad-timeout
-timeout: bientôt
-verification: Une attente.
+timeout: soon
+verification: An expectation.
 ---
 
-# Corps
+# Body

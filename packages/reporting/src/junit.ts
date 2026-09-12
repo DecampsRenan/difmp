@@ -10,10 +10,10 @@ import { buildReportView } from "./view.js"
  * unresolved verdict into a pass in every CI dashboard that reads this file.
  */
 const CANCELLATION_NOTE =
-  "Convention JUnit du harness : un critère `failed` est un <failure> (le produit contredit " +
-  "l'attente) ; `inconclusive`, `pending` et `error` sont des <error> (indéterminé ou technique) ; " +
-  "une annulation est un <error> au niveau du run. Aucun <skipped> n'est émis : un résultat " +
-  "indéterminé ne doit jamais apparaître en vert."
+  "JUnit convention of the harness: a `failed` criterion is a <failure> (the product contradicts " +
+  "the expectation); `inconclusive`, `pending` and `error` are <error> (indeterminate or technical); " +
+  "a cancellation is an <error> at run level. No <skipped> is ever emitted: an indeterminate " +
+  "result must never show up green."
 
 const oneLine = (value: string): string => value.replace(/\s+/g, " ").trim()
 
@@ -37,49 +37,49 @@ const outcomeFor = (criterion: CriterionView): CaseOutcome => {
       return {
         tag: "failure",
         type: "criterion-failed",
-        message: `status=failed — ${oneLine(criterion.observed ?? "aucune observation enregistrée")}`
+        message: `status=failed — ${oneLine(criterion.observed ?? "no observation recorded")}`
       }
     case "inconclusive":
       return {
         tag: "error",
         type: "criterion-inconclusive",
-        message: `status=inconclusive (résultat indéterminé, pas un succès) — ${
-          oneLine(criterion.observed ?? criterion.limitations ?? "preuves insuffisantes")
+        message: `status=inconclusive (indeterminate result, not a success) — ${
+          oneLine(criterion.observed ?? criterion.limitations ?? "insufficient evidence")
         }`
       }
     case "pending":
       return {
         tag: "error",
         type: "criterion-pending",
-        message: "status=pending — le critère n'a jamais été évalué"
+        message: "status=pending — the criterion was never evaluated"
       }
     case "error":
       return {
         tag: "error",
         type: "criterion-error",
-        message: `status=error — ${oneLine(criterion.observed ?? "erreur technique pendant l'évaluation")}`
+        message: `status=error — ${oneLine(criterion.observed ?? "technical error during the evaluation")}`
       }
   }
 }
 
 const caseBody = (criterion: CriterionView): string =>
   [
-    `critère: ${criterion.id}`,
-    `statut réel: ${criterion.status}`,
-    `méthode: ${criterion.method}`,
-    `évaluateur: ${criterion.evaluatorLabel}`,
+    `criterion: ${criterion.id}`,
+    `actual status: ${criterion.status}`,
+    `method: ${criterion.method}`,
+    `evaluator: ${criterion.evaluatorLabel}`,
     criterion.probabilistic
-      ? "avertissement: évaluation textuelle probabiliste, ce n'est pas une assertion déterministe"
-      : "évaluation déterministe (check TypeScript)",
-    `attente (texte gelé du contrat): ${criterion.expectation}`,
-    `attendu: ${criterion.expected ?? "—"}`,
-    `observé: ${criterion.observed ?? "—"}`,
-    criterion.limitations === undefined ? undefined : `limites: ${criterion.limitations}`,
-    criterion.absence === undefined ? undefined : `branche d'absence: ${criterion.absence}`,
-    `preuves: ${criterion.evidence.map((e) => e.artifactId).join(", ") || "aucune"}`,
+      ? "warning: probabilistic textual evaluation, this is not a deterministic assertion"
+      : "deterministic evaluation (TypeScript check)",
+    `expectation (frozen contract text): ${criterion.expectation}`,
+    `expected: ${criterion.expected ?? "—"}`,
+    `observed: ${criterion.observed ?? "—"}`,
+    criterion.limitations === undefined ? undefined : `limitations: ${criterion.limitations}`,
+    criterion.absence === undefined ? undefined : `absence branch: ${criterion.absence}`,
+    `evidence: ${criterion.evidence.map((e) => e.artifactId).join(", ") || "none"}`,
     criterion.danglingEvidence.length === 0
       ? undefined
-      : `preuves référencées introuvables: ${criterion.danglingEvidence.join(", ")}`
+      : `referenced evidence not found: ${criterion.danglingEvidence.join(", ")}`
   ].filter((line): line is string => line !== undefined).join("\n")
 
 /**
@@ -96,7 +96,7 @@ const runLevelCase = (view: ReportView): string | undefined => {
     ? "run-error"
     : "run-no-criteria"
   const message = `status=${view.status} — ${
-    oneLine(view.statusDetail ?? (noCriteria ? "aucun critère n'a été évalué" : "aucun détail enregistré"))
+    oneLine(view.statusDetail ?? (noCriteria ? "no criterion was evaluated" : "no detail recorded"))
   }`
   return [
     `    <testcase ${attr("name", `run:${view.runId}`)} ${attr("classname", view.scenarioId)} ${

@@ -4,8 +4,8 @@ id: coded-check
 checks:
   c2: project-unique-in-storage
 verification: |
-  - Le projet apparaît dans la liste.
-  - Un seul projet porte ce nom en base.
+  - The project appears in the list.
+  - Exactly one project with that name exists in the store.
 ---
 
-# Corps
+# Body

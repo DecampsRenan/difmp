@@ -22,7 +22,7 @@ id: must-not-be-selected
 
 # Decoy
 
-## Résultats attendus
+## Expected results
 
 - Never selected.
 `

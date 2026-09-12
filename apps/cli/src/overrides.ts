@@ -61,7 +61,7 @@ export const redactSensitive = (
 ): Readonly<Record<string, unknown>> => {
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(options)) {
-    out[key] = looksSensitive(key) ? "«redacted»" : value
+    out[key] = looksSensitive(key) ? "[redacted]" : value
   }
   return out
 }

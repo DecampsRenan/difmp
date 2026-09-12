@@ -11,38 +11,38 @@ const statusTone: Record<CriterionStatus, string> = {
 }
 
 const statusLabel: Record<CriterionStatus, string> = {
-  pending: "en attente",
-  passed: "réussi",
-  failed: "échoué",
-  inconclusive: "non concluant",
-  error: "erreur"
+  pending: "pending",
+  passed: "passed",
+  failed: "failed",
+  inconclusive: "inconclusive",
+  error: "error"
 }
 
 const evaluatorLabel = (evaluator: Evaluator): string => {
   switch (evaluator.kind) {
     case "model":
-      return `modèle ${evaluator.provider}/${evaluator.model}`
+      return `model ${evaluator.provider}/${evaluator.model}`
     case "scripted-model":
       // Never present a deterministic double as a real model judgement (design-contracts §8).
-      return "double scripté (pas un jugement de modèle)"
+      return "scripted double (not a model judgement)"
     case "code":
-      return `check TS « ${evaluator.checkName} »`
+      return `TS check "${evaluator.checkName}"`
   }
 }
 
 const absenceLabel: Record<string, string> = {
-  "uncertain-navigation": "absence après navigation incertaine → non concluant",
-  "established-at-checkpoint": "absence établie au point de contrôle → échec"
+  "uncertain-navigation": "absence after uncertain navigation → inconclusive",
+  "established-at-checkpoint": "absence established at the checkpoint → failed"
 }
 
 export const Criteria = (props: { readonly criteria: ReadonlyArray<CriterionView> }) => (
   <Panel
-    title="Critères de réussite"
+    title="Success criteria"
     testId="criteria-panel"
     aside={<span className="count">{props.criteria.length}</span>}
   >
     {props.criteria.length === 0
-      ? <Empty>Le contrat n'est pas encore gelé.</Empty>
+      ? <Empty>The contract is not frozen yet.</Empty>
       : (
         <ul className="criteria" data-testid="criteria-list">
           {props.criteria.map((criterion) => {
@@ -53,63 +53,63 @@ export const Criteria = (props: { readonly criteria: ReadonlyArray<CriterionView
                   <code className="criterion-id">{criterion.id}</code>
                   <Badge tone={statusTone[criterion.status]} title={statusLabel[criterion.status]}>
                     {/* The domain literal, not a translation: it is what `result.json`, `junit.xml`
-                        and the console reporter print, so it stays greppable across artefacts. */}
+                        and the console reporter print, so it stays greppable across artifacts. */}
                     <span data-testid={`criterion-status-${criterion.id}`}>{criterion.status}</span>
                   </Badge>
                   <span
                     className={`method method-${criterion.method ?? "unknown"}`}
                     data-testid={`criterion-method-${criterion.id}`}
                     title={criterion.method === "code"
-                      ? "Évalué par un check TypeScript déterministe"
+                      ? "Evaluated by a deterministic TypeScript check"
                       : criterion.method === "model"
-                      ? "Évalué par le modèle à partir des preuves"
-                      : "Méthode encore inconnue (contrat non chargé)"}
+                      ? "Evaluated by the model from the evidence"
+                      : "Method still unknown (contract not loaded)"}
                   >
                     {criterion.method === "code"
                       ? `code${criterion.checkName === undefined ? "" : ` · ${criterion.checkName}`}`
                       : criterion.method === "model"
-                      ? "modèle"
-                      : "méthode inconnue"}
+                      ? "model"
+                      : "unknown method"}
                   </span>
                 </div>
 
-                <p className="criterion-text">{criterion.text ?? "(texte du critère indisponible)"}</p>
+                <p className="criterion-text">{criterion.text ?? "(criterion text unavailable)"}</p>
 
                 {criterion.evidenceRequested && result === undefined
-                  ? <p className="criterion-meta">Preuves demandées, évaluation en cours…</p>
+                  ? <p className="criterion-meta">Evidence requested, evaluation in progress…</p>
                   : null}
 
                 {result === undefined ? null : (
                   <dl className="criterion-result">
                     <div>
-                      <dt>Attendu</dt>
+                      <dt>Expected</dt>
                       <dd>{result.expected}</dd>
                     </div>
                     <div>
-                      <dt>Observé</dt>
+                      <dt>Observed</dt>
                       <dd>{result.observed}</dd>
                     </div>
                     <div>
-                      <dt>Évaluateur</dt>
+                      <dt>Evaluator</dt>
                       <dd>{evaluatorLabel(result.evaluator)}</dd>
                     </div>
                     {result.absence === undefined ? null : (
                       <div>
-                        <dt>Règle d'absence</dt>
+                        <dt>Absence rule</dt>
                         <dd>{absenceLabel[result.absence] ?? result.absence}</dd>
                       </div>
                     )}
                     {result.limitations === undefined ? null : (
                       <div>
-                        <dt>Limites</dt>
+                        <dt>Limitations</dt>
                         <dd>{result.limitations}</dd>
                       </div>
                     )}
                     <div>
-                      <dt>Preuves</dt>
+                      <dt>Evidence</dt>
                       <dd>
                         {result.evidence.length === 0
-                          ? "aucune"
+                          ? "none"
                           : result.evidence.map((id) => <code key={id} className="chip">{id}</code>)}
                       </dd>
                     </div>

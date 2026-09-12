@@ -12,23 +12,23 @@ const turn = (text: string, calls: ReadonlyArray<ScriptedCall>): ScriptedStep =>
 
 /** Observe, fill, submit, re-observe, screenshot, ask for every criterion, finish. */
 export const happyPathScript = (options: HappyPathOptions): AgentScript => {
-  const steps: Array<ScriptedStep> = [turn("je regarde la page", [observe()])]
+  const steps: Array<ScriptedStep> = [turn("I look at the page", [observe()])]
   if (options.fills !== undefined && options.fills.length > 0) {
     steps.push(turn(
-      "je remplis le formulaire",
+      "I fill in the form",
       options.fills.map((entry) => fillByName(entry.name, entry.value))
     ))
   }
   if (options.submit !== undefined) {
-    steps.push(turn("je valide", [clickByName(options.submit, { intent: "soumettre le formulaire" })]))
-    steps.push(turn("je ré-observe après navigation", [observe()]))
+    steps.push(turn("I submit", [clickByName(options.submit, { intent: "submit the form" })]))
+    steps.push(turn("I observe again after navigation", [observe()]))
   }
-  steps.push(turn("je capture l'état atteint", [screenshot("etat-final")]))
+  steps.push(turn("I capture the state reached", [screenshot("final-state")]))
   steps.push(turn(
-    "je demande l'évaluation des critères",
+    "I ask for the criteria to be evaluated",
     options.criterionIds.map((id) => check(id))
   ))
-  steps.push(turn("terminé", [finish("parcours nominal exécuté")]))
+  steps.push(turn("done", [finish("nominal walkthrough carried out")]))
   return {
     id: "happy-path",
     description: "nominal walkthrough: observe, fill, submit, capture, check every criterion, finish",
@@ -41,8 +41,8 @@ export const prematureFinishScript = (): AgentScript => ({
   id: "premature-finish",
   description: "declares the run complete after a single observation, without asking for any check",
   steps: [
-    turn("je regarde la page", [observe()]),
-    turn("c'est bon", [finish("je pense que c'est fait")])
+    turn("I look at the page", [observe()]),
+    turn("all good", [finish("I think this is done")])
   ]
 })
 
@@ -55,8 +55,8 @@ export const exceedActionsScript = (options: {
   for (let i = 0; i < options.count; i++) {
     steps.push(turn(`exploration ${i + 1}`, i % 2 === 0 ? [observe()] : [screenshot(`exploration-${i + 1}`)]))
   }
-  steps.push(turn("évaluation", options.criterionIds.map((id) => check(id))))
-  steps.push(turn("terminé", [finish("parcours long")]))
+  steps.push(turn("evaluation", options.criterionIds.map((id) => check(id))))
+  steps.push(turn("done", [finish("long walkthrough")]))
   return {
     id: "exceed-actions",
     description: `spends ${options.count} browser actions before checking, crossing the indicative threshold`,
@@ -72,13 +72,13 @@ export const staleObservationScript = (options: {
   id: "stale-observation",
   description: "re-observes, then reuses the first observationId — the reference must be refused",
   steps: [
-    turn("première observation", [observe()]),
-    turn("seconde observation", [observe()]),
-    turn("je clique avec une référence périmée", [clickWithStaleObservation(options.target)]),
-    turn("je ré-observe comme demandé", [observe()]),
-    turn("je clique correctement", [clickByName(options.target)]),
-    turn("évaluation", options.criterionIds.map((id) => check(id))),
-    turn("terminé", [finish("référence périmée corrigée")])
+    turn("first observation", [observe()]),
+    turn("second observation", [observe()]),
+    turn("I click with a stale reference", [clickWithStaleObservation(options.target)]),
+    turn("I observe again as instructed", [observe()]),
+    turn("I click correctly", [clickByName(options.target)]),
+    turn("evaluation", options.criterionIds.map((id) => check(id))),
+    turn("done", [finish("stale reference corrected")])
   ]
 })
 
@@ -86,6 +86,6 @@ export const staleObservationScript = (options: {
 export const burnModelCallsScript = (): AgentScript => ({
   id: "burn-model-calls",
   description: "observes forever; the run can only end on a blocking budget, never on maxActions",
-  steps: [turn("j'observe encore", [observe()])],
+  steps: [turn("I observe again", [observe()])],
   onExhausted: "repeat"
 })

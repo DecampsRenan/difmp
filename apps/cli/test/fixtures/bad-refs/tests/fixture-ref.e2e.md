@@ -3,10 +3,10 @@ version: 1
 id: fixture-reference
 ---
 
-# Référence de fixture
+# Fixture reference
 
-Ouvrir l'espace {{ fixture.workspaceName }}.
+Open the {{ fixture.workspaceName }} workspace.
 
-## Résultats attendus
+## Expected results
 
-- L'espace {{ fixture.workspaceName }} est affiché.
+- The {{ fixture.workspaceName }} workspace is displayed.

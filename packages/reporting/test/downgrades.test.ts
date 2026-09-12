@@ -7,7 +7,7 @@ import { loadFixture } from "./fixtures.js"
 /**
  * A criterion the harness refused to conclude must say WHICH rule refused, and a verdict the agent
  * tried to overturn must still be visible. A bare `inconclusive` is exactly the information the
- * reader is missing, so these are rendered as their own blocks, not folded into "limites".
+ * reader is missing, so these are rendered as their own blocks, not folded into "limitations".
  */
 const withVerdictHistory = (input: ReportInput): ReportInput => {
   const attempt = input.result.attempts[0]!
@@ -33,7 +33,7 @@ const withVerdictHistory = (input: ReportInput): ReportInput => {
     reChecks: [
       {
         status: "passed",
-        observed: "cette fois le projet est visible",
+        observed: "this time the project is visible",
         evidence: ["art_2"],
         requestedBy: "agent",
         evaluatedAtSeq: 42,
@@ -62,20 +62,20 @@ describe("the report explains why the harness refused to conclude", () => {
     ])
     expect(criterion.reChecks).toHaveLength(1)
     const sources = view.diagnostics.map((d) => d.source)
-    expect(sources).toContain("absence après navigation incertaine c1")
-    expect(sources).toContain("preuve obligatoire non enregistrée c1")
-    expect(sources).toContain("re-vérification c1")
+    expect(sources).toContain("absence after uncertain navigation c1")
+    expect(sources).toContain("mandatory evidence not persisted c1")
+    expect(sources).toContain("re-check c1")
   })
 
   it("names the rule, the status it replaced and the reason in the HTML", () => {
     const html = renderHtmlReport(input)
-    expect(html).toContain("Statut imposé par le harness")
-    expect(html).toContain("absence après navigation incertaine")
-    expect(html).toContain("preuve obligatoire non enregistrée")
-    expect(html).toContain("Évaluations ultérieures de ce critère")
-    expect(html).toContain("observation seulement")
+    expect(html).toContain("Status imposed by the harness")
+    expect(html).toContain("absence after uncertain navigation")
+    expect(html).toContain("mandatory evidence not persisted")
+    expect(html).toContain("Later evaluations of this criterion")
+    expect(html).toContain("observation only")
     // The rejected upgrade is shown as what it was, not silently dropped.
-    expect(html).toContain("cette fois le projet est visible")
+    expect(html).toContain("this time the project is visible")
   })
 
   it("escapes a downgrade detail like every other piece of text", () => {

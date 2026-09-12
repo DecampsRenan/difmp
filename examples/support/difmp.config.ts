@@ -30,7 +30,7 @@ export default defineConfig({
   // Project-level input defaults (lowest priority: config < spec < --inputs-file < --input).
   // `{{ run.id }}` makes the name unique per run, so two runs never collide in one workspace.
   inputs: {
-    projectName: "Projet {{ run.id }}"
+    projectName: "Project {{ run.id }}"
   },
 
   // Registries. A spec references these NAMES; it can never name a module path.

@@ -95,8 +95,8 @@ const browserLayer = (options: BrowserOptions = {}) => {
           observationId,
           url,
           title: "Fixture app",
-          snapshot: `- button "Créer" [ref=e1]`,
-          elements: [{ ref: "e1", role: "button", name: "Créer" }]
+          snapshot: `- button "Create" [ref=e1]`,
+          elements: [{ ref: "e1", role: "button", name: "Create" }]
         } satisfies ObserveResult
       ),
     navigate: ({ url: target }) =>
@@ -229,15 +229,15 @@ describe("verdict integrity — a re-`check` never upgrades a decided criterion"
         ],
         verdicts: {
           c1: [
-            { status: "failed", observed: "le projet n'apparaît pas" },
-            { status: "passed", observed: "il est là finalement" }
+            { status: "failed", observed: "the project does not appear" },
+            { status: "passed", observed: "it is there after all" }
           ]
         }
       })
 
       const c1 = criterion(out, "c1")
       expect(c1.status).toBe("failed")
-      expect(c1.observed).toBe("le projet n'apparaît pas")
+      expect(c1.observed).toBe("the project does not appear")
       expect(out.result.status).toBe("failed")
       // The later answer is not lost: it is recorded as an observation that changed nothing.
       expect(c1.reChecks).toHaveLength(1)
@@ -259,14 +259,14 @@ describe("verdict integrity — a re-`check` never upgrades a decided criterion"
         }],
         verdicts: {
           c1: [
-            { status: "passed", observed: "présent avant rechargement" },
-            { status: "failed", observed: "disparu après rechargement" }
+            { status: "passed", observed: "present before the reload" },
+            { status: "failed", observed: "gone after the reload" }
           ]
         }
       })
       const c1 = criterion(out, "c1")
       expect(c1.status).toBe("failed")
-      expect(c1.observed).toBe("disparu après rechargement")
+      expect(c1.observed).toBe("gone after the reload")
       expect(c1.reChecks![0]).toMatchObject({ status: "failed", applied: true })
       expect(out.result.status).toBe("failed")
     }).pipe(Effect.provide(platform)))
@@ -281,8 +281,8 @@ describe("verdict integrity — a re-`check` never upgrades a decided criterion"
         }],
         verdicts: {
           c1: [
-            { status: "inconclusive", observed: "pas encore rechargé" },
-            { status: "passed", observed: "toujours là après rechargement" }
+            { status: "inconclusive", observed: "not reloaded yet" },
+            { status: "passed", observed: "still there after the reload" }
           ]
         }
       })
@@ -305,8 +305,8 @@ describe("evidence integrity applies to `method: code` exactly as it does to `mo
         checks: {
           "project-unique-in-storage": async () => ({
             status: "passed",
-            expected: "exactement une ligne",
-            observed: "une seule ligne en base",
+            expected: "exactly one row",
+            observed: "a single row in the store",
             evidence: ["art_999"]
           })
         }
@@ -329,8 +329,8 @@ describe("evidence integrity applies to `method: code` exactly as it does to `mo
             const artifactId = await ctx.recordEvidence({ label: "probe", data: { rows: 1 } })
             return {
               status: "passed",
-              expected: "exactement une ligne",
-              observed: "une seule ligne en base",
+              expected: "exactly one row",
+              observed: "a single row in the store",
               evidence: [artifactId]
             }
           }
@@ -352,8 +352,8 @@ describe("evidence integrity applies to `method: code` exactly as it does to `mo
         checks: {
           "project-unique-in-storage": async () => ({
             status: "passed",
-            expected: "exactement une ligne",
-            observed: "j'ai regardé, promis",
+            expected: "exactly one row",
+            observed: "I looked, I promise",
             evidence: []
           })
         }
@@ -369,7 +369,7 @@ describe("the absence rule is a harness decision, not a claim the evaluator make
       const out = yield* execute({
         spec: loaded,
         turns: [{ toolCalls: [observe] }, { toolCalls: [finish] }],
-        fallback: { status: "failed", observed: "je ne vois pas le projet", absence: "uncertain-navigation" }
+        fallback: { status: "failed", observed: "I do not see the project", absence: "uncertain-navigation" }
       })
       const c1 = criterion(out, "c1")
       expect(c1.status).toBe("inconclusive")
@@ -401,7 +401,7 @@ describe("the absence rule is a harness decision, not a claim the evaluator make
       const out = yield* execute({
         spec: loaded,
         turns: [{ toolCalls: [observe] }, { toolCalls: [finish] }],
-        fallback: { status: "failed", observed: "absent après rechargement", absence: "established-at-checkpoint" }
+        fallback: { status: "failed", observed: "absent after the reload", absence: "established-at-checkpoint" }
       })
       const c1 = criterion(out, "c1")
       expect(c1.status).toBe("failed")
@@ -441,7 +441,7 @@ describe("a failure to persist mandatory evidence can never end in a silent succ
         spec: loaded,
         turns: [{ toolCalls: [observe] }, { toolCalls: [finish] }],
         browser: { screenshotFails: true },
-        fallback: { status: "failed", observed: "le projet n'apparaît pas" }
+        fallback: { status: "failed", observed: "the project does not appear" }
       })
       expect(out.result.status).toBe("error")
       // spec §9: the criterion keeps its own status even when the aggregate is an error.
@@ -457,7 +457,7 @@ describe("known secrets never reach the contract, the journal or the manifest", 
         spec: loaded,
         turns: [{ toolCalls: [observe] }, { toolCalls: [finish] }],
         fixture: {
-          publicValues: { workspaceName: "Espace démo", leaked: "sk-live-SUPERSECRET" },
+          publicValues: { workspaceName: "Demo workspace", leaked: "sk-live-SUPERSECRET" },
           secretValues: ["sk-live-SUPERSECRET"]
         }
       })

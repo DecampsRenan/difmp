@@ -3,21 +3,21 @@ import type { RunModel } from "../state/model.js"
 import { Empty, Gauge, Panel, durationOf } from "./ui.js"
 
 const budgetLabel: Record<string, string> = {
-  attemptTimeout: "délai de tentative",
-  operationTimeout: "délai d'opération",
-  maxModelCalls: "appels modèle",
-  maxTokens: "jetons"
+  attemptTimeout: "attempt timeout",
+  operationTimeout: "operation timeout",
+  maxModelCalls: "model calls",
+  maxTokens: "tokens"
 }
 
 /**
  * Cost is shown ONLY when it can actually be computed from declared prices. With no price table the
- * spec requires the literal string "indisponible" — never an estimate, never a zero.
+ * spec requires the literal string "unavailable" — never an estimate, never a zero.
  */
 const renderCost = (model: RunModel, pricing: UiRuntimeConfig["pricing"]): string => {
-  if (pricing === undefined) return "indisponible"
+  if (pricing === undefined) return "unavailable"
   const total = (model.model.inputTokens / 1_000_000) * pricing.inputPerMillionTokens +
     (model.model.outputTokens / 1_000_000) * pricing.outputPerMillionTokens
-  if (!Number.isFinite(total)) return "indisponible"
+  if (!Number.isFinite(total)) return "unavailable"
   return `${total.toFixed(4)} ${pricing.currency}`
 }
 
@@ -33,17 +33,18 @@ export const BlockingBudgets = (props: {
 
   return (
     <Panel
-      title="Budgets bloquants"
+      title="Blocking budgets"
       testId="blocking-budgets-panel"
-      note="Épuiser l'un de ces budgets arrête la boucle et rend le run « non concluant ». Ce sont les seules limites qui bloquent."
+      note={'Exhausting any one of these budgets stops the loop and makes the run "inconclusive". ' +
+        "These are the only limits that block."}
     >
       {budgets === undefined
-        ? <Empty>Budgets inconnus tant que la configuration n'est pas résolue.</Empty>
+        ? <Empty>Budgets unknown until the configuration is resolved.</Empty>
         : (
           <div className="gauges">
             <Gauge
               kind="blocking"
-              label="Appels modèle"
+              label="Model calls"
               used={props.model.model.started}
               limit={budgets.maxModelCalls}
               exhausted={exhausted("maxModelCalls")}
@@ -51,18 +52,18 @@ export const BlockingBudgets = (props: {
             />
             <Gauge
               kind="blocking"
-              label="Jetons"
+              label="Tokens"
               used={tokensUsed}
               limit={budgets.maxTokens}
               exhausted={exhausted("maxTokens")}
               testId="budget-maxTokens"
-              footnote={`dont ${props.model.model.verifierTokens.toLocaleString("fr-FR")} vérificateur · réserve ${
-                budgets.verifierReserveTokens.toLocaleString("fr-FR")
+              footnote={`of which ${props.model.model.verifierTokens.toLocaleString("en-US")} verifier · reserve ${
+                budgets.verifierReserveTokens.toLocaleString("en-US")
               }`}
             />
             <Gauge
               kind="blocking"
-              label="Délai de tentative"
+              label="Attempt timeout"
               used={Math.min(props.elapsedMs, budgets.attemptTimeoutMs)}
               limit={budgets.attemptTimeoutMs}
               format={durationOf}
@@ -71,15 +72,15 @@ export const BlockingBudgets = (props: {
             />
             <dl className="budget-scalars">
               <div>
-                <dt>Délai par opération</dt>
+                <dt>Per-operation timeout</dt>
                 <dd>{durationOf(budgets.operationTimeoutMs)}</dd>
               </div>
               <div>
-                <dt>Délai de nettoyage fixture</dt>
+                <dt>Fixture cleanup timeout</dt>
                 <dd>{durationOf(budgets.fixtureCleanupTimeoutMs)}</dd>
               </div>
               <div>
-                <dt>Coût</dt>
+                <dt>Cost</dt>
                 <dd data-testid="cost-value">{renderCost(props.model, props.pricing)}</dd>
               </div>
             </dl>
@@ -90,7 +91,7 @@ export const BlockingBudgets = (props: {
         <ul className="breaches" data-testid="budget-breaches">
           {breaches.map((breach) => (
             <li key={`${breach.budget}-${breach.used}`}>
-              <strong>{budgetLabel[breach.budget] ?? breach.budget}</strong> épuisé — {breach.used} / {breach.limit}
+              <strong>{budgetLabel[breach.budget] ?? breach.budget}</strong> exhausted — {breach.used} / {breach.limit}
               {breach.detail === undefined ? null : ` — ${breach.detail}`}
             </li>
           ))}
@@ -112,25 +113,26 @@ export const ActionGuidance = (props: { readonly model: RunModel }) => {
 
   return (
     <Panel
-      title="Actions — seuil indicatif"
+      title="Actions — indicative threshold"
       testId="action-guidance-panel"
-      note="Indication de trajectoire, pas une limite. Dépasser ce seuil ne refuse rien et ne dégrade aucun statut : un run qui réussit en 40 actions reste « réussi »."
-      aside={<span className="tag tag-indicative">indicatif</span>}
+      note={"A trajectory hint, not a limit. Crossing this threshold refuses nothing and degrades no status: " +
+        'a run that succeeds in 40 actions is still "passed".'}
+      aside={<span className="tag tag-indicative">indicative</span>}
     >
       {guidance === undefined
         ? (
           <p className="big-number" data-testid="action-count">
-            {used} <small>action(s) acceptée(s) — seuil indicatif inconnu</small>
+            {used} <small>accepted action(s) — indicative threshold unknown</small>
           </p>
         )
         : (
           <>
             <p className="big-number" data-testid="action-count">
-              {used} <small>/ {guidance} indicatives</small>
+              {used} <small>/ {guidance} suggested</small>
             </p>
             <Gauge
               kind="indicative"
-              label="Actions acceptées"
+              label="Accepted actions"
               used={used}
               limit={guidance}
               testId="guidance-gauge"
@@ -142,13 +144,13 @@ export const ActionGuidance = (props: { readonly model: RunModel }) => {
         ? null
         : (
           <p className="guidance-note" data-testid="guidance-exceeded">
-            <strong>{exceededEvent.rendering}</strong> — seuil indicatif dépassé. Aucune action refusée, aucun
-            statut dégradé ; une relance de cadrage a été envoyée à l'agent.
+            <strong>{exceededEvent.rendering}</strong> — indicative threshold crossed. No action refused, no
+            status degraded; a short refocusing nudge was sent to the agent.
           </p>
         )}
 
       <p className="panel-foot">
-        Les appels modèle et les opérations de vérification sont comptés à part et jamais imputés à ce seuil.
+        Model calls and verification operations are counted separately and never charged to this threshold.
       </p>
     </Panel>
   )

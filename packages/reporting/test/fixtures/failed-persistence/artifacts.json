@@ -3,8 +3,8 @@
   "runId": "r_p7q3znm5tk2ab",
   "artifacts": [
     { "artifactId": "art_1", "attemptId": "a1", "kind": "trace", "path": "attempts/a1/trace.zip", "state": "present", "bytes": 611002, "ts": "2026-03-04T10:02:43.500Z" },
-    { "artifactId": "art_2", "attemptId": "a1", "kind": "screenshot", "label": "apres-soumission", "path": "attempts/a1/screenshots/apres-soumission.png", "state": "present", "bytes": 96114, "ts": "2026-03-04T10:02:29.400Z", "sourceSeq": 11 },
+    { "artifactId": "art_2", "attemptId": "a1", "kind": "screenshot", "label": "after-submission", "path": "attempts/a1/screenshots/after-submission.png", "state": "present", "bytes": 96114, "ts": "2026-03-04T10:02:29.400Z", "sourceSeq": 11 },
     { "artifactId": "art_3", "attemptId": "a1", "kind": "probe-result", "label": "project-unique-in-storage", "path": "attempts/a1/checks/c2-probe.json", "state": "present", "bytes": 88, "ts": "2026-03-04T10:02:41.010Z", "sourceSeq": 17 },
-    { "artifactId": "art_4", "attemptId": "a1", "kind": "network-log", "state": "failed", "reason": "le fichier network.jsonl n'a pas pu être finalisé : ENOSPC sur le volume de sortie", "ts": "2026-03-04T10:02:43.700Z" }
+    { "artifactId": "art_4", "attemptId": "a1", "kind": "network-log", "state": "failed", "reason": "network.jsonl could not be finalised: ENOSPC on the output volume", "ts": "2026-03-04T10:02:43.700Z" }
   ]
 }

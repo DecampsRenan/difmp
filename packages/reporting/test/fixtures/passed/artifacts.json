@@ -6,7 +6,7 @@
       "artifactId": "art_1",
       "attemptId": "a1",
       "kind": "trace",
-      "label": "trace de la tentative",
+      "label": "attempt trace",
       "path": "attempts/a1/trace.zip",
       "state": "present",
       "bytes": 482113,
@@ -16,7 +16,7 @@
       "artifactId": "art_2",
       "attemptId": "a1",
       "kind": "aria-snapshot",
-      "label": "liste des projets",
+      "label": "project list",
       "path": "attempts/a1/screenshots/obs_5.aria.txt",
       "state": "present",
       "bytes": 3184,
@@ -27,8 +27,8 @@
       "artifactId": "art_3",
       "attemptId": "a1",
       "kind": "screenshot",
-      "label": "checkpoint-liste-projets",
-      "path": "attempts/a1/screenshots/checkpoint-liste-projets.png",
+      "label": "checkpoint-project-list",
+      "path": "attempts/a1/screenshots/checkpoint-project-list.png",
       "state": "present",
       "bytes": 118902,
       "ts": "2026-03-04T09:13:02.310Z",
@@ -50,7 +50,7 @@
       "attemptId": "a1",
       "kind": "video",
       "state": "missing",
-      "reason": "capture vidéo désactivée par la configuration (capture.video = \"off\")",
+      "reason": "video capture disabled by the configuration (capture.video = \"off\")",
       "ts": "2026-03-04T09:13:07.700Z"
     }
   ]

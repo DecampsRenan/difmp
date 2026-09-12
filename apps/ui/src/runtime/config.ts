@@ -14,7 +14,7 @@ export interface UiRuntimeConfig {
   readonly artifactBaseUrl: string
   /**
    * Token prices, if the operator configured any. ABSENT is the normal case and the UI then shows
-   * "indisponible" rather than inventing a number.
+   * "unavailable" rather than inventing a number.
    */
   readonly pricing?: {
     readonly currency: string

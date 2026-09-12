@@ -6,10 +6,10 @@ inputs:
   projectName: from-spec
 ---
 
-# Ouvrir la page d'accueil
+# Open the home page
 
-Ouvrir l'application et observer la page d'accueil du projet {{ projectName }}.
+Open the application and observe the home page of project {{ projectName }}.
 
-## Résultats attendus
+## Expected results
 
-- Le projet {{ projectName }} est visible, source {{ fromConfigOnly }}, retries {{ retries }}.
+- The project {{ projectName }} is visible, source {{ fromConfigOnly }}, retries {{ retries }}.

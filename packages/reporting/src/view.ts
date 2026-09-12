@@ -157,39 +157,39 @@ export interface Diagnostic {
 }
 
 const statusLabels: Record<RunStatus, string> = {
-  passed: "Réussi",
-  failed: "Échoué",
-  inconclusive: "Non concluant",
-  error: "Erreur",
-  cancelled: "Annulé"
+  passed: "Passed",
+  failed: "Failed",
+  inconclusive: "Inconclusive",
+  error: "Error",
+  cancelled: "Cancelled"
 }
 
 export const runStatusLabel = (status: RunStatus): string => statusLabels[status]
 
 const criterionStatusLabels: Record<CriterionStatus, string> = {
-  pending: "En attente",
-  passed: "Réussi",
-  failed: "Échoué",
-  inconclusive: "Non concluant",
-  error: "Erreur"
+  pending: "Pending",
+  passed: "Passed",
+  failed: "Failed",
+  inconclusive: "Inconclusive",
+  error: "Error"
 }
 
 export const criterionStatusLabel = (status: CriterionStatus): string => criterionStatusLabels[status]
 
 /** Why the harness refused the evaluator's status — shown verbatim next to the criterion. */
 const downgradeLabels: Record<CriterionDowngrade["reason"], string> = {
-  "rejected-evidence": "preuves rejetées",
-  "absence-uncertain-navigation": "absence après navigation incertaine",
-  "evidence-persistence-failed": "preuve obligatoire non enregistrée",
-  "verdict-already-decided": "verdict déjà rendu"
+  "rejected-evidence": "evidence rejected",
+  "absence-uncertain-navigation": "absence after uncertain navigation",
+  "evidence-persistence-failed": "mandatory evidence not persisted",
+  "verdict-already-decided": "verdict already decided"
 }
 
 export const downgradeLabel = (reason: CriterionDowngrade["reason"]): string => downgradeLabels[reason]
 
 const inconclusiveReasonLabels: Record<string, string> = {
-  "unresolved-criteria": "critères non résolus",
-  "insufficient-evidence": "preuves insuffisantes",
-  "budget-exhausted": "budget bloquant épuisé"
+  "unresolved-criteria": "unresolved criteria",
+  "insufficient-evidence": "insufficient evidence",
+  "budget-exhausted": "blocking budget exhausted"
 }
 
 const field = (label: string, value: unknown): { label: string; value: string } => ({
@@ -229,27 +229,27 @@ const describeEvent = (
 ): { title: string; fields: ReadonlyArray<{ label: string; value: string }> } => {
   switch (event.type) {
     case "runStarted":
-      return { title: "Run démarré", fields: [field("scénario", event.scenarioId), field("spec", event.specPath)] }
+      return { title: "Run started", fields: [field("scenario", event.scenarioId), field("spec", event.specPath)] }
     case "configResolved":
       return {
-        title: "Configuration résolue",
-        fields: [field("baseUrl", event.config.baseUrl), field("fournisseur", event.config.provider)]
+        title: "Configuration resolved",
+        fields: [field("baseUrl", event.config.baseUrl), field("provider", event.config.provider)]
       }
     case "contractFrozen":
       return {
-        title: "Contrat gelé",
-        fields: [field("hash", event.contractHash), field("critères", event.criterionIds.join(", "))]
+        title: "Contract frozen",
+        fields: [field("hash", event.contractHash), field("criteria", event.criterionIds.join(", "))]
       }
     case "fixtureReady":
-      return { title: "Fixture prête", fields: [field("fixture", event.fixtureName)] }
+      return { title: "Fixture ready", fields: [field("fixture", event.fixtureName)] }
     case "fixtureCleaned":
       return {
-        title: "Fixture nettoyée",
+        title: "Fixture cleaned",
         fields: [field("fixture", event.fixtureName), field("timeout", event.timedOut)]
       }
     case "browserContextOpened":
       return {
-        title: "Contexte navigateur ouvert",
+        title: "Browser context opened",
         fields: [field("baseUrl", event.baseUrl), field("storageState", event.usedStorageState)]
       }
     case "observationTaken":
@@ -258,29 +258,29 @@ const describeEvent = (
         fields: [
           field("id", event.observationId),
           field("url", event.url),
-          field("titre", event.title),
-          field("éléments", event.elementCount)
+          field("title", event.title),
+          field("elements", event.elementCount)
         ]
       }
     case "modelCallStarted":
       return {
-        title: `Appel modèle (${event.role})`,
-        fields: [field("modèle", `${event.provider}/${event.model}`), field("callId", event.callId)]
+        title: `Model call (${event.role})`,
+        fields: [field("model", `${event.provider}/${event.model}`), field("callId", event.callId)]
       }
     case "modelCallFinished":
       return {
-        title: `Appel modèle terminé (${event.role})`,
+        title: `Model call finished (${event.role})`,
         fields: [
-          field("tokens entrée", event.inputTokens),
-          field("tokens sortie", event.outputTokens),
-          field("outils", event.toolCalls),
-          field("fin", event.finishReason)
+          field("input tokens", event.inputTokens),
+          field("output tokens", event.outputTokens),
+          field("tools", event.toolCalls),
+          field("finish", event.finishReason)
         ]
       }
     case "actionStarted":
       return {
         title: `Action ${event.tool}`,
-        fields: [field("id", event.actionId), field("intention", event.intent), field("params", event.params)]
+        fields: [field("id", event.actionId), field("intent", event.intent), field("params", event.params)]
       }
     case "actionFinished":
       return {
@@ -289,46 +289,46 @@ const describeEvent = (
       }
     case "evidenceRequested":
       return {
-        title: "Preuve demandée",
-        fields: [field("critère", event.criterionId), field("par", event.requestedBy), field("note", event.note)]
+        title: "Evidence requested",
+        fields: [field("criterion", event.criterionId), field("by", event.requestedBy), field("note", event.note)]
       }
     case "verificationFinished":
       return {
-        title: `Vérification ${event.criterionId} — ${event.result.status}`,
+        title: `Verification ${event.criterionId} — ${event.result.status}`,
         fields: [
-          field("méthode", event.result.method),
-          field("évaluateur", event.result.evaluator.kind),
-          field("preuves", event.result.evidence.join(", "))
+          field("method", event.result.method),
+          field("evaluator", event.result.evaluator.kind),
+          field("evidence", event.result.evidence.join(", "))
         ]
       }
     case "artifactAvailable":
       return {
-        title: `Artefact ${event.artifactId} (${event.state})`,
-        fields: [field("type", event.kind), field("chemin", event.path), field("raison", event.reason)]
+        title: `Artifact ${event.artifactId} (${event.state})`,
+        fields: [field("type", event.kind), field("path", event.path), field("reason", event.reason)]
       }
     case "actionGuidanceExceeded":
-      return { title: "Seuil indicatif d'actions dépassé", fields: [field("compte", event.rendering)] }
+      return { title: "Indicative action threshold crossed", fields: [field("count", event.rendering)] }
     case "budgetExhausted":
       return {
-        title: `Budget bloquant épuisé : ${event.budget}`,
-        fields: [field("utilisé", event.used), field("limite", event.limit), field("détail", event.detail)]
+        title: `Blocking budget exhausted: ${event.budget}`,
+        fields: [field("used", event.used), field("limit", event.limit), field("detail", event.detail)]
       }
     case "progressStalled":
       return {
-        title: "Progression bloquée",
-        fields: [field("raison", event.reason), field("actions répétées", event.repeatedActions)]
+        title: "Progress stalled",
+        fields: [field("reason", event.reason), field("repeated actions", event.repeatedActions)]
       }
     case "error":
       return {
-        title: `Erreur (${event.stage})`,
-        fields: [field("raison", event.reason), field("fatale", event.fatal), field("cause", event.cause)]
+        title: `Error (${event.stage})`,
+        fields: [field("reason", event.reason), field("fatal", event.fatal), field("cause", event.cause)]
       }
     case "cancellationRequested":
-      return { title: "Annulation demandée", fields: [field("raison", event.reason), field("source", event.source)] }
+      return { title: "Cancellation requested", fields: [field("reason", event.reason), field("source", event.source)] }
     case "runFinished":
       return {
-        title: `Run terminé — ${event.status}`,
-        fields: [field("critères", event.criteriaCount), field("échoués", event.failedCriteria.join(", "))]
+        title: `Run finished — ${event.status}`,
+        fields: [field("criteria", event.criteriaCount), field("failed", event.failedCriteria.join(", "))]
       }
   }
 }
@@ -349,12 +349,12 @@ const toArtifactView = (record: ArtifactRecord): ArtifactView => ({
 const evaluatorLabel = (evaluator: CriterionResult["evaluator"]): string => {
   switch (evaluator.kind) {
     case "model":
-      return `modèle ${evaluator.provider}/${evaluator.model}`
+      return `model ${evaluator.provider}/${evaluator.model}`
     case "scripted-model":
       // Named explicitly so a deterministic double is never read as a real model judgement.
-      return "double scripté déterministe (pas un jugement de modèle réel)"
+      return "deterministic scripted double (not a real model judgement)"
     case "code":
-      return `check TypeScript « ${evaluator.checkName} »`
+      return `TypeScript check "${evaluator.checkName}"`
   }
 }
 
@@ -366,7 +366,7 @@ const budgetLines = (
   return [
     {
       key: "maxModelCalls",
-      label: "Appels modèle",
+      label: "Model calls",
       used: attempt.model.calls,
       limit: budgets.maxModelCalls,
       remaining: budgets.maxModelCalls - attempt.model.calls,
@@ -379,13 +379,13 @@ const budgetLines = (
       limit: budgets.maxTokens,
       remaining: budgets.maxTokens - tokens,
       unit: "tokens",
-      note: `dont ${attempt.model.verifierTokens} pour le vérificateur ; réserve vérificateur ` +
-        `(${budgets.verifierReserveTokens}) : retenue à la boucle de navigation, et garantie au ` +
-        `vérificateur même si un tour de navigation a dépassé le plafond`
+      note: `of which ${attempt.model.verifierTokens} for the verifier; the verifier reserve ` +
+        `(${budgets.verifierReserveTokens}) is withheld from the browsing loop and guaranteed to the ` +
+        `verifier even if a browsing turn went over the ceiling`
     },
     {
       key: "attemptTimeoutMs",
-      label: "Durée de la tentative",
+      label: "Attempt duration",
       used: attempt.durationMs,
       limit: budgets.attemptTimeoutMs,
       remaining: budgets.attemptTimeoutMs - attempt.durationMs,
@@ -401,38 +401,38 @@ const collectDiagnostics = (input: ReportInput, criteria: ReadonlyArray<Criterio
   if (input.contract === undefined) {
     out.push({
       severity: "error",
-      source: "contrat",
-      message: "Le contrat n'a jamais été gelé : le run s'est arrêté avant l'étape 3 de §6 " +
-        "(résolution des inputs, registres ou préparation de la fixture). Aucun critère n'a donc " +
-        "pu être évalué, et ce rapport ne décrit qu'un échec d'infrastructure."
+      source: "contract",
+      message: "The contract was never frozen: the run stopped before step 3 of §6 " +
+        "(resolving the inputs, the registries or preparing the fixture). No criterion could " +
+        "therefore be evaluated, and this report describes an infrastructure failure only."
     })
   }
   if (!input.finalized) {
     out.push({
       severity: "warning",
       source: "journal",
-      message: "Le journal ne se termine pas sur un `runFinished` intact : l'exécution n'a pas été finalisée " +
-        "et ce rapport peut être incomplet."
+      message: "The journal does not end on an intact `runFinished`: the run was not finalized " +
+        "and this report may be incomplete."
     })
   }
   if (result.status === "error") {
-    out.push({ severity: "error", source: `étape ${result.stage}`, message: result.reason })
+    out.push({ severity: "error", source: `stage ${result.stage}`, message: result.reason })
   }
   if (result.status === "cancelled") {
-    out.push({ severity: "warning", source: "annulation", message: result.reason })
+    out.push({ severity: "warning", source: "cancellation", message: result.reason })
   }
   if (result.status === "inconclusive") {
     out.push({
       severity: "warning",
-      source: `non concluant (${inconclusiveReasonLabels[result.reason] ?? result.reason})`,
-      message: result.detail ?? "aucun détail enregistré"
+      source: `inconclusive (${inconclusiveReasonLabels[result.reason] ?? result.reason})`,
+      message: result.detail ?? "no detail recorded"
     })
   }
   for (const event of events) {
     if (event.type === "error") {
       out.push({
         severity: event.fatal ? "error" : "warning",
-        source: `événement error / ${event.stage}`,
+        source: `error event / ${event.stage}`,
         message: event.cause === undefined ? event.reason : `${event.reason} (${event.cause})`,
         seq: event.seq
       })
@@ -446,8 +446,8 @@ const collectDiagnostics = (input: ReportInput, criteria: ReadonlyArray<Criterio
     } else if (event.type === "progressStalled") {
       out.push({
         severity: "warning",
-        source: "progression",
-        message: `${event.reason} (${event.repeatedActions} actions répétées)`,
+        source: "progress",
+        message: `${event.reason} (${event.repeatedActions} repeated actions)`,
         seq: event.seq
       })
     }
@@ -457,34 +457,34 @@ const collectDiagnostics = (input: ReportInput, criteria: ReadonlyArray<Criterio
       out.push({
         severity: "warning",
         source: `${downgradeLabels[downgrade.reason]} ${criterion.id}`,
-        message: `Statut ramené de « ${criterionStatusLabel(downgrade.from)} » à « ${
+        message: `Status "${criterionStatusLabel(downgrade.from)}" brought down to "${
           criterionStatusLabel(downgrade.to)
-        } » : ${downgrade.detail}`
+        }": ${downgrade.detail}`
       })
     }
     for (const reCheck of criterion.reChecks) {
       out.push({
         severity: reCheck.applied ? "warning" : "info",
-        source: `re-vérification ${criterion.id}`,
+        source: `re-check ${criterion.id}`,
         message: reCheck.note
       })
     }
     if (criterion.limitations !== undefined) {
-      out.push({ severity: "info", source: `limite ${criterion.id}`, message: criterion.limitations })
+      out.push({ severity: "info", source: `limitation ${criterion.id}`, message: criterion.limitations })
     }
     if (criterion.hashMismatch) {
       out.push({
         severity: "error",
         source: `hash ${criterion.id}`,
-        message: `Le hash évalué (${criterion.resultHash ?? "absent"}) ne correspond pas au hash du contrat ` +
-          `(${criterion.contractHash}) : le verdict peut porter sur un autre texte.`
+        message: `The evaluated hash (${criterion.resultHash ?? "absent"}) does not match the contract hash ` +
+          `(${criterion.contractHash}): the verdict may be bound to a different text.`
       })
     }
     if (criterion.danglingEvidence.length > 0) {
       out.push({
         severity: "error",
-        source: `preuves ${criterion.id}`,
-        message: `Références de preuve absentes de l'inventaire : ${criterion.danglingEvidence.join(", ")}.`
+        source: `evidence ${criterion.id}`,
+        message: `Evidence references missing from the inventory: ${criterion.danglingEvidence.join(", ")}.`
       })
     }
   }
@@ -492,8 +492,8 @@ const collectDiagnostics = (input: ReportInput, criteria: ReadonlyArray<Criterio
     if (artifact.state !== "present") {
       out.push({
         severity: artifact.state === "failed" ? "error" : "warning",
-        source: `artefact ${artifact.artifactId} (${artifact.state})`,
-        message: artifact.reason ?? "aucune raison enregistrée"
+        source: `artifact ${artifact.artifactId} (${artifact.state})`,
+        message: artifact.reason ?? "no reason recorded"
       })
     }
   }
@@ -539,7 +539,7 @@ export const buildReportView = (input: ReportInput): ReportView => {
       method: criterion.method,
       status: found?.result.status ?? "pending",
       evaluatorKind: evaluator?.kind ?? (criterion.method === "code" ? "code" : "model"),
-      evaluatorLabel: evaluator === undefined ? "non évalué" : evaluatorLabel(evaluator),
+      evaluatorLabel: evaluator === undefined ? "not evaluated" : evaluatorLabel(evaluator),
       probabilistic: criterion.method === "model",
       downgrades: found?.result.downgrades ?? [],
       reChecks: found?.result.reChecks ?? [],
@@ -596,7 +596,7 @@ export const buildReportView = (input: ReportInput): ReportView => {
   })
 
   const statusDetail = result.status === "error"
-    ? `${result.stage} : ${result.reason}`
+    ? `${result.stage}: ${result.reason}`
     : result.status === "cancelled"
     ? result.reason
     : result.status === "inconclusive"
@@ -604,7 +604,7 @@ export const buildReportView = (input: ReportInput): ReportView => {
       result.detail === undefined ? "" : ` — ${result.detail}`
     }`
     : result.status === "failed"
-    ? `critères en échec : ${result.failedCriteria.join(", ")}`
+    ? `failing criteria: ${result.failedCriteria.join(", ")}`
     : undefined
 
   return {

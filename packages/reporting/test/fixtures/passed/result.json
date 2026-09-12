@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "runId": "r_k4m2xq7ab3cdz",
-  "specPath": "tests/e2e/creation-projet.e2e.md",
-  "scenarioId": "creation-projet",
+  "specPath": "tests/e2e/project-create.e2e.md",
+  "scenarioId": "project-create",
   "contractHash": "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
   "startedAt": "2026-03-04T09:12:44.108Z",
   "finishedAt": "2026-03-04T09:13:07.941Z",
@@ -26,8 +26,8 @@
           "status": "passed",
           "method": "model",
           "evaluator": { "kind": "model", "provider": "anthropic", "model": "claude-sonnet-5" },
-          "expected": "La liste des projets contient une entrée intitulée « Projet r_k4m2xq7ab3cdz ».",
-          "observed": "Après la soumission du formulaire, l'instantané aria de /projects liste un lien « Projet r_k4m2xq7ab3cdz » en première position, et la capture art_3 montre la même entrée.",
+          "expected": "The project list contains an entry titled \"Project r_k4m2xq7ab3cdz\".",
+          "observed": "After the form was submitted, the aria snapshot of /projects lists a \"Project r_k4m2xq7ab3cdz\" link in first position, and screenshot art_3 shows the same entry.",
           "evidence": ["art_2", "art_3"],
           "evaluatedAtSeq": 24
         },
@@ -37,8 +37,8 @@
           "status": "passed",
           "method": "code",
           "evaluator": { "kind": "code", "checkName": "project-unique-in-storage" },
-          "expected": "GET /__probe/projects renvoie exactement une entrée nommée « Projet r_k4m2xq7ab3cdz ».",
-          "observed": "1 entrée trouvée, id srv_7741, createdAt 2026-03-04T09:13:01.220Z.",
+          "expected": "GET /__probe/projects returns exactly one entry named \"Project r_k4m2xq7ab3cdz\".",
+          "observed": "1 entry found, id srv_7741, createdAt 2026-03-04T09:13:01.220Z.",
           "evidence": ["art_4"],
           "evaluatedAtSeq": 27
         }

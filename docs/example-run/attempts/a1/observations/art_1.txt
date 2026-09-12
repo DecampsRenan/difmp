@@ -1,18 +1,18 @@
-url: http://127.0.0.1:40899/
-title: Espace r_t2suucd2gj4qi-a1 · Projects
+url: http://127.0.0.1:37897/
+title: Workspace r_tqyz6a2ucpgic-a1 · Projects
 
 - generic [active] [ref=e1]:
   - generic [ref=e2]:
     - generic [ref=e3]: Projects
     - generic [ref=e4]:
-      - text: Signed in as agent-r_t2suucd2gj4qi-a1@example.test ·
+      - text: Signed in as agent-r_tqyz6a2ucpgic-a1@example.test ·
       - link "Sign out" [ref=e5] [cursor=pointer]:
         - /url: /logout
   - main [ref=e6]:
     - heading "Projects" [level=1] [ref=e7]
     - paragraph [ref=e8]:
       - text: "Workspace:"
-      - strong [ref=e9]: Espace r_t2suucd2gj4qi-a1
+      - strong [ref=e9]: Workspace r_tqyz6a2ucpgic-a1
     - region [ref=e10]:
       - heading "New project" [level=2] [ref=e11]
       - generic [ref=e12]:

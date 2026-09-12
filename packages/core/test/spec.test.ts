@@ -15,7 +15,7 @@ describe("SpecLoader parsing", () => {
       expect(spec.timeoutMs).toBe(90_000)
       expect(spec.criteria.map((c) => c.id)).toEqual(["c1", "c2", "c3"])
       expect(spec.criteria[0]!.sourceText).toBe(
-        "Le projet {{ projectName }} apparaît dans la liste après création."
+        "The project {{ projectName }} appears in the list after it is created."
       )
       // Positions are preserved: the block scalar starts on line 11 of the file.
       expect(spec.criteria[0]!.line).toBe(11)
@@ -30,10 +30,10 @@ describe("SpecLoader parsing", () => {
       expect(spec.expectationSource).toBe("section")
       expect(spec.criteria).toHaveLength(1)
       expect(spec.criteria[0]!.sourceText).toBe(
-        "Le tableau de bord affiche le solde à jour\naprès la validation du formulaire."
+        "The dashboard shows the up-to-date balance\nafter the form is submitted."
       )
       // The following `## Notes` heading ends the section.
-      expect(spec.criteria[0]!.sourceText).not.toContain("Ceci n'est pas")
+      expect(spec.criteria[0]!.sourceText).not.toContain("This is not")
     }))
 
   it.effect("binds a `checks` entry to its criterion and marks the method as code", () =>
@@ -103,7 +103,7 @@ describe("duration parsing", () => {
   it("rejects non-positive and unparseable durations", () => {
     expect(parseDurationMs("0s")).toBeUndefined()
     expect(parseDurationMs(-1)).toBeUndefined()
-    expect(parseDurationMs("bientôt")).toBeUndefined()
+    expect(parseDurationMs("soon")).toBeUndefined()
     expect(parseDurationMs("")).toBeUndefined()
   })
 })
