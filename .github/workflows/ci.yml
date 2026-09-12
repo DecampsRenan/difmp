@@ -32,19 +32,19 @@
 # `apps/cli/scripts/ci/run-examples.sh` (healthy and alt-layout, 3 scenarios each, exit 0 through
 # the tarball's binary), and both `rsync` collection commands.
 #
-# The `ui` job was added later. Both of its `run:` steps were executed locally as written, on the
-# same Node 24.19.0 / pnpm 10.29.3: `pnpm install --frozen-lockfile` (exit 0 — the suite brought
-# Testing Library and jsdom into the root `devDependencies`, so this was re-verified AFTER the
-# lockfile changed, and the suite was re-run on the resulting tree), then `pnpm run test:ui`
-# (= `vitest run --config apps/ui/vitest.config.ts`) — 297 tests across 10 files, passing, in about
-# six seconds, and identical on three consecutive runs and with each file run on its own. NOTHING
-# about this job has run on a GitHub runner, and the "about a minute" below is the local suite
-# duration plus the install the other jobs take there — an expectation, not a measurement.
+# The `ui` job was added later, and it HAS now run on a GitHub runner: run 34693858363
+# (push of `1fdf4de`, 2026-09-12T12:30Z), green, 43 seconds wall-clock for the whole job, of which
+# `pnpm run test:ui` was 13.81s for 318 tests across 11 files. Every step succeeded, including
+# `pnpm install --frozen-lockfile` — worth stating on its own, because the suite brought Testing
+# Library and jsdom into the root `devDependencies` and the two runner failures recorded below were
+# both install-time differences between a local pnpm and the runner's. The same commands were run
+# locally first, on Node 24.19.0 / pnpm 10.29.3, with the same result and identical across three
+# consecutive runs and with each test file run on its own.
 #
 # The same suite ALSO runs inside `pnpm run test` in the `difmp` job, because the root
 # `vitest.config.ts` now lists `apps/ui/vitest.config.ts` as a project. The overlap is deliberate
-# and cheap (seconds inside a 45-minute job): the root config exists so a contributor has ONE local
-# command that runs everything, and the separate `ui` job exists so a broken component test is
+# and cheap (14s inside a job that takes 7m26s): the root config exists so a contributor has ONE
+# local command that runs everything, and the separate `ui` job exists so a broken component test is
 # reported in about a minute instead of after Chromium, two builds and the packaging matrix.
 # Verified locally that both paths pick the suite up — `npx vitest list --filesOnly` prints the
 # `apps/ui/test` files under a `[ui]` project name next to `[unit]` and `[cli]`, and `pnpm run test`
@@ -69,10 +69,15 @@
 # <tgz>` exits 0, the same flag exits 0 on pnpm 10.29.3, and the installed binary runs in both.
 # `run.sh <dir> pnpm` then passes 24/24 on both the ESM and CommonJS cells.
 #
-# STILL UNVERIFIED on a runner, because the job has never got past packaging or because they only
-# exist there: the example-scenarios step, the `actions/cache` hit branch, and the
-# `secrets.ANTHROPIC_API_KEY` path of the optional job — no Anthropic call has been made.
-# The `quality` job below HAS passed on a runner (34687483497).
+# CONFIRMED ON A RUNNER since: run 34693858363 (push of `1fdf4de`, 2026-09-12T12:30Z) is the first
+# fully green run of this workflow. The `difmp` job completed in 7m26s — every step, packaging
+# included, so the `--allow-build=esbuild` remedy above is no longer an inference — and with it the
+# example-scenarios step ran on a runner for the first time. `quality` and `ui` were green in the
+# same run.
+#
+# STILL UNVERIFIED on a runner: the `actions/cache` HIT branch (34693858363 was a miss — it
+# installed Chromium and skipped the hit-only step), and the `secrets.ANTHROPIC_API_KEY` path of
+# the optional job, which has never run at all. No Anthropic call has been made from CI.
 
 name: ci
 
@@ -134,12 +139,13 @@ jobs:
         run: pnpm exec oxlint --format=github
 
   # The UI component suite, and deliberately its own job for the same reason as `quality`: jsdom,
-  # no Chromium, no `pnpm run build`, no demo app, so it answers in about a minute instead of
-  # waiting on the 45-minute `difmp` job below. It runs the UI project's own config directly rather
-  # than the whole root suite, so nothing it reports can be a failure from another package.
+  # no Chromium, no `pnpm run build`, no demo app, so it answers in well under a minute instead of
+  # waiting on the `difmp` job below (7m26s when everything is green; its timeout is 45). It runs
+  # the UI project's own config directly rather than the whole root suite, so nothing it reports
+  # can be a failure from another package.
   #
   # It overlaps with `pnpm run test` in `difmp` on purpose — see the header: one local command
-  # there, fast feedback here.
+  # there, fast feedback here. Measured at 43s end to end on a runner, install included.
   ui:
     name: UI component suite (Vitest, jsdom)
     runs-on: ubuntu-latest
