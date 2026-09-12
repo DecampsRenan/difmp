@@ -46,7 +46,13 @@ const sizeOf = async (path: string): Promise<number | undefined> => {
 const outcome = (
   kind: CaptureOutcome["kind"],
   state: CaptureOutcome["state"],
-  extra: { label?: string; path?: string; reason?: string; bytes?: number },
+  extra: {
+    label?: string;
+    path?: string;
+    reason?: string;
+    bytes?: number;
+    image?: { readonly mediaType: "image/png"; readonly data: Uint8Array };
+  },
 ): CaptureOutcome => ({
   kind,
   state,
@@ -54,6 +60,7 @@ const outcome = (
   ...(extra.path === undefined ? {} : { path: extra.path }),
   ...(extra.reason === undefined ? {} : { reason: extra.reason }),
   ...(extra.bytes === undefined ? {} : { bytes: extra.bytes }),
+  ...(extra.image === undefined ? {} : { image: extra.image }),
 });
 
 /**
@@ -353,9 +360,9 @@ export const makeSession = (
         .withPermits(1)(
           Effect.gen(function* () {
             yield* ensureOpen("screenshot");
-            yield* attempt("screenshot", async () => {
+            const data = yield* attempt("screenshot", async () => {
               await mkdir(dirname(target), { recursive: true });
-              await page.screenshot({
+              return page.screenshot({
                 path: target,
                 fullPage: params.fullPage ?? false,
                 animations: "disabled",
@@ -364,11 +371,11 @@ export const makeSession = (
                 timeout,
               });
             });
-            const bytes = yield* Effect.promise(() => sizeOf(target));
             return outcome("screenshot", "present", {
               path: target,
               ...(params.label === undefined ? {} : { label: params.label }),
-              ...(bytes === undefined ? {} : { bytes }),
+              bytes: data.byteLength,
+              image: { mediaType: "image/png", data },
             });
           }),
         )

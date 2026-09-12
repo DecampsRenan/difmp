@@ -3,6 +3,7 @@ import { resolveInputPrecedence, resolveInputs, SpecLoader, validateReferences }
 import { Console, Effect, FileSystem, Option, Path } from "effect";
 import { UsageError } from "../errors.js";
 import { loadProject } from "../project.js";
+import { validateProviderConfig } from "../providers.js";
 import { selectSpecs } from "../select.js";
 import type { SelectFlags } from "./types.js";
 
@@ -16,6 +17,50 @@ export interface SpecReport {
   readonly criteria: number;
   readonly problems: ReadonlyArray<string>;
 }
+
+export interface ValidationDocument {
+  readonly schemaVersion: 1;
+  readonly valid: boolean;
+  /** Invocation-wide failures: config, provider prerequisites, discovery or spec loading. */
+  readonly problems: ReadonlyArray<string>;
+  readonly scenarios: ReadonlyArray<SpecReport>;
+}
+
+const document = (
+  problems: ReadonlyArray<string>,
+  scenarios: ReadonlyArray<SpecReport>,
+): ValidationDocument => ({
+  schemaVersion: 1,
+  valid: problems.length === 0 && scenarios.every((scenario) => scenario.problems.length === 0),
+  problems,
+  scenarios,
+});
+
+const writeDocument = (report: ValidationDocument, json: boolean): Effect.Effect<void> =>
+  Effect.gen(function* () {
+    if (json) {
+      yield* Console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    if (report.problems.length > 0) {
+      yield* Console.log("BAD   validation");
+      for (const problem of report.problems) yield* Console.log(`        - ${problem}`);
+    }
+    for (const scenario of report.scenarios) {
+      if (scenario.problems.length === 0) {
+        yield* Console.log(
+          `OK    ${scenario.scenarioId}  ${scenario.criteria} criteria  ${scenario.specPath}`,
+        );
+      } else {
+        yield* Console.log(`BAD   ${scenario.scenarioId}  ${scenario.specPath}`);
+        for (const problem of scenario.problems) yield* Console.log(`        - ${problem}`);
+      }
+    }
+    const valid = report.scenarios.filter((scenario) => scenario.problems.length === 0).length;
+    yield* Console.log(
+      `\n${valid}/${report.scenarios.length} scenario${report.scenarios.length === 1 ? "" : "s"} valid`,
+    );
+  });
 
 /**
  * Check everything that can be checked before anything runs: the frontmatter (already done by the
@@ -106,58 +151,58 @@ export const validateHandler = (
 ): Effect.Effect<void, UsageError, FileSystem.FileSystem | Path.Path> =>
   Effect.gen(function* () {
     const cwd = process.cwd();
-    const project = yield* loadProject({
-      cwd,
-      ...(Option.isSome(flags.config) ? { configPath: flags.config.value } : {}),
-    });
-    const selection = yield* selectSpecs({
-      cwd,
-      root: project.location.root,
-      config: project.config,
-      patterns: flags.paths,
-      tags: flags.tag,
-      source: project.location.source,
-    }).pipe(Effect.provide(SpecLoader.layer));
+    const built = yield* Effect.gen(function* () {
+      const project = yield* loadProject({
+        cwd,
+        ...(Option.isSome(flags.config) ? { configPath: flags.config.value } : {}),
+      });
+      const provider = yield* validateProviderConfig(project.config, project.registries).pipe(
+        Effect.result,
+      );
+      const problems =
+        provider._tag === "Failure" ? [provider.failure.message] : ([] as Array<string>);
 
-    const reports = yield* Effect.forEach(selection.specs, (spec, index) =>
-      validateSpec({
-        spec,
-        specPath: selection.relativePaths[index]!,
+      const selection = yield* selectSpecs({
+        cwd,
+        root: project.location.root,
         config: project.config,
-        registries: project.registries,
+        patterns: flags.paths,
+        tags: flags.tag,
         source: project.location.source,
-      }),
-    );
-
-    const invalid = reports.filter((r) => r.problems.length > 0);
-    if (flags.json) {
-      yield* Console.log(
-        JSON.stringify(
-          { schemaVersion: 1, valid: invalid.length === 0, scenarios: reports },
-          null,
-          2,
-        ),
-      );
-    } else {
-      for (const report of reports) {
-        if (report.problems.length === 0) {
-          yield* Console.log(
-            `OK    ${report.scenarioId}  ${report.criteria} criteria  ${report.specPath}`,
-          );
-        } else {
-          yield* Console.log(`BAD   ${report.scenarioId}  ${report.specPath}`);
-          for (const problem of report.problems) yield* Console.log(`        - ${problem}`);
-        }
+      }).pipe(Effect.provide(SpecLoader.layer), Effect.result);
+      if (selection._tag === "Failure") {
+        return document([...problems, selection.failure.message], []);
       }
-      yield* Console.log(
-        `\n${reports.length - invalid.length}/${reports.length} scenario${reports.length === 1 ? "" : "s"} valid`,
+
+      const reports = yield* Effect.forEach(selection.success.specs, (spec, index) =>
+        validateSpec({
+          spec,
+          specPath: selection.success.relativePaths[index]!,
+          config: project.config,
+          registries: project.registries,
+          source: project.location.source,
+        }),
       );
+      return document(problems, reports);
+    }).pipe(Effect.result);
+
+    if (built._tag === "Failure") {
+      if (!flags.json) return yield* Effect.fail(built.failure);
+      yield* writeDocument(document([built.failure.message], []), true);
+      return yield* Effect.fail(new UsageError({ message: built.failure.message, reported: true }));
     }
 
-    if (invalid.length > 0) {
+    const report = built.success;
+    yield* writeDocument(report, flags.json);
+    if (!report.valid) {
+      const scenarioProblems = report.scenarios.filter(
+        (scenario) => scenario.problems.length > 0,
+      ).length;
+      const totalProblems = report.problems.length + scenarioProblems;
       return yield* Effect.fail(
         new UsageError({
-          message: `${invalid.length} scenario${invalid.length === 1 ? " is" : "s are"} invalid`,
+          message: `${totalProblems} validation problem${totalProblems === 1 ? "" : "s"}`,
+          ...(flags.json ? { reported: true } : {}),
         }),
       );
     }

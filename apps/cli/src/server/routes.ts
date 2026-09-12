@@ -25,8 +25,10 @@ export interface RoutesOptions {
  * relative defaults (`events`, `cancel`, `contract`, `artifacts/`).
  */
 const uiRuntimeConfig = {
-  eventsUrl: "/api/ui/events",
+  // The monotonic suite stream retains every scenario; raw per-run seq values restart at 1.
+  eventsUrl: "/api/events",
   cancelUrl: "/api/cancel",
+  closeUrl: "/api/close",
   contractUrl: "/api/contract",
   artifactBaseUrl: "/api/artifacts/",
 } as const;
@@ -57,6 +59,11 @@ const cursorOf = (request: HttpServerRequest.HttpServerRequest): number => {
   // Header keys are lowercase. `EventSource` sets Last-Event-ID itself when it reconnects; the UI
   // adds `?lastEventId=` when it takes the retrying over.
   return parseCursor(request.headers["last-event-id"] ?? search.get("lastEventId") ?? undefined);
+};
+
+const runOf = (bus: RunBus, request: HttpServerRequest.HttpServerRequest) => {
+  const runId = new URL(request.url, "http://localhost").searchParams.get("runId");
+  return runId === null ? bus.currentRun() : bus.runById(runId);
 };
 
 /**
@@ -122,6 +129,15 @@ export const makeRoutes = (options: RoutesOptions) => {
     }),
   );
 
+  const close = HttpRouter.add(
+    "POST",
+    "/api/close",
+    Effect.gen(function* () {
+      const accepted = yield* bus.requestDashboardClose;
+      return yield* HttpServerResponse.json({ accepted }, { status: 202 });
+    }),
+  );
+
   /**
    * The frozen contract of the run being followed. `contractFrozen` carries criterion ids only, so
    * the UI fetches the text and the `model` / `code` method from here — and retries until the
@@ -131,7 +147,8 @@ export const makeRoutes = (options: RoutesOptions) => {
     "GET",
     "/api/contract",
     Effect.gen(function* () {
-      const run = bus.currentRun();
+      const request = yield* HttpServerRequest.HttpServerRequest;
+      const run = runOf(bus, request);
       if (run === undefined) return HttpServerResponse.text("no run yet", { status: 404 });
       const bytes = yield* readAsset(join(run.directory, "contract.json")).pipe(
         Effect.orElseSucceed(() => undefined),
@@ -149,10 +166,10 @@ export const makeRoutes = (options: RoutesOptions) => {
     "GET",
     "/api/artifacts/*",
     Effect.gen(function* () {
-      const run = bus.currentRun();
+      const request = yield* HttpServerRequest.HttpServerRequest;
+      const run = runOf(bus, request);
       if (run === undefined) return HttpServerResponse.text("no run yet", { status: 404 });
-      const path = new URL((yield* HttpServerRequest.HttpServerRequest).url, "http://localhost")
-        .pathname;
+      const path = new URL(request.url, "http://localhost").pathname;
       const file = resolveUnder(run.directory, path.slice("/api/artifacts/".length));
       if (file === undefined) return HttpServerResponse.text("not found", { status: 404 });
       const bytes = yield* readAsset(file).pipe(Effect.orElseSucceed(() => undefined));
@@ -201,6 +218,16 @@ export const makeRoutes = (options: RoutesOptions) => {
     }),
   );
 
-  const routes = [events, uiEvents, cancel, contract, artifacts, snapshot, health, ui] as const;
+  const routes = [
+    events,
+    uiEvents,
+    cancel,
+    close,
+    contract,
+    artifacts,
+    snapshot,
+    health,
+    ui,
+  ] as const;
   return Layer.mergeAll(...routes);
 };

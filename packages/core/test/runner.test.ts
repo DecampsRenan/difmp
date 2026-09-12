@@ -17,6 +17,7 @@ import type {
   LoadedSpec,
   ResolvedConfig,
   RunResult,
+  VerificationRequest,
 } from "../src/index.js";
 import type { ModelProvider, RunFailure } from "../src/index.js";
 import {
@@ -45,6 +46,8 @@ interface RunOptions {
   readonly fixtureSetupError?: string;
   /** Passed to the fake browser — a failing screenshot, a `finalize` that never returns, … */
   readonly browserOptions?: FakeBrowserOptions;
+  /** Verifier requests captured at the seam, including in-memory evidence payloads. */
+  readonly verificationRequests?: Array<VerificationRequest>;
   /** Replaces the scripted model provider (used to make the provider DIE rather than fail). */
   readonly providerLayer?: Layer.Layer<ModelProvider>;
   /**
@@ -117,7 +120,11 @@ const executeRaw = (options: RunOptions) =>
           RunStore.layer({ runId, outputDir: dir }),
           browser.layer,
           options.providerLayer ?? scriptedProvider(options.turns),
-          scriptedVerifier(options.verdicts ?? {}, options.fallbackVerdict ?? { status: "passed" }),
+          scriptedVerifier(
+            options.verdicts ?? {},
+            options.fallbackVerdict ?? { status: "passed" },
+            options.verificationRequests,
+          ),
           fixtureLayer,
         ),
       ),
@@ -251,6 +258,28 @@ describe("runner", () => {
       expect(out.result.status).toBe("failed");
       if (out.result.status === "failed")
         expect(out.result.failedCriteria).toEqual(["c1", "c2", "c3"]);
+    }).pipe(Effect.provide(platform)),
+  );
+
+  it.effect("hands screenshot pixels to every model verification request", () =>
+    Effect.gen(function* () {
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"));
+      const requests: Array<VerificationRequest> = [];
+      yield* execute({
+        spec: loaded,
+        turns: [{ toolCalls: [finish] }],
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) },
+        verificationRequests: requests,
+      });
+
+      expect(requests).toHaveLength(3);
+      for (const request of requests) {
+        const screenshots = request.evidence.filter((item) => item.kind === "screenshot");
+        expect(screenshots.length).toBeGreaterThan(0);
+        expect(screenshots.every((item) => item.image?.mediaType === "image/png")).toBe(true);
+        expect(screenshots.every((item) => item.image?.data instanceof Uint8Array)).toBe(true);
+        expect(screenshots.every((item) => item.image?.data[0] === 137)).toBe(true);
+      }
     }).pipe(Effect.provide(platform)),
   );
 

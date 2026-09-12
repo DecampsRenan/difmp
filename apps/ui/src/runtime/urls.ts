@@ -10,7 +10,7 @@ const SAFE_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
  * Returns `undefined` for anything that is absolute, escapes the base, or resolves to a
  * non-http(s) scheme.
  */
-export const artifactHref = (base: string, path: string): string | undefined => {
+export const artifactHref = (base: string, path: string, runId?: string): string | undefined => {
   if (path.length === 0) return undefined;
   // Reject absolute paths, protocol-relative URLs, anything carrying a scheme, and traversal.
   if (path.startsWith("/") || path.startsWith("\\")) return undefined;
@@ -31,6 +31,7 @@ export const artifactHref = (base: string, path: string): string | undefined => 
     if (!SAFE_PROTOCOLS.has(resolved.protocol)) return undefined;
     // Never let a computed artifact URL leave the base directory.
     if (!resolved.pathname.startsWith(baseUrl.pathname)) return undefined;
+    if (runId !== undefined) resolved.searchParams.set("runId", runId);
     return resolved.href;
   } catch {
     return undefined;

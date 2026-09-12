@@ -84,12 +84,27 @@ JS
 if [ "$KIND" = "esm" ]; then
 cat > "$DIR/difmp.config.ts" <<'TS'
 import { defineConfig } from "difmp"
+import { happyPathScript, type ScriptFactory, type ScriptedProviderScript } from "difmp/scripted"
 
 // Erasable TypeScript: a type alias and annotations only. Node >= 22.18 strips this natively.
 type Verdict = "passed" | "failed" | "inconclusive"
 
 const baseUrl: string = process.env["CONSUMER_BASE_URL"] ?? "http://127.0.0.1:3000"
 const verdict = (process.env["CONSUMER_VERDICT"] ?? "passed") as Verdict
+const customWalkthrough: ScriptFactory<ScriptedProviderScript> = (ctx) => ({
+  agent: happyPathScript({
+    criterionIds: ctx.criterionIds,
+    fills: [{ name: "Project name", value: "Consumer project" }],
+    submit: "Create"
+  }),
+  verdicts: {
+    fallback: {
+      status: verdict,
+      observed: "the list shows the created entry (scripted test double)",
+      evidence: verdict === "inconclusive" ? [] : ["$last"]
+    }
+  }
+})
 
 export default defineConfig({
   include: ["tests/**/*.e2e.md"],
@@ -98,13 +113,8 @@ export default defineConfig({
   allowedOrigins: [baseUrl],
   inputs: { projectName: "Project {{ run.id }}" },
   provider: "scripted",
-  providerOptions: {
-    scenario: "happy-path",
-    fills: [{ name: "Project name", value: "Consumer project" }],
-    submit: "Create",
-    verdict,
-    observed: "the list shows the created entry (scripted test double)"
-  },
+  scripts: { consumer: customWalkthrough },
+  providerOptions: { script: "consumer" },
   maxActions: 25,
   outputDir: "runs"
 })
@@ -112,6 +122,7 @@ TS
 else
 cat > "$DIR/difmp.config.ts" <<'TS'
 import { defineConfig } from "difmp"
+import { happyPathScript, type ScriptFactory, type ScriptedProviderScript } from "difmp/scripted"
 
 // NON-ERASABLE TypeScript inside a CommonJS-typed package. Node's native type stripping refuses
 // `enum`, and the CommonJS loader refuses the `import` statement above, so this file loads ONLY
@@ -129,6 +140,20 @@ const verdict = fromEnv === "failed"
   : fromEnv === "inconclusive"
   ? Verdict.Inconclusive
   : Verdict.Passed
+const customWalkthrough: ScriptFactory<ScriptedProviderScript> = (ctx) => ({
+  agent: happyPathScript({
+    criterionIds: ctx.criterionIds,
+    fills: [{ name: "Project name", value: "Consumer project" }],
+    submit: "Create"
+  }),
+  verdicts: {
+    fallback: {
+      status: verdict,
+      observed: "the list shows the created entry (scripted test double)",
+      evidence: verdict === Verdict.Inconclusive ? [] : ["$last"]
+    }
+  }
+})
 
 export default defineConfig({
   include: ["tests/**/*.e2e.md"],
@@ -137,13 +162,8 @@ export default defineConfig({
   allowedOrigins: [baseUrl],
   inputs: { projectName: "Project {{ run.id }}" },
   provider: "scripted",
-  providerOptions: {
-    scenario: "happy-path",
-    fills: [{ name: "Project name", value: "Consumer project" }],
-    submit: "Create",
-    verdict,
-    observed: "the list shows the created entry (scripted test double)"
-  },
+  scripts: { consumer: customWalkthrough },
+  providerOptions: { script: "consumer" },
   maxActions: 25,
   outputDir: "runs"
 })

@@ -303,13 +303,10 @@ double answers with, and it defaults to `"inconclusive"` because evidence is nev
 exactly why step 7 came back `INCO`. The installed package's own README,
 `node_modules/difmp/README.md`, lists every option.
 
-> **What you cannot do from a tarball install.** That README also documents a richer `scripts: { … }`
-> registry. Its entries are factories whose return type comes from `@difmp/agent-runtime`, a
-> workspace package the tarball _bundles_ but does not _install_: `import "@difmp/agent-runtime"` in
-> your project fails with `ERR_MODULE_NOT_FOUND`, and the worked example it cites,
-> `examples/support/scripts/registry.ts`, is not shipped either. Until difmp is published, the
-> `providerOptions` above are the deterministic path open to a consumer; the factory registry is
-> reachable only from inside a clone of this repository.
+For complete control, the installed package also exposes the `scripts: { … }` registry authoring
+API at `difmp/scripted`. Its factory types, step builders, and a complete example under
+`node_modules/difmp/examples/custom-scripted/` are all part of the tarball; no private workspace
+package or repository checkout is required.
 
 See [Choosing a provider](#choosing-a-provider). Next, add expectations worth judging: read
 [Writing scenarios](#writing-scenarios).
@@ -405,7 +402,7 @@ a known journey. Pick `anthropic` for the thing difmp is actually for.
 export default defineConfig({
   provider: "anthropic",
   model: "claude-sonnet-5",
-  providerOptions: { maxTokens: 2048, temperature: 0 },
+  providerOptions: { maxTokens: 2048 },
 });
 ```
 
@@ -413,15 +410,34 @@ export default defineConfig({
 redacted configuration value that never reaches a prompt, `manifest.json` or a report. It is read
 from the environment only; there is nowhere to write it into a config file.
 
+Claude Sonnet 5 requires the sampling controls `temperature`, `topP` and `topK` to be omitted. difmp
+rejects those options locally for `claude-sonnet-5` (including dated ids) before it opens a browser
+or sends a model request. They remain available for model ids whose Anthropic API supports them.
+
 **A `scripted` run with no registered script asserts nothing and correctly comes back
 `inconclusive`** (exit `1`). The built-in double answers with canned, explicitly-labelled verdicts
 and difmp refuses to call that evidence. The lightest way to make a `scripted` run mean something is
 `providerOptions` — `verdict`, plus `fills`/`submit`/`scenario` to shape the built-in walkthrough —
-which works from a plain tarball install. For full control, register a walkthrough by name; note that
-this second form needs a clone of this repository, because a factory's return type comes from the
-unpublished `@difmp/agent-runtime`:
+which works from a plain tarball install. For full control, register a walkthrough by name. The
+factory and all step builders are available from the installed package's public `difmp/scripted`
+entry point:
 
 ```ts
+import {
+  observe,
+  screenshot,
+  type ScriptFactory,
+  type ScriptedProviderScript,
+} from "difmp/scripted";
+
+const myScriptFactory: ScriptFactory<ScriptedProviderScript> = (ctx) => ({
+  agent: {
+    id: "healthy",
+    description: "observe and capture the page",
+    steps: [{ calls: [observe()] }, { calls: [screenshot(`final-${ctx.runId}`)] }],
+  },
+});
+
 export default defineConfig({
   provider: "scripted",
   scripts: { healthy: myScriptFactory },
@@ -431,7 +447,7 @@ export default defineConfig({
 
 An entry is a **factory**, not a finished script: it is called once the run id is minted and the
 inputs are resolved, before the browser opens, so a deterministic script can type the value the run
-will really use. `examples/support/scripts/registry.ts` is a worked one, and
+will really use. The tarball ships a complete, typechecked example at `examples/custom-scripted/`;
 [`apps/cli/README.md`](apps/cli/README.md) documents the factory context and the built-in generic
 walkthrough.
 
@@ -440,19 +456,27 @@ walkthrough.
 ```sh
 node examples/fixture-app/dist/main.js --port 3000 --variant alt-layout \
      --seed --seed-email demo@example.test --seed-password demo-password &
-export FIXTURE_APP_SEED_TOKEN=<the token it printed> ANTHROPIC_API_KEY=<key>
+export FIXTURE_APP_SEED_TOKEN=<the token it printed> ANTHROPIC_API_KEY=<key> DIFMP_PROVIDER=anthropic
 
 node apps/cli/dist/bin/difmp.js run examples/scenarios/project-create.e2e.md \
      --config examples/support/difmp.config.ts \
      --provider anthropic --model <model id>
 ```
 
-**This has NOT been run in this repository. No Anthropic API call has been made, because no API key
-is configured here.** Every result quoted in this README comes from the scripted adapter, which
+Set `DIFMP_PROVIDER=anthropic` for this repository example as well; its shared support config uses
+that variable to select Anthropic options instead of the scripted walkthrough registry.
+
+**The full browser command above has NOT been run in this repository.** Every browser result quoted
+in this README comes from the scripted adapter, which
 exercises the real prompt construction, tool dispatch, policy, budgets and real Playwright against
 the demo app — it tests _difmp_. It is not evidence that a model can navigate. `alt-layout` is the
 variant worth pointing a real model at: functionally identical to `healthy`, differently shaped, so a
 walkthrough memorised from `healthy` does not transfer.
+
+CI has a smaller provider-contract smoke: three tests check an accepted request plus tool use, a
+native structured verdict, and cancellation after the HTTP transport starts. They run on the weekly
+schedule, or on a manual dispatch with `real_model: true`, using `ANTHROPIC_API_KEY` from repository
+secrets. Pushes, pull requests and ordinary local `pnpm test` runs never make a paid call.
 
 ---
 
@@ -524,6 +548,12 @@ the live fan-out, so the dashboard can never show something the journal does not
 `artifacts.json` records capture _failures_ too, so a missing screenshot is visible rather than
 silently absent.
 
+For `method: "model"`, every present screenshot is also sent to the dedicated evaluator as PNG
+bytes in a native multimodal prompt part, explicitly paired with its `artifactId`. A screenshot
+whose pixels are unavailable to the provider is removed from the evaluator's citable evidence set;
+its label alone can never support a visual claim. The binary payload stays out of prompts rendered
+as text, the journal and `artifacts.json` (the PNG on disk remains the reviewable source artifact).
+
 `manifest.json` is written twice and carries a `stage`: `initial` before the fixture and the freeze
 (so a run that dies in infrastructure setup is still attributable and still gets a JUnit file), then
 `final` with the contract hashes once the freeze succeeded. `contract.json` is therefore optional,
@@ -572,8 +602,11 @@ npx --no-install difmp run --ui --ui-port 45123
 Live dashboard  http://127.0.0.1:45123/
 ```
 
-It streams the run over SSE, shows the criteria with their text and method from the moment the
-contract is frozen, and its Cancel button cancels the run cleanly (CLI exit `130`). Loopback only
+It streams the full suite over SSE, retains completed scenario timelines while later scenarios run,
+and shows the criteria with their text and method from the moment each contract is frozen. Its
+Cancel button cancels the suite cleanly (CLI exit `130`). On an interactive terminal the completed
+dashboard stays available until you press **Close dashboard** or Ctrl-C; under non-TTY/CI it exits
+without waiting and the generated standalone `report.html` is the durable view. Loopback only
 unless you pass `--ui-host`, which says loudly that it is no longer loopback. `--ui` is an option of
 the runner: a CI run starts no server at all. `--ui-port` defaults to `0`, an ephemeral port.
 
@@ -828,8 +861,9 @@ examples/fixture-app/dist/main.js`. They are expected and harmless: that bin poi
 the fixture app is built separately. `pnpm typecheck` does cover `examples/*` — it is the project
 references build of `tsconfig.build.json`.
 
-> `pnpm pack` in `apps/cli/` runs `prepack` → `build:bundle` (tsdown, `clean: true`), which
-> **replaces `apps/cli/dist` with the bundled artifact**. The bundle runs fine, but it has the
+> `pnpm pack` in `apps/cli/` runs `prepack` → `build:bundle`: it first rebuilds/copies the UI, then
+> runs tsdown (`clean: true`), which **replaces `apps/cli/dist` with the bundled artifact**. The
+> bundle runs fine, but it has the
 > `@difmp/*` packages baked in, so it will not pick up an edit under `packages/` until you rebuild.
 > `pnpm --filter difmp build` restores the `tsc -b` layout; it deletes `tsconfig.tsbuildinfo` first,
 > without which `tsc -b` would consider itself up to date and leave the stale bundle in place.

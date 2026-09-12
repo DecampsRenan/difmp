@@ -7,7 +7,7 @@ import { defineConfig } from "tsdown";
  * service identity, and `playwright` cannot be bundled at all.
  */
 export default defineConfig({
-  entry: ["src/index.ts", "src/bin/difmp.ts"],
+  entry: ["src/index.ts", "src/scripted.ts", "src/bin/difmp.ts"],
   format: ["esm"],
   platform: "node",
   target: "node22.12",

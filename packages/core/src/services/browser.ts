@@ -31,6 +31,11 @@ export interface CaptureOutcome {
   readonly path?: string;
   readonly reason?: string;
   readonly bytes?: number;
+  /**
+   * In-memory visual payload for a successful screenshot. It is deliberately absent from the
+   * artifact inventory and journal; the runner forwards it only to the multimodal evaluator.
+   */
+  readonly image?: { readonly mediaType: "image/png"; readonly data: Uint8Array };
 }
 
 export interface ConsoleEntry {

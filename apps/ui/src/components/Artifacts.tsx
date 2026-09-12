@@ -9,6 +9,7 @@ export const Artifacts = (props: {
   readonly artifacts: ReadonlyArray<ArtifactView>;
   readonly criteria: ReadonlyArray<CriterionView>;
   readonly config: UiRuntimeConfig;
+  readonly runId?: string;
 }) => {
   const citedBy = new Map<string, Array<string>>();
   for (const criterion of props.criteria) {
@@ -45,7 +46,7 @@ export const Artifacts = (props: {
               const href =
                 artifact.path === undefined || artifact.state !== "present"
                   ? undefined
-                  : artifactHref(props.config.artifactBaseUrl, artifact.path);
+                  : artifactHref(props.config.artifactBaseUrl, artifact.path, props.runId);
               const cited = citedBy.get(artifact.artifactId) ?? [];
               return (
                 <tr key={artifact.artifactId} data-testid={`artifact-${artifact.artifactId}`}>

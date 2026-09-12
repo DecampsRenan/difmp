@@ -11,6 +11,7 @@ import { fixtureAppScriptRegistry } from "./scripts/registry.js";
  * With `node dist/main.js --port 3000 --seed` the default below is already correct.
  */
 const baseUrl = process.env["DIFMP_BASE_URL"] ?? "http://127.0.0.1:3000";
+const realProvider = process.env["DIFMP_PROVIDER"] === "anthropic";
 
 export default defineConfig({
   // Discovery. `include`/`exclude` are resolved against the DIRECTORY OF THIS FILE, not the
@@ -47,18 +48,21 @@ export default defineConfig({
   // Model. `scripted` is the deterministic, network-free double, so the repository's tests need no
   // API key. Switch to the real adapter with:
   //   provider: "anthropic", model: "claude-sonnet-5"   (+ ANTHROPIC_API_KEY in the environment)
-  // or, without editing this file, `difmp run --provider anthropic --model claude-sonnet-5`.
+  // or, without editing this file, set DIFMP_PROVIDER=anthropic and pass
+  // `--provider anthropic --model claude-sonnet-5`.
   // A scripted run never validates a model's ability to navigate — the report names the adapter.
   provider: "scripted",
-  providerOptions: {
-    // "auto" picks the journey from the scenario and from FIXTURE_APP_VARIANT, so the four
-    // variants of spec §13 run without editing this file. DIFMP_SCRIPT selects one of the
-    // harness-behaviour cases instead (premature-finish, exceed-actions, stale-observation,
-    // budget-exhausted, invented-evidence, needs-evidence).
-    script: process.env["DIFMP_SCRIPT"] ?? "auto",
-    maxTokens: 2048,
-    temperature: 0,
-  },
+  providerOptions: realProvider
+    ? // Claude Sonnet 5 rejects temperature/topP/topK: keep its documented request minimal.
+      { maxTokens: 2048 }
+    : {
+        // "auto" picks the journey from the scenario and from FIXTURE_APP_VARIANT, so the four
+        // variants of spec §13 run without editing this file. DIFMP_SCRIPT selects one of the
+        // harness-behaviour cases instead (premature-finish, exceed-actions, stale-observation,
+        // budget-exhausted, invented-evidence, needs-evidence).
+        script: process.env["DIFMP_SCRIPT"] ?? "auto",
+        maxTokens: 2048,
+      },
 
   // INDICATIVE journey length. Crossing it warns once and changes nothing else: no tool is
   // refused, no verdict is degraded. The blocking limits are `budgets` below.

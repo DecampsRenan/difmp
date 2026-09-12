@@ -101,8 +101,28 @@ An entry is a **factory**, not a finished script. It is called with `ScriptFacto
 `attemptId`, `scenarioId`, `specPath`, `baseUrl`, the resolved `inputs` and the `criterionIds` of the
 spec — once the run id is minted and the inputs are resolved, and **before the browser opens**,
 because a deterministic script has to type the value the run will really use. It returns
-`{ agent, verdicts?, defaultUsage? }` from `@difmp/agent-runtime`. See
-[`examples/support/scripts/registry.ts`](../../examples/support/scripts/registry.ts) for a worked one.
+`{ agent, verdicts?, defaultUsage? }`. Import the factory types and step builders from the public
+`difmp/scripted` entry point:
+
+```ts
+import {
+  observe,
+  screenshot,
+  type ScriptFactory,
+  type ScriptedProviderScript,
+} from "difmp/scripted";
+
+export const healthy: ScriptFactory<ScriptedProviderScript> = (ctx) => ({
+  agent: {
+    id: "healthy",
+    description: "observe and capture the page",
+    steps: [{ calls: [observe()] }, { calls: [screenshot(`final-${ctx.runId}`)] }],
+  },
+});
+```
+
+See [`examples/custom-scripted`](examples/custom-scripted/README.md) for the complete, typechecked
+example shipped in the installed package.
 
 Without `script`, a built-in generic walkthrough runs (observe → fill → submit → observe →
 screenshot → ask for every criterion → finish), steered by the remaining options:
@@ -125,27 +145,31 @@ back `inconclusive` with exit `1`.
 and CI runs with no UI server at all. Loopback only by default; `--ui-host` accepts something else and
 says loudly that it is no longer loopback.
 
-| endpoint                                 |                                                                                     |
-| ---------------------------------------- | ----------------------------------------------------------------------------------- |
-| `GET /` and every other path             | the dashboard assets                                                                |
-| `GET /api/ui/events`                     | SSE of **raw `HarnessEvent`s** for the run being followed — what `apps/ui` consumes |
-| `GET /api/events`                        | SSE of the CLI's own stream: scenario lifecycle plus every harness event, wrapped   |
-| `POST /api/cancel`                       | `{"reason": "…"}` → `202`, cancels the run cleanly                                  |
-| `GET /api/contract`                      | the frozen `contract.json` of the run being followed (`404` until it is frozen)     |
-| `GET /api/artifacts/<run-relative path>` | evidence files, as recorded in `artifactAvailable.path`                             |
-| `GET /api/state`                         | a snapshot the dashboard can render before any event arrives                        |
-| `GET /api/health`                        | `204`                                                                               |
+| endpoint                              |                                                                              |
+| ------------------------------------- | ---------------------------------------------------------------------------- |
+| `GET /` and every other path          | the dashboard assets                                                         |
+| `GET /api/ui/events`                  | compatibility SSE of raw events for the current run                          |
+| `GET /api/events`                     | suite SSE consumed by `apps/ui`: lifecycle plus every harness event, wrapped |
+| `POST /api/cancel`                    | `{"reason": "…"}` → `202`, cancels the run cleanly                           |
+| `POST /api/close`                     | releases a completed interactive dashboard                                   |
+| `GET /api/contract[?runId=…]`         | frozen contract of the current or selected retained run                      |
+| `GET /api/artifacts/<path>[?runId=…]` | evidence from the current or selected retained run                           |
+| `GET /api/state`                      | a snapshot the dashboard can render before any event arrives                 |
+| `GET /api/health`                     | `204`                                                                        |
 
 The served `index.html` gets a
 `<script id="difmp-ui-runtime">globalThis.__DIFMP_UI__ = { … }</script>` injected before the bundle —
 the override documented by `apps/ui/src/runtime/config.ts` — so the UI points at the endpoints above
 instead of its relative defaults.
 
-Two streams because they answer different questions. `/api/ui/events` is the run's own journal: `id:`
-is the harness event `seq`, each frame is named after the event type, and it resets at the start of
-every scenario because the UI models exactly one run and closes itself on `runFinished`.
-`/api/events` re-sequences everything onto one cursor that keeps counting across scenarios, which is
-what a multi-scenario invocation needs. Both honour `Last-Event-ID` and `?lastEventId=`.
+`/api/events` re-sequences everything onto one cursor that keeps counting across scenarios. This is
+the dashboard's source of truth: it retains finished runs and suite progress instead of replacing
+the page at every `scenarioStarted`. `/api/ui/events` remains available for consumers that need the
+current run's raw journal. Both honour `Last-Event-ID` and `?lastEventId=`.
+
+On an interactive TTY, the completed dashboard remains available until **Close dashboard** is
+pressed or Ctrl-C is received. A non-TTY/CI process never waits: every run already has a standalone,
+offline `report.html`, and the command exits after those durable reports are written.
 
 **Resume.** Every message carries a contiguous `id` starting at 1. A reconnect sends `Last-Event-ID`
 (the browser's `EventSource` does this by itself) and the server replays the journal from there. A
@@ -171,14 +195,15 @@ CLI also works under Yarn PnP, where the resolved path lives inside a zip.
 
 ## Build and packaging
 
-| script              |                                                             |
-| ------------------- | ----------------------------------------------------------- |
-| `pnpm build`        | `tsc -b` — the workspace build, used by project references  |
-| `pnpm build:bundle` | `tsdown` — the shippable artifact; also what `prepack` runs |
-| `pnpm test`         | `vitest run --config vitest.config.ts`                      |
+| script              |                                                            |
+| ------------------- | ---------------------------------------------------------- |
+| `pnpm build`        | `tsc -b` — the workspace build, used by project references |
+| `pnpm build:bundle` | rebuild the UI, then `tsdown`; also what `prepack` runs    |
+| `pnpm test`         | `vitest run --config vitest.config.ts`                     |
 
-`build:bundle` emits ESM with `.js` / `.d.ts` extensions, keeps the shebang, and sets the executable
-bit. `effect`, `@effect/*`, `playwright`, `tsx`, `yaml` and `tinyglobby` stay **external** — bundling
+`build:bundle` first rebuilds `apps/ui`, copies those fresh static assets, then emits ESM with `.js`
+/ `.d.ts` extensions, keeps the shebang, and sets the executable bit. `effect`, `@effect/*`,
+`playwright`, `tsx`, `yaml` and `tinyglobby` stay **external** — bundling
 `effect` would fight its module-instance-sensitive service identity and `playwright` cannot be bundled
 at all — while the private `@difmp/*` workspace packages are bundled in.
 
@@ -196,7 +221,8 @@ loader.
 pnpm auto-install peers so the barrel appears to work there; Yarn does not, and an installed CLI died
 with `ERR_MODULE_NOT_FOUND: Cannot find package 'redis'`.
 
-> **`pnpm pack` replaces `dist`.** `prepack` → `build:bundle` runs tsdown with `clean: true`, so after
+> **`pnpm pack` replaces `dist`.** `prepack` → `build:bundle` rebuilds/copies the UI and runs tsdown
+> with `clean: true`, so after
 > packing, `apps/cli/dist` holds the bundle rather than the `tsc -b` layout. The bundle runs, but it
 > has `@difmp/*` baked in and will not reflect an edit under `packages/` until it is rebuilt.
 > `pnpm build` restores the `tsc -b` layout — it deletes `tsconfig.tsbuildinfo` first, without which
@@ -267,6 +293,7 @@ the scripted adapter against the demo app
 (`apps/cli/scripts/ci/run-examples.sh [workdir] [variant...]`). Artifacts upload with `if: always()`.
 There are **no scenario retries**.
 
-The real-model smoke test is a separate job that runs only on a manual dispatch with
-`real_model: true`, reads `ANTHROPIC_API_KEY` from the repository secrets and is `continue-on-error` —
-its verdict is reported on its own and can never block a contributor who has no key.
+The real-provider contract smoke is a separate job that runs weekly or on a manual dispatch with
+`real_model: true`. It reads `ANTHROPIC_API_KEY` from repository secrets and checks accepted request
+formatting, tool use, native structured verdicts and in-flight cancellation. It never runs on a push
+or pull request, so contributors and ordinary local test runs need neither a key nor paid calls.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect, Layer, Stream } from "effect";
 import { LanguageModel } from "effect/unstable/ai";
-import { makeLanguageModelProvider } from "../src/index.js";
+import { makeLanguageModelProvider, toAiPrompt } from "../src/index.js";
 
 /** A `LanguageModel` that THROWS instead of failing — an SDK bug, not an `AiError`. */
 const dyingLanguageModel = (message: string): Layer.Layer<LanguageModel.LanguageModel> =>
@@ -14,6 +14,37 @@ const dyingLanguageModel = (message: string): Layer.Layer<LanguageModel.Language
   );
 
 describe("language-model provider", () => {
+  it("encodes image bytes as a native multimodal file part", () => {
+    const bytes = new Uint8Array([137, 80, 78, 71]);
+    const prompt = toAiPrompt({
+      messages: [
+        {
+          role: "user",
+          parts: [
+            { type: "text", text: "Inspect screenshot art_1" },
+            {
+              type: "image",
+              mediaType: "image/png",
+              fileName: "art_1.png",
+              data: bytes,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(prompt.content).toHaveLength(1);
+    const message = prompt.content[0];
+    expect(message?.role).toBe("user");
+    if (message?.role !== "user" || typeof message.content === "string") return;
+    expect(message.content[1]).toMatchObject({
+      type: "file",
+      mediaType: "image/png",
+      fileName: "art_1.png",
+      data: bytes,
+    });
+  });
+
   it.effect("reports a provider DEFECT as a typed ProviderError", () =>
     Effect.gen(function* () {
       // The `ModelProvider` seam declares `ProviderError` and nothing else. A defect escaping it

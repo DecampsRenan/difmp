@@ -67,7 +67,7 @@ export default defineConfig({
   // model
   provider: "scripted" | "anthropic",
   model: "claude-sonnet-5", // provider-specific id, never hardcoded in core
-  providerOptions: { maxTokens: 2048, temperature: 0, script: "healthy" }, // scripted adapter: names an entry of `scripts`
+  providerOptions: { maxTokens: 2048, script: "healthy" }, // scripted adapter: names an entry of `scripts`
   // guidance vs budgets  (SEPARATE — see §7)
   maxActions: 25, // INDICATIVE ONLY
   budgets: {

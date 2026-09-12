@@ -6,6 +6,7 @@ import { Empty, Panel, timeOf } from "./ui.js";
 export const LatestScreenshot = (props: {
   readonly artifacts: ReadonlyArray<ArtifactView>;
   readonly config: UiRuntimeConfig;
+  readonly runId?: string;
 }) => {
   let latest: ArtifactView | undefined;
   for (const artifact of props.artifacts) {
@@ -14,7 +15,7 @@ export const LatestScreenshot = (props: {
   const href =
     latest?.path === undefined
       ? undefined
-      : artifactHref(props.config.artifactBaseUrl, latest.path);
+      : artifactHref(props.config.artifactBaseUrl, latest.path, props.runId);
 
   return (
     <Panel title="Latest screenshot" testId="screenshot-panel">

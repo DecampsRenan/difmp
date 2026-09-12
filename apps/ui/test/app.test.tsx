@@ -56,12 +56,17 @@ const jsonResponse = (body: unknown, init: { ok?: boolean; status?: number } = {
 interface FetchRoutes {
   readonly contract?: () => Promise<Response>;
   readonly cancel?: () => Promise<Response>;
+  readonly close?: () => Promise<Response>;
 }
 
 const stubFetch = (routes: FetchRoutes = {}) => {
   const fetchMock = vi.fn<(input: unknown) => Promise<Response>>((input) => {
     const url = String(input);
-    const route = url.includes("cancel") ? routes.cancel : routes.contract;
+    const route = url.includes("cancel")
+      ? routes.cancel
+      : url.includes("close")
+        ? routes.close
+        : routes.contract;
     return route === undefined
       ? Promise.resolve(jsonResponse({}, { ok: false, status: 404 }))
       : route();
@@ -104,6 +109,17 @@ const deliverRaw = async (data: string, type = "message"): Promise<void> => {
   await act(async () => {
     source.dispatchEvent(new MessageEvent(type, { data }));
   });
+};
+
+let uiSeq = 0;
+const deliverUi = async (type: string, data: unknown): Promise<void> => {
+  const message = {
+    seq: ++uiSeq,
+    ts: `2026-09-12T10:00:${String(uiSeq).padStart(2, "0")}.000Z`,
+    type,
+    data,
+  };
+  await deliverRaw(JSON.stringify(message), type);
 };
 
 const failStream = async (readyState: number): Promise<void> => {
@@ -157,8 +173,62 @@ const originalFetch = globalThis.fetch;
 
 beforeEach(() => {
   sources.length = 0;
+  uiSeq = 0;
   globalThis.EventSource = FakeEventSource as unknown as typeof EventSource;
   stubFetch();
+});
+
+describe("App — multi-scenario suite", () => {
+  it("keeps completed histories selectable and closes only after cliFinished", async () => {
+    configure({ eventsUrl: "/api/events", closeUrl: "/api/close" });
+    const fetchMock = stubFetch({ close: () => Promise.resolve(jsonResponse({ accepted: true })) });
+    const first = eventStream("run-one");
+    const second = eventStream("run-two");
+    await renderApp();
+    await openStream();
+
+    await deliverUi("cliStarted", { scenarios: ["specs/one.e2e.md", "specs/two.e2e.md"] });
+    await deliverUi("scenarioStarted", { specPath: "specs/one.e2e.md", runId: "run-one" });
+    await deliverUi("harness", {
+      runId: "run-one",
+      event: first("runStarted", {
+        specPath: "specs/one.e2e.md",
+        scenarioId: "one",
+        harnessVersion: "0.1.0",
+      }),
+    });
+    await deliverUi("harness", {
+      runId: "run-one",
+      event: first("runFinished", { status: "passed", criteriaCount: 0, failedCriteria: [] }),
+    });
+    await deliverUi("scenarioFinished", { specPath: "specs/one.e2e.md", status: "passed" });
+    await deliverUi("scenarioStarted", { specPath: "specs/two.e2e.md", runId: "run-two" });
+    await deliverUi("harness", {
+      runId: "run-two",
+      event: second("runStarted", {
+        specPath: "specs/two.e2e.md",
+        scenarioId: "two",
+        harnessVersion: "0.1.0",
+      }),
+    });
+
+    expect(screen.getByTestId("suite-counts")).toHaveTextContent("1/2 complete");
+    expect(screen.getByTestId("suite-scenario-specs/one.e2e.md")).toHaveTextContent("passed");
+    expect(screen.getByTestId("suite-scenario-specs/two.e2e.md")).toHaveTextContent("running");
+    expect(screen.getByTestId("scenario-id")).toHaveTextContent("two");
+
+    fireEvent.click(screen.getByTestId("suite-scenario-specs/one.e2e.md"));
+    expect(screen.getByTestId("scenario-id")).toHaveTextContent("one");
+    expect(screen.getByTestId("app")).toHaveAttribute("data-run-status", "passed");
+    expect(screen.getByTestId("cancel-button")).toHaveTextContent("Cancel the suite");
+    expect(screen.getByTestId("cancel-button")).not.toBeDisabled();
+
+    await deliverUi("cliFinished", { completed: 2, total: 2 });
+    expect(screen.getByTestId("connection-state")).toHaveTextContent("stream closed");
+    expect(screen.getByTestId("suite-counts")).toHaveTextContent("2/2 complete");
+    fireEvent.click(screen.getByTestId("close-dashboard-button"));
+    expect(fetchMock).toHaveBeenCalledWith("/api/close", { method: "POST" });
+  });
 });
 
 afterEach(() => {

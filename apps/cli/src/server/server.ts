@@ -27,9 +27,8 @@ export interface UiServer {
 /**
  * Start the live UI server for the duration of the enclosing scope.
  *
- * `gracefulShutdownTimeout: 0` is deliberate: the default is 20 s and an open SSE connection keeps
- * a socket alive, so a run that ends with a dashboard attached would otherwise hang for 21 s after
- * SIGTERM (api-effect-http-node.md §6).
+ * The short graceful-shutdown timeout is deliberate: the default is 20 s and an open SSE
+ * connection would otherwise keep the process alive long after its enclosing scope closes.
  */
 export const openUiServer = (
   options: UiServerOptions,
@@ -38,7 +37,8 @@ export const openUiServer = (
     const host = options.host ?? "127.0.0.1";
     const port = options.port ?? 0;
 
-    const serverLayer = NodeHttpServer.layer(createServer, {
+    const nodeServer = createServer();
+    const serverLayer = NodeHttpServer.layer(() => nodeServer, {
       host,
       port,
       // Small but NOT zero. The default is 20 s and an open SSE connection keeps a socket alive, so
@@ -61,6 +61,12 @@ export const openUiServer = (
           }),
       ),
     );
+    // Effect's Node server registers two shutdown finalizers around one cached effect. If the
+    // graceful close times out while Node still considers a cancelled SSE socket active, the
+    // cached interruption is replayed by the second finalizer and fails the enclosing scope. This
+    // is reproducible with two consecutive fetch/readable cancellations on Node 22. Close active
+    // sockets first so both Effect finalizers observe a completed server shutdown.
+    yield* Effect.addFinalizer(() => Effect.sync(() => nodeServer.closeAllConnections()));
     const server = Context.get(context, HttpServer.HttpServer);
     const address = server.address;
     const bound = address._tag === "UnixPathAddress" ? 0 : address.port;

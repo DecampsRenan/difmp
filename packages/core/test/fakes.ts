@@ -7,6 +7,7 @@ import type {
   FixtureSession,
   ObserveResult,
   ProviderResponse,
+  VerificationRequest,
   VerificationResponse,
 } from "../src/index.js";
 import { BrowserDriver, FixtureManager, ModelProvider, Verifier } from "../src/index.js";
@@ -63,7 +64,8 @@ export const fakeBrowser = (options: FakeBrowserOptions = {}) => {
                 kind: "screenshot",
                 state: "present",
                 path: `/tmp/${fileName}`,
-                bytes: 128,
+                bytes: 4,
+                image: { mediaType: "image/png", data: new Uint8Array([137, 80, 78, 71]) },
                 ...(label === undefined ? {} : { label }),
               };
         captures.push(capture);
@@ -121,6 +123,7 @@ export interface ScriptedVerdict {
 export const scriptedVerifier = (
   verdicts: Readonly<Record<string, ScriptedVerdict>> = {},
   fallback: ScriptedVerdict = { status: "passed" },
+  seen?: Array<VerificationRequest>,
 ) =>
   Layer.succeed(
     Verifier,
@@ -128,6 +131,7 @@ export const scriptedVerifier = (
       id: "scripted-verifier",
       verify: (request) =>
         Effect.sync((): VerificationResponse => {
+          seen?.push(request);
           const verdict = verdicts[request.criterion.id] ?? fallback;
           if (verdict.verdict === false) {
             return {

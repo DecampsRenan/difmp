@@ -2,6 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { shouldKeepDashboardOpen } from "../src/commands/run.js";
 import { allOutput, exec, execInterrupted, fixture, startPage } from "./helpers.js";
 
 const project = fixture("project");
@@ -224,6 +225,18 @@ const drainEvents = async (
   return frames;
 };
 
+describe("live dashboard lifetime", () => {
+  it("waits only for an interactive TTY, never for pipes or CI", () => {
+    expect(shouldKeepDashboardOpen({ stdinIsTTY: true, stdoutIsTTY: true })).toBe(true);
+    expect(shouldKeepDashboardOpen({ stdinIsTTY: false, stdoutIsTTY: true })).toBe(false);
+    expect(shouldKeepDashboardOpen({ stdinIsTTY: true, stdoutIsTTY: false })).toBe(false);
+    expect(shouldKeepDashboardOpen({ stdinIsTTY: true, stdoutIsTTY: true, ci: "true" })).toBe(
+      false,
+    );
+    expect(shouldKeepDashboardOpen({ stdinIsTTY: true, stdoutIsTTY: true, ci: "1" })).toBe(false);
+  });
+});
+
 describe("live dashboard (--ui)", () => {
   it("serves the dashboard while the run progresses, and the run still finishes", async () => {
     const dir = join(output, "ui");
@@ -259,7 +272,7 @@ describe("live dashboard (--ui)", () => {
     // The served page carries the endpoint overrides `apps/ui/src/runtime/config.ts` reads.
     const shell = await (await fetch(`http://127.0.0.1:${port}/`)).text();
     expect(shell).toContain("__DIFMP_UI__");
-    expect(shell).toContain("/api/ui/events");
+    expect(shell).toContain('"eventsUrl":"/api/events"');
 
     const [frames, uiFrames] = await Promise.all([
       drainEvents(`http://127.0.0.1:${port}/api/events`, 30_000),

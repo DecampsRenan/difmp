@@ -20,6 +20,8 @@ export interface EvidenceItem {
   readonly sourceSeq?: number;
   /** Short textual rendering safe to put in a prompt (already redacted and escaped). */
   readonly summary: string;
+  /** Screenshot pixels, kept in memory and sent as a native multimodal model input. */
+  readonly image?: { readonly mediaType: "image/png"; readonly data: Uint8Array };
   /** Structured payload for code checks. Never sent to a model verbatim. */
   readonly data?: unknown;
 }

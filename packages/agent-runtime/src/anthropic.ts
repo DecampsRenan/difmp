@@ -37,6 +37,34 @@ export interface AnthropicAdapterOptions extends AnthropicProviderOptions {
 const providerError = (reason: string): ProviderError =>
   new ProviderError({ provider: anthropicProviderId, reason, retryable: false });
 
+const isClaudeSonnet5 = (model: string): boolean => /^claude-sonnet-5(?:-|$)/.test(model);
+
+/**
+ * Claude Sonnet 5 rejects sampling controls on the Messages API. Keep this check next to the
+ * provider mapping so `validate` and `run` fail locally instead of discovering the incompatibility
+ * after a browser has opened and a paid request has started.
+ */
+const validateModelOptions = (
+  model: string,
+  options: AnthropicProviderOptions,
+): Effect.Effect<void, ProviderError> => {
+  if (!isClaudeSonnet5(model)) return Effect.void;
+  const unsupported = [
+    ...(options.temperature === undefined ? [] : ["temperature"]),
+    ...(options.topP === undefined ? [] : ["topP"]),
+    ...(options.topK === undefined ? [] : ["topK"]),
+  ];
+  return unsupported.length === 0
+    ? Effect.void
+    : Effect.fail(
+        providerError(
+          `providerOptions.${unsupported.join(", providerOptions.")} ${
+            unsupported.length === 1 ? "is" : "are"
+          } not supported by ${model}; omit temperature, topP and topK for Claude Sonnet 5`,
+        ),
+      );
+};
+
 /** Resolve the adapter options from the validated harness config. */
 export const anthropicOptionsFromConfig = (
   config: ResolvedConfig,
@@ -59,6 +87,7 @@ export const anthropicOptionsFromConfig = (
         ),
       ),
     );
+    yield* validateModelOptions(config.model, options);
     return { ...options, model: config.model };
   });
 

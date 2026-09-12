@@ -202,6 +202,48 @@ code,
 
 /* ---------- layout ---------- */
 
+.suite {
+  padding: 14px 14px 0;
+}
+.suite-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+}
+.suite-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.suite-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--bg-sunk);
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+}
+.suite-row span:last-child {
+  overflow-wrap: anywhere;
+}
+.suite-row-selected {
+  border-color: var(--info);
+}
+.suite-row:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
 .grid {
   flex: 1;
   display: grid;

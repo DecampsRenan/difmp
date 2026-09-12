@@ -74,9 +74,27 @@ export const verifierUserPrompt = (options: {
 
 export const verifierPrompt = (
   options: Parameters<typeof verifierUserPrompt>[0],
-): HarnessPrompt => ({
-  messages: [
-    { role: "system", parts: [{ type: "text", text: verifierSystemPrompt() }] },
-    { role: "user", parts: [{ type: "text", text: verifierUserPrompt(options) }] },
-  ],
-});
+): HarnessPrompt => {
+  const imageParts = options.evidence.flatMap((item) =>
+    item.kind !== "screenshot" || item.image === undefined || item.image.data.byteLength === 0
+      ? []
+      : [
+          { type: "text" as const, text: `Image contents of screenshot ${item.artifactId}:` },
+          {
+            type: "image" as const,
+            mediaType: item.image.mediaType,
+            data: item.image.data,
+            fileName: `${item.artifactId}.png`,
+          },
+        ],
+  );
+  return {
+    messages: [
+      { role: "system", parts: [{ type: "text", text: verifierSystemPrompt() }] },
+      {
+        role: "user",
+        parts: [{ type: "text", text: verifierUserPrompt(options) }, ...imageParts],
+      },
+    ],
+  };
+};

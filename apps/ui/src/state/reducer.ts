@@ -7,6 +7,7 @@ export type RunAction =
   | { readonly kind: "event"; readonly event: HarnessEvent }
   | { readonly kind: "malformed" }
   | { readonly kind: "contract"; readonly contract: ContractView }
+  | { readonly kind: "replace"; readonly model: RunModel }
   | { readonly kind: "reset" };
 
 const truncate = (value: string, max = 220): string =>
@@ -107,6 +108,7 @@ const mergeContract = (model: RunModel, contract: ContractView): RunModel => {
  */
 export const runReducer = (model: RunModel, action: RunAction): RunModel => {
   if (action.kind === "reset") return emptyRunModel;
+  if (action.kind === "replace") return action.model;
   if (action.kind === "malformed") return { ...model, malformed: model.malformed + 1 };
   if (action.kind === "contract") return mergeContract(model, action.contract);
 

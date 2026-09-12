@@ -10,6 +10,8 @@ import { Runtime, Schema } from "effect";
  */
 export class UsageError extends Schema.TaggedError<UsageError>()("UsageError", {
   message: Schema.String,
+  /** The command already emitted the complete diagnostic (for example a JSON document). */
+  reported: Schema.optionalKey(Schema.Boolean),
 }) {
   override readonly [Runtime.errorExitCode] = 2;
   override readonly [Runtime.errorReported] = false;

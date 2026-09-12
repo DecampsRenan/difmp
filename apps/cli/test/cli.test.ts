@@ -8,6 +8,7 @@ const project = fixture("project");
 const badRefs = fixture("bad-refs");
 const enumProject = fixture("enum-config");
 const strayHarnessConfig = fixture("stray-harness-config");
+const validationProject = fixture("validation");
 
 const empty = mkdtempSync(join(tmpdir(), "difmp-empty-"));
 
@@ -28,6 +29,18 @@ describe("no spec selected", () => {
       expect(result.code, command).toBe(2);
       expect(allOutput(result)).toContain("no *.e2e.md scenario selected");
     }
+  });
+
+  it("keeps validate --json machine-readable when discovery selects nothing", async () => {
+    const result = await exec(["validate", "--json"], { cwd: empty });
+    expect(result.code).toBe(2);
+    expect(result.stderr).toEqual([]);
+    expect(JSON.parse(result.stdout.join("\n"))).toMatchObject({
+      schemaVersion: 1,
+      valid: false,
+      problems: [expect.stringContaining("no *.e2e.md scenario selected")],
+      scenarios: [],
+    });
   });
 
   it("reports a glob that matched nothing rather than falling back to the configured include", async () => {
@@ -137,6 +150,19 @@ describe("validate", () => {
     expect(allOutput(result)).toContain("3/3 scenarios valid");
   });
 
+  it("uses the stable validation document on success", async () => {
+    const result = await exec(["validate", "--json"], { cwd: project });
+    expect(result.code).toBe(0);
+    expect(result.stderr).toEqual([]);
+    const parsed = JSON.parse(result.stdout.join("\n")) as Record<string, unknown>;
+    expect(Object.keys(parsed)).toEqual(["schemaVersion", "valid", "problems", "scenarios"]);
+    expect(parsed).toMatchObject({
+      schemaVersion: 1,
+      valid: true,
+      problems: [],
+    });
+  });
+
   it("accepts unresolved {{ fixture.* }} but rejects every other unknown variable", async () => {
     const result = await exec(["validate", "--json"], { cwd: badRefs });
     expect(result.code).toBe(2);
@@ -154,5 +180,91 @@ describe("validate", () => {
     expect(unknown.join("\n")).toContain("alsoNotDeclared");
     // Errors name the file and the line.
     expect(unknown.join("\n")).toMatch(/unknown\.e2e\.md:\d+:\d+/);
+  });
+
+  it.each([
+    ["anthropic-no-model.config.ts", "`model` is required"],
+    ["anthropic-bad-options.config.ts", "tempertaure"],
+    ["anthropic-sonnet-5-temperature.config.ts", "omit temperature, topP and topK"],
+    ["anthropic-sonnet-5-top-p.config.ts", "providerOptions.topP is not supported"],
+    ["anthropic-sonnet-5-top-k.config.ts", "providerOptions.topK is not supported"],
+    ["scripted-bad-options.config.mjs", "invalid scripted provider options"],
+    ["scripted-unknown-script.config.ts", 'script "missing"'],
+  ])("rejects deterministic provider prerequisite failures from %s", async (config, message) => {
+    const result = await exec(["validate", "--json", "--config", config], {
+      cwd: validationProject,
+    });
+    expect(result.code).toBe(2);
+    expect(result.stderr).toEqual([]);
+    const parsed = JSON.parse(result.stdout.join("\n")) as {
+      valid: boolean;
+      problems: ReadonlyArray<string>;
+      scenarios: ReadonlyArray<unknown>;
+    };
+    expect(parsed.valid).toBe(false);
+    expect(parsed.problems.join("\n")).toContain(message);
+    // Provider validation is a preflight only: the valid scenario is still parsed and reported.
+    expect(parsed.scenarios).toHaveLength(1);
+  });
+
+  it("rejects incompatible Sonnet 5 options on run before acquiring a provider or browser", async () => {
+    const result = await exec(
+      ["run", "--config", "anthropic-sonnet-5-temperature.config.ts", "--reporter", "console"],
+      { cwd: validationProject },
+    );
+    expect(result.code).toBe(2);
+    expect(allOutput(result)).toContain("providerOptions.temperature is not supported");
+    expect(allOutput(result)).toContain("omit temperature, topP and topK");
+  });
+
+  it("keeps sampling options available for Anthropic models that support them", async () => {
+    const result = await exec(
+      ["validate", "--config", "anthropic-sonnet-4-temperature.config.ts"],
+      { cwd: validationProject },
+    );
+    expect(result.code).toBe(0);
+    expect(allOutput(result)).toContain("1/1 scenario valid");
+  });
+
+  it.each([
+    ["invalid.e2e.md", /invalid\.e2e\.md:.*frontmatter/],
+    ["missing-id.e2e.md", /missing-id\.e2e\.md:.*invalid frontmatter/],
+  ])("keeps --json machine-readable when %s cannot be parsed", async (path, problem) => {
+    const result = await exec(["validate", path, "--json"], {
+      cwd: validationProject,
+    });
+    expect(result.code).toBe(2);
+    expect(result.stderr).toEqual([]);
+    expect(result.stdout).toHaveLength(1);
+    const parsed = JSON.parse(result.stdout[0]!) as Record<string, unknown>;
+    expect(Object.keys(parsed)).toEqual(["schemaVersion", "valid", "problems", "scenarios"]);
+    expect(parsed.valid).toBe(false);
+    expect(parsed.problems).toEqual([expect.stringMatching(problem)]);
+    expect(parsed.scenarios).toEqual([]);
+  });
+
+  it("keeps the same JSON document shape when config loading fails", async () => {
+    const result = await exec(["validate", "--json", "--config", "difmp.invalid.config.ts"], {
+      cwd: project,
+    });
+    expect(result.code).toBe(2);
+    expect(result.stderr).toEqual([]);
+    const parsed = JSON.parse(result.stdout.join("\n")) as Record<string, unknown>;
+    expect(Object.keys(parsed)).toEqual(["schemaVersion", "valid", "problems", "scenarios"]);
+    expect(parsed).toMatchObject({ valid: false, scenarios: [] });
+    expect(parsed.problems).toEqual([expect.stringContaining("invalid configuration")]);
+  });
+
+  it("rejects an unknown provider selection as a JSON validation problem", async () => {
+    const result = await exec(["validate", "--json", "--config", "invalid-provider.config.mjs"], {
+      cwd: validationProject,
+    });
+    expect(result.code).toBe(2);
+    expect(result.stderr).toEqual([]);
+    const parsed = JSON.parse(result.stdout.join("\n")) as {
+      problems: ReadonlyArray<string>;
+    };
+    expect(parsed.problems.join("\n")).toContain("provider");
+    expect(parsed.problems.join("\n")).toContain("not-a-provider");
   });
 });

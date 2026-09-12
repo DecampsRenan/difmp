@@ -130,6 +130,7 @@
       <span class="dim" id="counts"></span>
       <span style="flex: 1"></span>
       <button id="cancel">Cancel run</button>
+      <button id="close" hidden>Close dashboard</button>
     </header>
     <main>
       <section id="side">
@@ -245,6 +246,8 @@
         }
         if (m.type === "cliFinished") {
           el("counts").textContent = m.data.completed + "/" + m.data.total + " done";
+          el("cancel").disabled = true;
+          el("close").hidden = false;
         }
         push(m.seq, m.type, m.data);
       }
@@ -278,6 +281,10 @@
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ reason: "dashboard" }),
         });
+      });
+      el("close").addEventListener("click", () => {
+        el("close").disabled = true;
+        fetch("/api/close", { method: "POST" });
       });
       fetch("/api/state")
         .then((r) => r.json())

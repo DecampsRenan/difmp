@@ -4,6 +4,7 @@ import { listHandler } from "./commands/list.js";
 import { reportHandler } from "./commands/report.js";
 import { runHandler } from "./commands/run.js";
 import { validateHandler } from "./commands/validate.js";
+import { UsageError } from "./errors.js";
 import { runConfig, selectConfig } from "./flags.js";
 import { harnessVersion } from "./version.js";
 
@@ -76,6 +77,7 @@ export const cli = difmp.pipe(Command.withSubcommands([run, list, validate, repo
 export const reportFailures = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
   Effect.tapError(effect, (error) => {
     if (CliError.isCliError(error)) return Effect.void;
+    if (error instanceof UsageError && error.reported === true) return Effect.void;
     if (
       typeof error === "object" &&
       error !== null &&

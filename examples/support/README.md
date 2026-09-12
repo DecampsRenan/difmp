@@ -123,12 +123,15 @@ What it sets, and why:
 ```ts
 provider: "anthropic",
 model: "claude-sonnet-5",
-providerOptions: { maxTokens: 2048, temperature: 0 }
+providerOptions: { maxTokens: 2048 }
 ```
 
 with `ANTHROPIC_API_KEY` in the environment — or, without editing the file,
-`difmp run --provider anthropic --model claude-sonnet-5`. `alt-layout` is the variant worth
+`DIFMP_PROVIDER=anthropic difmp run --provider anthropic --model claude-sonnet-5` (the environment
+switch also selects the provider-specific `providerOptions`). `alt-layout` is the variant worth
 pointing a real model at: it is functionally identical to `healthy` and differently shaped.
+`temperature`, `topP` and `topK` must be omitted for Claude Sonnet 5; difmp rejects them during
+provider preflight rather than waiting for an HTTP 400 after the browser starts.
 
 ## 3. The `authenticated-workspace` fixture
 

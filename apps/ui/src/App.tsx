@@ -5,6 +5,7 @@ import { Criteria } from "./components/Criteria.js";
 import { Header } from "./components/Header.js";
 import { RunContext } from "./components/RunContext.js";
 import { LatestScreenshot } from "./components/Screenshot.js";
+import { SuiteProgress } from "./components/SuiteProgress.js";
 import { Timeline } from "./components/Timeline.js";
 import { readRuntimeConfig } from "./runtime/config.js";
 import { useNow, useRunStream } from "./state/useRunStream.js";
@@ -40,6 +41,17 @@ export const App = () => {
         onCancel={stream.requestCancel}
         onReconnect={stream.reconnectNow}
         elapsedMs={elapsedMs}
+        suiteRunning={stream.scenarios.length > 0 && !stream.suiteFinished}
+        {...(config.closeUrl === undefined ? {} : { onCloseDashboard: stream.closeDashboard })}
+        suiteFinished={stream.suiteFinished}
+      />
+
+      <SuiteProgress
+        scenarios={stream.scenarios}
+        {...(model.runId === undefined ? {} : { selectedRunId: model.runId })}
+        completed={stream.completed}
+        total={stream.total}
+        onSelect={stream.selectScenario}
       />
 
       <main className="grid">
@@ -50,9 +62,22 @@ export const App = () => {
           <RunContext model={model} />
         </div>
         <div className="col col-right">
-          <LatestScreenshot artifacts={model.artifacts} config={config} />
+          <LatestScreenshot
+            artifacts={model.artifacts}
+            config={config}
+            {...(stream.scenarios.length === 0 || model.runId === undefined
+              ? {}
+              : { runId: model.runId })}
+          />
           <Timeline entries={model.timeline} />
-          <Artifacts artifacts={model.artifacts} criteria={model.criteria} config={config} />
+          <Artifacts
+            artifacts={model.artifacts}
+            criteria={model.criteria}
+            config={config}
+            {...(stream.scenarios.length === 0 || model.runId === undefined
+              ? {}
+              : { runId: model.runId })}
+          />
         </div>
       </main>
 
