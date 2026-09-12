@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
-import type { Check, CheckResult } from "@harness/core"
-import type { ProbeResult } from "@harness/fixture-app"
+import type { Check, CheckResult } from "@difmp/core"
+import type { ProbeResult } from "@difmp/fixture-app"
 import { lookupWorkspace } from "../fixtures/attempt-state.js"
 import { seedTokenEnvVar } from "../fixtures/authenticated-workspace.js"
 

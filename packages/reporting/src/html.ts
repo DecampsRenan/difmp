@@ -1,4 +1,4 @@
-import type { ReportInput } from "@harness/core"
+import type { ReportInput } from "@difmp/core"
 import { artifactHref, embedJson, escapeHtml as h } from "./escape.js"
 import { reportStyles } from "./styles.js"
 import type { ArtifactView, AttemptView, CriterionView, Diagnostic, ReportView, TimelineEntry } from "./view.js"

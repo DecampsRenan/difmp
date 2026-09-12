@@ -70,4 +70,4 @@ export interface VerificationResponse {
 export class Verifier extends Context.Service<Verifier, {
   readonly id: string
   readonly verify: (request: VerificationRequest) => Effect.Effect<VerificationResponse, VerifierError>
-}>()("@harness/core/services/Verifier") {}
+}>()("@difmp/core/services/Verifier") {}

@@ -1,5 +1,5 @@
-import type { Fixture, FixtureResult, StorageStateLike } from "@harness/core"
-import type { SeedResult } from "@harness/fixture-app"
+import type { Fixture, FixtureResult, StorageStateLike } from "@difmp/core"
+import type { SeedResult } from "@difmp/fixture-app"
 import { forgetWorkspace, rememberWorkspace } from "./attempt-state.js"
 
 /**

@@ -1,4 +1,4 @@
-import type { ObservedElement, ObserveResult, Prompt as HarnessPrompt, ToolName } from "@harness/core"
+import type { ObservedElement, ObserveResult, Prompt as HarnessPrompt, ToolName } from "@difmp/core"
 
 /**
  * A scripted run is a TEST DOUBLE. The format is deliberately small: a list of turns, each turn a

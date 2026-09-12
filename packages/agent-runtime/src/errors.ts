@@ -1,4 +1,4 @@
-import { ProviderError } from "@harness/core"
+import { ProviderError } from "@difmp/core"
 import type { AiError } from "effect/unstable/ai"
 
 const statusOf = (reason: AiError.AiErrorReason): number | undefined => {

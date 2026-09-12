@@ -1,4 +1,4 @@
-import type { Prompt as HarnessPrompt, PromptMessage, PromptPart } from "@harness/core"
+import type { Prompt as HarnessPrompt, PromptMessage, PromptPart } from "@difmp/core"
 import { Prompt } from "effect/unstable/ai"
 
 /**

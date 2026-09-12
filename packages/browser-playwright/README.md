@@ -1,10 +1,10 @@
-# `@harness/browser-playwright`
+# `@difmp/browser-playwright`
 
 The `BrowserDriver` implementation: it is the only thing in the repository that touches Playwright.
 
 It launches Chromium, opens one isolated context per attempt, turns the page into observations the
 model can reason about, executes the actions the harness authorised, and captures the evidence.
-It implements an interface declared in `@harness/core`; it makes no policy decisions of its own
+It implements an interface declared in `@difmp/core`; it makes no policy decisions of its own
 beyond fail-closed guards.
 
 ## Observation: aria snapshots, not HTML
@@ -53,6 +53,6 @@ handling belongs to the Effect runtime alone.
 [`docs/architecture.md`](../../docs/architecture.md) §4.
 
 ```sh
-pnpm --filter @harness/browser-playwright build
+pnpm --filter @difmp/browser-playwright build
 npx playwright install chromium
 ```

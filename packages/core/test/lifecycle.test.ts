@@ -53,9 +53,9 @@ interface Wired {
 const wire = (options: Wiring) =>
   Effect.gen(function*() {
     const fs = yield* FileSystem.FileSystem
-    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harness-lifecycle-" }).pipe(Effect.orDie)
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "difmp-lifecycle-" }).pipe(Effect.orDie)
     const project = yield* expectSuccess(resolveConfig({
-      source: "harness.config.ts",
+      source: "difmp.config.ts",
       config: { outputDir: dir, ...options.configOverrides }
     }))
     const runRoot = `${dir}/${runId}`
@@ -384,7 +384,7 @@ describe("cancellation and lifecycle", () => {
   it.live("the events PubSub is shut down when the run's scope closes", () =>
     Effect.gen(function*() {
       const fs = yield* FileSystem.FileSystem
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harness-pubsub-" }).pipe(Effect.orDie)
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "difmp-pubsub-" }).pipe(Effect.orDie)
       const events = yield* Effect.scoped(
         Effect.gen(function*() {
           const store = yield* RunStore
@@ -405,7 +405,7 @@ describe("budgets", () => {
   it.live("the new blocking budgets are part of the resolved configuration", () =>
     Effect.gen(function*() {
       const project = yield* expectSuccess(resolveConfig({
-        source: "harness.config.ts",
+        source: "difmp.config.ts",
         config: { budgets: { fixtureSetupTimeoutMs: 1_000, maxIdleTurns: 5, maxEvidenceRequests: 3 } }
       }))
       expect(project.config.budgets.fixtureSetupTimeoutMs).toBe(1_000)

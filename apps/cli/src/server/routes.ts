@@ -20,7 +20,7 @@ export interface RoutesOptions {
 }
 
 /**
- * Endpoints injected into the served page as `globalThis.__HARNESS_UI__`, which is the override
+ * Endpoints injected into the served page as `globalThis.__DIFMP_UI__`, which is the override
  * `apps/ui/src/runtime/config.ts` documents. Without the injection the UI would fall back to its
  * relative defaults (`events`, `cancel`, `contract`, `artifacts/`).
  */
@@ -31,9 +31,9 @@ const uiRuntimeConfig = {
   artifactBaseUrl: "/api/artifacts/"
 } as const
 
-const injectionId = "harness-ui-runtime"
+const injectionId = "difmp-ui-runtime"
 const injection =
-  `<script id="${injectionId}">globalThis.__HARNESS_UI__=${JSON.stringify(uiRuntimeConfig)};</script>`
+  `<script id="${injectionId}">globalThis.__DIFMP_UI__=${JSON.stringify(uiRuntimeConfig)};</script>`
 
 /** Injected before the bundle, and only once — the UI's own shell mentions the global in a comment. */
 const withRuntimeConfig = (html: string): string =>

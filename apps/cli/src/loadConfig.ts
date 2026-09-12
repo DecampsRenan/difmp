@@ -4,13 +4,18 @@ import { dirname, isAbsolute, join, parse, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
 import { UsageError } from "./errors.js"
 
-/** Recommended name first; `.mts`/`.js`/`.mjs` are accepted so a JS-only project is not forced into TS. */
-export const configFileNames: ReadonlyArray<string> = [
-  "harness.config.ts",
-  "harness.config.mts",
-  "harness.config.mjs",
-  "harness.config.js"
-]
+const extensions: ReadonlyArray<string> = ["ts", "mts", "mjs", "js"]
+
+/**
+ * `.mts`/`.js`/`.mjs` are accepted alongside `.ts` so a JS-only project is not forced into
+ * TypeScript.
+ */
+export const configBaseNames: ReadonlyArray<string> = ["difmp.config"]
+
+/** Discovery order: `.ts` first. */
+export const configFileNames: ReadonlyArray<string> = configBaseNames.flatMap((base) =>
+  extensions.map((ext) => `${base}.${ext}`)
+)
 
 const isTs = (p: string): boolean => /\.(m|c)?ts$/.test(p)
 
@@ -43,7 +48,7 @@ export const importConfigModule = async (absPath: string): Promise<unknown> => {
   }
   const cfg = pickDefault(mod)
   if (cfg === undefined) {
-    throw new Error(`${absPath}: no default export — a harness config must \`export default defineConfig({...})\``)
+    throw new Error(`${absPath}: no default export — a difmp config must \`export default defineConfig({...})\``)
   }
   return cfg
 }

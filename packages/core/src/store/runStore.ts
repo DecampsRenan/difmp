@@ -51,7 +51,7 @@ export class RunStore extends Context.Service<RunStore, {
   readonly ensureAttemptDirs: (attemptId: string) => Effect.Effect<void, StoreError>
   /** Live fan-out for the SSE server. The runner never depends on a subscriber existing. */
   readonly events: PubSub.PubSub<HarnessEvent>
-}>()("@harness/core/store/RunStore") {
+}>()("@difmp/core/store/RunStore") {
   static readonly layer = (
     options: RunStoreOptions
   ): Layer.Layer<RunStore, StoreError, FileSystem.FileSystem | Path.Path> =>

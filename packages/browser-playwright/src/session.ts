@@ -6,8 +6,8 @@ import type {
   ObservedElement,
   ObserveResult,
   OpenContextOptions
-} from "@harness/core"
-import { BrowserError, checkNavigationOrigin } from "@harness/core"
+} from "@difmp/core"
+import { BrowserError, checkNavigationOrigin } from "@difmp/core"
 import { Clock, Effect, Semaphore } from "effect"
 import { mkdir, rm, stat, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"

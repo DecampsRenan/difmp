@@ -112,7 +112,7 @@ describe("spec discovery", () => {
   it.effect("returns a sorted, de-duplicated selection and honours the excludes", () =>
     Effect.gen(function*() {
       const project = yield* expectSuccess(
-        resolveConfig({ source: "harness.config.ts", config: { exclude: ["**/bad-*.e2e.md"] } })
+        resolveConfig({ source: "difmp.config.ts", config: { exclude: ["**/bad-*.e2e.md"] } })
       )
       const found = yield* expectSuccess(
         discoverSpecs({ cwd: fixturePath("."), config: project.config })

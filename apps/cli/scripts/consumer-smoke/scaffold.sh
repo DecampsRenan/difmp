@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Create a throw-away CONSUMER project: a package that knows nothing about this repository except
-# the `@harness/cli` tarball it installs. Everything it needs — the application under test, the
+# the `difmp` tarball it installs. Everything it needs — the application under test, the
 # scenario, the TypeScript config — is generated here, so the consumer never needs the harness
 # checked out.
 #
@@ -18,14 +18,14 @@ if [ "$KIND" = "esm" ]; then TYPE=module; else TYPE=commonjs; fi
 
 cat > "$DIR/package.json" <<JSON
 {
-  "name": "harness-consumer-$KIND",
+  "name": "difmp-consumer-$KIND",
   "private": true,
   "version": "1.0.0",
   "type": "$TYPE",
   "scripts": {
-    "test:e2e": "harness run",
-    "test:e2e:ui": "harness run --ui",
-    "e2e:list": "harness list"
+    "test:e2e": "difmp run",
+    "test:e2e:ui": "difmp run --ui",
+    "e2e:list": "difmp list"
   }
 }
 JSON
@@ -79,11 +79,11 @@ server.listen(0, "127.0.0.1", () => {
 JS
 
 # ---------------------------------------------------------------------------------------------
-# harness.config.ts — TypeScript, loaded by the installed CLI from the consumer project.
+# difmp.config.ts — TypeScript, loaded by the installed CLI from the consumer project.
 # ---------------------------------------------------------------------------------------------
 if [ "$KIND" = "esm" ]; then
-cat > "$DIR/harness.config.ts" <<'TS'
-import { defineConfig } from "@harness/cli"
+cat > "$DIR/difmp.config.ts" <<'TS'
+import { defineConfig } from "difmp"
 
 // Erasable TypeScript: a type alias and annotations only. Node >= 22.18 strips this natively.
 type Verdict = "passed" | "failed" | "inconclusive"
@@ -110,8 +110,8 @@ export default defineConfig({
 })
 TS
 else
-cat > "$DIR/harness.config.ts" <<'TS'
-import { defineConfig } from "@harness/cli"
+cat > "$DIR/difmp.config.ts" <<'TS'
+import { defineConfig } from "difmp"
 
 // NON-ERASABLE TypeScript inside a CommonJS-typed package. Node's native type stripping refuses
 // `enum`, and the CommonJS loader refuses the `import` statement above, so this file loads ONLY

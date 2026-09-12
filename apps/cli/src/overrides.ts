@@ -1,5 +1,5 @@
-import type { ConfigOverrides, ProviderName, ReporterName, ResolvedConfig } from "@harness/core"
-import { isSensitiveKey } from "@harness/core"
+import type { ConfigOverrides, ProviderName, ReporterName, ResolvedConfig } from "@difmp/core"
+import { isSensitiveKey } from "@difmp/core"
 import { Effect, Option } from "effect"
 import { UsageError } from "./errors.js"
 import { reporterNames } from "./project.js"
@@ -26,7 +26,7 @@ const validateReporters = (values: ReadonlyArray<string>): Effect.Effect<Readonl
 }
 
 /**
- * CLI execution options override `harness.config.ts`. Only the flags actually supplied become
+ * CLI execution options override `difmp.config.ts`. Only the flags actually supplied become
  * overrides — an absent flag leaves the file's value (or the built-in default) alone.
  */
 export const toOverrides = (flags: OverrideFlags): Effect.Effect<ConfigOverrides, UsageError> =>
@@ -43,7 +43,7 @@ export const toOverrides = (flags: OverrideFlags): Effect.Effect<ConfigOverrides
   })
 
 /**
- * Whether a KEY looks like a credential. The rule lives in `@harness/core` (`isSensitiveKey`), so
+ * Whether a KEY looks like a credential. The rule lives in `@difmp/core` (`isSensitiveKey`), so
  * what this printer hides and what `sanitizeConfig` blanks in `manifest.json` and the
  * `configResolved` event can never drift apart. Matching is per word, not per substring, so
  * `maxTokens` and `verifierReserveTokens` are printed while `token`, `sessionToken` and `apiKey`

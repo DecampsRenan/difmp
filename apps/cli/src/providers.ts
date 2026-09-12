@@ -1,5 +1,5 @@
-import type { InputsRecord, LoadedSpec, Registries, ResolvedConfig, ScriptFactoryContext } from "@harness/core"
-import { formatSchemaError, ModelProvider } from "@harness/core"
+import type { InputsRecord, LoadedSpec, Registries, ResolvedConfig, ScriptFactoryContext } from "@difmp/core"
+import { formatSchemaError, ModelProvider } from "@difmp/core"
 import {
   anthropicAdapterId,
   anthropicModelProviderLayerFromConfig,
@@ -8,14 +8,14 @@ import {
   scriptedAdapterId,
   scriptedModelId,
   scriptedModelProviderLayer
-} from "@harness/agent-runtime"
-import type { ScriptedProviderScript } from "@harness/agent-runtime"
+} from "@difmp/agent-runtime"
+import type { ScriptedProviderScript } from "@difmp/agent-runtime"
 import { Cause, Effect, Layer, Schema } from "effect"
 import { UsageError } from "./errors.js"
 
 /**
  * `providerOptions` understood by the deterministic double. It exists so a scripted run can be
- * steered from `harness.config.ts` without writing an orchestration script; it is a TEST DOUBLE
+ * steered from `difmp.config.ts` without writing an orchestration script; it is a TEST DOUBLE
  * and its verdicts are labelled `scripted-model`, never presentable as a model judgement.
  */
 export const ScriptedProviderOptions = Schema.Struct({
@@ -75,7 +75,7 @@ export const scriptFor = (
           new UsageError({
             message:
               `providerOptions.script "${options.script}" cannot be resolved here: this command does not ` +
-              "build scripted runs (only `harness run` does)"
+              "build scripted runs (only `difmp run` does)"
           })
         )
       }
@@ -143,7 +143,7 @@ export interface ProviderChoice {
   readonly adapterId: string
 }
 
-/** Wire the provider named by `--provider` or by `harness.config.ts`. */
+/** Wire the provider named by `--provider` or by `difmp.config.ts`. */
 export const modelProviderFor = (
   config: ResolvedConfig,
   spec: LoadedSpec,

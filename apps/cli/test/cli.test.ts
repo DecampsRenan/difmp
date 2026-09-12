@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterAll, describe, expect, it } from "vitest"
@@ -7,8 +7,9 @@ import { allOutput, exec, fixture } from "./helpers.js"
 const project = fixture("project")
 const badRefs = fixture("bad-refs")
 const enumProject = fixture("enum-config")
+const strayHarnessConfig = fixture("stray-harness-config")
 
-const empty = mkdtempSync(join(tmpdir(), "harness-empty-"))
+const empty = mkdtempSync(join(tmpdir(), "difmp-empty-"))
 
 afterAll(() => {
   rmSync(empty, { recursive: true, force: true })
@@ -68,7 +69,7 @@ describe("exit-code mapping", () => {
   })
 
   it("2 for an invalid configuration (unknown top-level key)", async () => {
-    const result = await exec(["list", "--config", "harness.invalid.config.ts"], { cwd: project })
+    const result = await exec(["list", "--config", "difmp.invalid.config.ts"], { cwd: project })
     expect(result.code).toBe(2)
     expect(allOutput(result)).toContain("invalid configuration")
   })
@@ -86,7 +87,7 @@ describe("exit-code mapping", () => {
 })
 
 describe("config loading", () => {
-  it("loads harness.config.ts from an upward lookup and reports the resolved values", async () => {
+  it("loads difmp.config.ts from an upward lookup and reports the resolved values", async () => {
     const result = await exec(["validate"], { cwd: join(project, "tests", "nested") })
     expect(result.code).toBe(0)
     // The upward lookup found the config two directories above, so the sibling specs are in scope.
@@ -94,7 +95,7 @@ describe("config loading", () => {
   })
 
   it("loads a TS config that needs a transpiler (non-erasable `enum` -> tsx fallback)", async () => {
-    const result = await exec(["list", "--json", "--config", join(enumProject, "harness.config.ts")], {
+    const result = await exec(["list", "--json", "--config", join(enumProject, "difmp.config.ts")], {
       cwd: project
     })
     expect(result.code).toBe(2)
@@ -108,6 +109,19 @@ describe("config loading", () => {
     const result = await exec(["run"], { cwd: empty })
     expect(result.code).toBe(2)
     expect(allOutput(result)).toContain("<built-in defaults>")
+  })
+
+  /**
+   * `difmp.config.*` is the only basename discovery recognises. A `harness.config.ts` left over
+   * from the old name is an ordinary file: it is not loaded, and the run falls back to the
+   * built-in defaults rather than silently picking up settings nobody asked for.
+   */
+  it("ignores a harness.config.ts and falls back to the built-in defaults", async () => {
+    const result = await exec(["validate"], { cwd: strayHarnessConfig })
+    // The spec references `{{ configBasename }}`, which ONLY that file supplies. Under the
+    // built-in defaults the reference is undeclared, so validate must reject it.
+    expect(result.code).toBe(2)
+    expect(allOutput(result)).toContain("configBasename")
   })
 })
 

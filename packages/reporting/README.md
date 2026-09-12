@@ -1,11 +1,11 @@
-# `@harness/reporting`
+# `@difmp/reporting`
 
 The `Reporter` implementations: `result.json`, `junit.xml` and a standalone `report.html`.
 
 All three are **pure functions of the persisted run directory**. `renderAll(input)` takes a
 `ReportInput` — manifest, result, optional contract, artifact inventory, journal — and returns the
 three documents. No model call, no browser, no replay, no configuration re-resolution. That is what
-lets `harness report <run-directory>` rebuild a report months later, from a machine that never had
+lets `difmp report <run-directory>` rebuild a report months later, from a machine that never had
 the application under test.
 
 ## `report.html`
@@ -37,6 +37,6 @@ produced with one run-level `<error>` naming the infrastructure failure. An infr
 that reports nothing is indistinguishable, in CI, from a suite that never ran.
 
 ```sh
-pnpm --filter @harness/reporting build
+pnpm --filter @difmp/reporting build
 npx vitest run packages/reporting
 ```

@@ -43,4 +43,4 @@ export interface ReportOutput {
 export class Reporter extends Context.Service<Reporter, {
   readonly name: string
   readonly report: (input: ReportInput) => Effect.Effect<ReadonlyArray<ReportOutput>, ReporterError>
-}>()("@harness/core/services/Reporter") {}
+}>()("@difmp/core/services/Reporter") {}

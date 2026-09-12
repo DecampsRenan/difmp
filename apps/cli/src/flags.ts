@@ -5,7 +5,7 @@ const InputValue = Schema.Union([Schema.String, Schema.Finite, Schema.Boolean])
 const InputsFile = Schema.Record(Schema.String, InputValue)
 
 /**
- * Files, directories or globs. A quoted glob (`harness run '**\/*.e2e.md'`) arrives here
+ * Files, directories or globs. A quoted glob (`difmp run '**\/*.e2e.md'`) arrives here
  * unexpanded — bash only recurses on `**` with `shopt -s globstar`, and `cmd` expands nothing —
  * so the harness always does the matching itself.
  */
@@ -16,7 +16,7 @@ export const pathsArgument = Argument.String("paths").pipe(
 
 export const configFlag = Flag.String("config").pipe(
   Flag.withAlias("c"),
-  Flag.withDescription("Path to harness.config.ts (default: nearest one above the working directory)"),
+  Flag.withDescription("Path to difmp.config.ts (default: nearest one above the working directory)"),
   Flag.optional
 )
 
@@ -51,17 +51,17 @@ export const outputFlag = Flag.String("output").pipe(
 )
 
 export const providerFlag = Flag.Literals("provider", ["scripted", "anthropic"]).pipe(
-  Flag.withDescription("Model provider (overrides harness.config.ts)"),
+  Flag.withDescription("Model provider (overrides difmp.config.ts)"),
   Flag.optional
 )
 
 export const modelFlag = Flag.String("model").pipe(
-  Flag.withDescription("Provider-specific model id (overrides harness.config.ts)"),
+  Flag.withDescription("Provider-specific model id (overrides difmp.config.ts)"),
   Flag.optional
 )
 
 export const baseUrlFlag = Flag.String("base-url").pipe(
-  Flag.withDescription("Application under test (overrides harness.config.ts)"),
+  Flag.withDescription("Application under test (overrides difmp.config.ts)"),
   Flag.optional
 )
 
@@ -95,7 +95,7 @@ export const jsonFlag = Flag.Boolean("json").pipe(
   Flag.withDefault(false)
 )
 
-/** The shape shared by `harness run` and the bare `harness` alias. */
+/** The shape shared by `difmp run` and the bare `difmp` alias. */
 export const runConfig = {
   paths: pathsArgument,
   config: configFlag,

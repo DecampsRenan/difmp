@@ -1,12 +1,12 @@
-import type { AgentScript, ScriptedCall, ScriptedStep } from "@harness/agent-runtime"
-import { burnModelCallsScript, check, clickWithStaleObservation, finish, observe, screenshot } from "@harness/agent-runtime"
+import type { AgentScript, ScriptedCall, ScriptedStep } from "@difmp/agent-runtime"
+import { burnModelCallsScript, check, clickWithStaleObservation, finish, observe, screenshot } from "@difmp/agent-runtime"
 import type { JourneyOptions } from "./journey.js"
 import { createProjectSteps, formShape, reloadSteps } from "./journey.js"
 
 /**
  * The risky-behaviour cases of spec §13, bound to the fixture app.
  *
- * `@harness/agent-runtime` already ships app-agnostic versions of these shapes
+ * `@difmp/agent-runtime` already ships app-agnostic versions of these shapes
  * (`prematureFinishScript`, `exceedActionsScript`, `staleObservationScript`,
  * `burnModelCallsScript`). The variants below exist because the interesting assertions need the
  * real app: a stale reference must be refused *while a real element with that name exists*, and a

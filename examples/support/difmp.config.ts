@@ -1,4 +1,4 @@
-import { defineConfig } from "@harness/core"
+import { defineConfig } from "@difmp/core"
 import { projectUniqueInStorage } from "./checks/project-unique-in-storage.js"
 import { authenticatedWorkspace } from "./fixtures/authenticated-workspace.js"
 import { fixtureAppScriptRegistry } from "./scripts/registry.js"
@@ -6,18 +6,18 @@ import { fixtureAppScriptRegistry } from "./scripts/registry.js"
 /**
  * Demo configuration for the example scenarios.
  *
- * `HARNESS_BASE_URL` exists because the fixture app binds an ephemeral port by default
+ * `DIFMP_BASE_URL` exists because the fixture app binds an ephemeral port by default
  * (`--port 0`); a test harness that started it programmatically exports the URL it actually got.
  * With `node dist/main.js --port 3000 --seed` the default below is already correct.
  */
-const baseUrl = process.env["HARNESS_BASE_URL"] ?? "http://127.0.0.1:3000"
+const baseUrl = process.env["DIFMP_BASE_URL"] ?? "http://127.0.0.1:3000"
 
 export default defineConfig({
   // Discovery. `include`/`exclude` are resolved against the DIRECTORY OF THIS FILE, not the
-  // invocation directory — so a consumer gets the same selection wherever they run `harness` from.
+  // invocation directory — so a consumer gets the same selection wherever they run `difmp` from.
   // Paths given as CLI arguments are resolved against the invocation directory instead.
   // `invalid/` holds specs that MUST be rejected; they are fixtures for the loader, not runs, and
-  // naming one explicitly (`harness run examples/scenarios/invalid/x.e2e.md`) still reaches it.
+  // naming one explicitly (`difmp run examples/scenarios/invalid/x.e2e.md`) still reaches it.
   include: ["../scenarios/**/*.e2e.md"],
   exclude: ["**/invalid/**"],
 
@@ -47,15 +47,15 @@ export default defineConfig({
   // Model. `scripted` is the deterministic, network-free double, so the repository's tests need no
   // API key. Switch to the real adapter with:
   //   provider: "anthropic", model: "claude-sonnet-5"   (+ ANTHROPIC_API_KEY in the environment)
-  // or, without editing this file, `harness run --provider anthropic --model claude-sonnet-5`.
+  // or, without editing this file, `difmp run --provider anthropic --model claude-sonnet-5`.
   // A scripted run never validates a model's ability to navigate — the report names the adapter.
   provider: "scripted",
   providerOptions: {
     // "auto" picks the journey from the scenario and from FIXTURE_APP_VARIANT, so the four
-    // variants of spec §13 run without editing this file. HARNESS_SCRIPT selects one of the
+    // variants of spec §13 run without editing this file. DIFMP_SCRIPT selects one of the
     // harness-behaviour cases instead (premature-finish, exceed-actions, stale-observation,
     // budget-exhausted, invented-evidence, needs-evidence).
-    script: process.env["HARNESS_SCRIPT"] ?? "auto",
+    script: process.env["DIFMP_SCRIPT"] ?? "auto",
     maxTokens: 2048,
     temperature: 0
   },

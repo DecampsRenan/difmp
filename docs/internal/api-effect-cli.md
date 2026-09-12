@@ -135,7 +135,7 @@ Combinators: `optional`, `withDefault`, `withDescription`, `withMetavar`, `withS
 `filterMap`, `orElse`, `orElseResult`, `atLeast`, `atMost`, `between`, `ChoiceWithValue`,
 **`variadic`**.
 
-### Variadic positionals — `harness run [paths...]`
+### Variadic positionals — `difmp run [paths...]`
 
 `Argument.variadic` is `dual`, so **both** of these are valid (the ai-docs use both spellings):
 
@@ -149,7 +149,7 @@ const bounded   = Argument.String("paths").pipe(Argument.variadic({ min: 1, max:
 `min: 0` (the default) renders as `[<paths...>]` and is optional. Violations surface as
 `CliError.MissingArgument` (too few) / `CliError.UnexpectedArgument` (too many).
 
-`--` ends flag parsing: everything after it becomes positional (`harness run -- --not-a-flag b.yaml`
+`--` ends flag parsing: everything after it becomes positional (`difmp run -- --not-a-flag b.yaml`
 → `paths === ["--not-a-flag", "b.yaml"]`). Verified at runtime.
 
 ## 4. Root command that is ALSO the default subcommand
@@ -172,7 +172,7 @@ const cli = harness.pipe(Command.withSubcommands([run, list, validate, report]))
 ```
 
 Verified: `harness 'e2e/**/*.yaml' a.yaml -i user=bob -r json` runs the root handler, exit 0;
-`harness run ...` runs the subcommand; `harness list` runs the `list` subcommand.
+`difmp run ...` runs the subcommand; `difmp list` runs the `list` subcommand.
 
 **GOTCHAS**
 
@@ -181,7 +181,7 @@ Verified: `harness 'e2e/**/*.yaml' a.yaml -i user=bob -r json` runs the root han
   *no* positional args (`toImpl(command).config.arguments.length > 0` gate). If you want typo
   detection you must validate the glob list yourself in the handler.
 - A file literally named `run`/`list`/`validate`/`report` in argv position 1 is taken as the
-  subcommand. Users must write `harness ./run` or `harness -- run`.
+  subcommand. Users must write `difmp ./run` or `difmp -- run`.
 - Duplicating the config means duplicating flag definitions; that is fine (they are separate
   `Command`s), but a *shared* flag on the root that is also declared locally on a subcommand throws
   at construction time (`checkForDuplicateFlags`).
@@ -375,7 +375,7 @@ const exec = (argv: ReadonlyArray<string>) =>
 ```
 
 Verified output: `{ code: 0, stdout: ['{"paths":["a.ts"],"reporter":["json"]}'] }`, and for
-`["run","--zzz"]`: `code: 1`, `stderr: ['\nERROR\n  Unrecognized flag: --zzz in command harness run']`.
+`["run","--zzz"]`: `code: 1`, `stderr: ['\nERROR\n  Unrecognized flag: --zzz in command difmp run']`.
 Help/errors go through `Console`, **not** through the `Stdio` sinks, so overriding `Console.Console`
 is the capture point. `Stdio.layerTest({ args })` only feeds `Command.run`'s argv.
 
@@ -448,7 +448,7 @@ const runHandler = Effect.fnUntraced(function*(cfg: RunInput) {
   if (failed > 0) return yield* new FailedRun({ failed })
 })
 
-// --- root command: own config == `run` config, so bare `harness <globs>` works
+// --- root command: own config == `run` config, so bare `difmp <globs>` works
 const harness = Command.make("harness", runConfig).pipe(
   Command.withSharedFlags({ verbose }),
   Command.withDescription("Agentic E2E harness"),
@@ -459,7 +459,7 @@ const run = Command.make("run", runConfig, (cfg) =>
   Effect.flatMap(harness, (root) => runHandler({ ...cfg, verbose: root.verbose }))).pipe(
     Command.withDescription("Run scenarios"),
     Command.withExamples([
-      { command: "harness run 'e2e/**/*.yaml' -i user=bob -r json", description: "Run" }
+      { command: "difmp run 'e2e/**/*.yaml' -i user=bob -r json", description: "Run" }
     ])
   )
 
@@ -517,12 +517,12 @@ Observed runs:
 $ harness 'e2e/**/*.yaml' a.yaml -i user=bob -i env=ci -r json -r html --concurrency 4
 {"paths":["e2e/**/*.yaml","a.yaml"],"input":{"user":"bob","env":"ci"},"reporter":["json","html"],"headless":true,"outDir":null}   exit 0
 $ harness --no-headless a.yaml      -> headless:false                                   exit 0
-$ harness run -- --not-a-flag b.yaml -> paths:["--not-a-flag","b.yaml"]                 exit 0
+$ difmp run -- --not-a-flag b.yaml -> paths:["--not-a-flag","b.yaml"]                 exit 0
 $ harness --input=a=1 --input=b=2 --reporter=json x  -> input:{a:"1",b:"2"}             exit 0
-$ harness --help / --version / list                                                     exit 0
+$ difmp --help / --version / list                                                     exit 0
 $ harness --nope        -> help + "ERROR Unrecognized flag: --nope in command harness"  exit 2
-$ harness report        -> "Missing required argument: from"                            exit 2
-$ harness run --concurrency 0 x.yaml                                                    exit 2
+$ difmp report        -> "Missing required argument: from"                            exit 2
+$ difmp run --concurrency 0 x.yaml                                                    exit 2
 $ harness rnu           -> treated as a glob, paths:["rnu"]                             exit 0  (!)
 $ <SIGINT>                                                                              exit 130
 ```

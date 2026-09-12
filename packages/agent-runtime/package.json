@@ -1,5 +1,5 @@
 {
-  "name": "@harness/agent-runtime",
+  "name": "@difmp/agent-runtime",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -22,6 +22,6 @@
   "dependencies": {
     "effect": "4.0.0-rc.113",
     "@effect/ai-anthropic": "4.0.0-rc.113",
-    "@harness/core": "workspace:*"
+    "@difmp/core": "workspace:*"
   }
 }

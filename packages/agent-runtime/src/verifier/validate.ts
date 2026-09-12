@@ -1,4 +1,4 @@
-import type { Criterion, CriterionDowngrade, CriterionResult, EvidenceItem, Evaluator } from "@harness/core"
+import type { Criterion, CriterionDowngrade, CriterionResult, EvidenceItem, Evaluator } from "@difmp/core"
 import type { CriterionVerdictShape } from "./verdict.js"
 
 export interface VerdictValidation {

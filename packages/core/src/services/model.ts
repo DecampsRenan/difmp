@@ -65,4 +65,4 @@ export class ModelProvider extends Context.Service<ModelProvider, {
   readonly id: string
   readonly modelId: string
   readonly generate: (request: GenerateRequest) => Effect.Effect<ProviderResponse, ProviderError>
-}>()("@harness/core/services/ModelProvider") {}
+}>()("@difmp/core/services/ModelProvider") {}

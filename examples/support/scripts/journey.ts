@@ -1,11 +1,11 @@
-import type { AgentScript, ScriptedCall, ScriptedStep } from "@harness/agent-runtime"
-import { check, clickByName, fillByName, finish, navigate, observe, screenshot } from "@harness/agent-runtime"
-import type { Variant } from "@harness/fixture-app"
+import type { AgentScript, ScriptedCall, ScriptedStep } from "@difmp/agent-runtime"
+import { check, clickByName, fillByName, finish, navigate, observe, screenshot } from "@difmp/agent-runtime"
+import type { Variant } from "@difmp/fixture-app"
 
 /**
  * Fixture-app-specific browsing scripts for the deterministic (scripted) adapter.
  *
- * The script FORMAT and the reusable, app-agnostic patterns live in `@harness/agent-runtime`
+ * The script FORMAT and the reusable, app-agnostic patterns live in `@difmp/agent-runtime`
  * (`src/scripted/script.ts` and `src/scripted/scenarios.ts`) — that package already ships that
  * location, so nothing is duplicated here. What lives in this file is the part that can only be
  * written against a concrete application: the real accessible names of the fixture app, per

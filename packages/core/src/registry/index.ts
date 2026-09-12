@@ -96,7 +96,7 @@ export type Check = (ctx: CheckContext) => Promise<CheckResult>
  * the inputs are resolved — so the registry holds FACTORIES, not finished scripts.
  *
  * Core stays free of any model SDK: the returned value is opaque here and is typed by the package
- * that owns the scripted adapter (`@harness/agent-runtime`).
+ * that owns the scripted adapter (`@difmp/agent-runtime`).
  */
 export interface ScriptFactoryContext {
   readonly runId: string
@@ -135,7 +135,7 @@ export const makeRegistry = <A>(
     lookup: (name) =>
       Object.prototype.hasOwnProperty.call(entries, name)
         ? Effect.succeed(entries[name]!)
-        : Effect.fail(new RegistryError({ kind, name, reason: "is not registered in harness.config.ts", registered: names }))
+        : Effect.fail(new RegistryError({ kind, name, reason: "is not registered in difmp.config.ts", registered: names }))
   }
 }
 
@@ -144,7 +144,7 @@ export interface Registries {
   readonly checks: Registry<Check>
   /**
    * Optional: only a run using the deterministic (scripted) adapter resolves a name here. It is
-   * declared in `harness.config.ts` next to `fixtures` and `checks` and, like them, a name is
+   * declared in `difmp.config.ts` next to `fixtures` and `checks` and, like them, a name is
    * never a module path.
    */
   readonly scripts?: Registry<ScriptFactory>
@@ -177,7 +177,7 @@ export const validateSpecRegistries = (options: {
         new RegistryError({
           kind: "check",
           name: checkName,
-          reason: `is mapped to criterion ${criterion.id} but is not registered in harness.config.ts`,
+          reason: `is mapped to criterion ${criterion.id} but is not registered in difmp.config.ts`,
           registered: registries.checks.names
         })
       )

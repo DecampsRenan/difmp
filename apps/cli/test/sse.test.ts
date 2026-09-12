@@ -289,7 +289,7 @@ describe("endpoints the live UI consumes", () => {
   })
 
   it("serves the frozen contract of the run being followed, and 404s before there is one", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "harness-contract-"))
+    const dir = mkdtempSync(join(tmpdir(), "difmp-contract-"))
     try {
       const result = await withServer(({ bus, url }) =>
         Effect.gen(function*() {
@@ -316,7 +316,7 @@ describe("endpoints the live UI consumes", () => {
   })
 
   it("serves artifacts by their run-relative path and refuses to escape the run directory", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "harness-artifacts-"))
+    const dir = mkdtempSync(join(tmpdir(), "difmp-artifacts-"))
     try {
       mkdirSync(join(dir, "attempts", "a1", "screenshots"), { recursive: true })
       writeFileSync(join(dir, "attempts", "a1", "screenshots", "final.txt"), "evidence", "utf8")

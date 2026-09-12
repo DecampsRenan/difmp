@@ -1,4 +1,4 @@
-import type { LoadedSpec, ReportInput, ResolvedConfig, Registries, RunResult } from "@harness/core"
+import type { LoadedSpec, ReportInput, ResolvedConfig, Registries, RunResult } from "@difmp/core"
 import {
   attemptId as makeAttemptId,
   makeRunId,
@@ -7,9 +7,9 @@ import {
   RunStore,
   runScenario,
   Verifier
-} from "@harness/core"
-import * as BrowserPlaywright from "@harness/browser-playwright"
-import { makeVerifier } from "@harness/agent-runtime"
+} from "@difmp/core"
+import * as BrowserPlaywright from "@difmp/browser-playwright"
+import { makeVerifier } from "@difmp/agent-runtime"
 import { Crypto, Effect, Exit, FiberSet, FileSystem, Layer, Path, Stream } from "effect"
 import { ExecutionError } from "./errors.js"
 import { modelProviderFor } from "./providers.js"
@@ -49,7 +49,7 @@ export interface RunOutcome {
 
 /**
  * One scenario, end to end: mint the run id, assemble the service layers, run, then rebuild the
- * report input from what was PERSISTED — the same path `harness report` takes.
+ * report input from what was PERSISTED — the same path `difmp report` takes.
  */
 export const runOne = (
   options: RunOneOptions
@@ -128,7 +128,7 @@ export const runOne = (
           return yield* makeVerifier({
             checks: registries.checks,
             runId,
-            // A blocking budget like any other: declared in `harness.config.ts`, printed with the
+            // A blocking budget like any other: declared in `difmp.config.ts`, printed with the
             // resolved configuration, recorded in `manifest.json`.
             maxEvidenceRequests: config.budgets.maxEvidenceRequests,
             recordEvidence: (entry) =>

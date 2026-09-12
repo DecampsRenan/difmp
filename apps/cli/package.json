@@ -1,10 +1,10 @@
 {
-  "name": "@harness/cli",
+  "name": "difmp",
   "version": "0.1.0",
   "type": "module",
   "description": "Agent-driven end-to-end test harness: run *.e2e.md scenarios from any project",
   "bin": {
-    "harness": "./dist/bin/harness.js"
+    "difmp": "./dist/bin/difmp.js"
   },
   "exports": {
     ".": {
@@ -41,10 +41,10 @@
     "tinyglobby": "^0.2.17"
   },
   "devDependencies": {
-    "@harness/agent-runtime": "workspace:*",
-    "@harness/browser-playwright": "workspace:*",
-    "@harness/core": "workspace:*",
-    "@harness/reporting": "workspace:*",
+    "@difmp/agent-runtime": "workspace:*",
+    "@difmp/browser-playwright": "workspace:*",
+    "@difmp/core": "workspace:*",
+    "@difmp/reporting": "workspace:*",
     "tsdown": "^0.23.0",
     "vitest": "^5.0.0"
   }

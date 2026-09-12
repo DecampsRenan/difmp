@@ -1,5 +1,5 @@
-import type { LoadedSpec, Registries, ResolvedConfig } from "@harness/core"
-import { resolveInputPrecedence, resolveInputs, SpecLoader, validateReferences } from "@harness/core"
+import type { LoadedSpec, Registries, ResolvedConfig } from "@difmp/core"
+import { resolveInputPrecedence, resolveInputs, SpecLoader, validateReferences } from "@difmp/core"
 import { Console, Effect, FileSystem, Option, Path } from "effect"
 import { UsageError } from "../errors.js"
 import { loadProject } from "../project.js"

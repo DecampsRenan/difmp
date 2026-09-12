@@ -1,5 +1,5 @@
 {
-  "name": "@harness/reporting",
+  "name": "@difmp/reporting",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -21,6 +21,6 @@
   },
   "dependencies": {
     "effect": "4.0.0-rc.113",
-    "@harness/core": "workspace:*"
+    "@difmp/core": "workspace:*"
   }
 }

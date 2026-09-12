@@ -5,8 +5,8 @@ import type {
   VerificationRequest,
   VerificationResponse,
   Verifier as VerifierService
-} from "@harness/core"
-import { decodeStrict, formatSchemaError, ModelProvider, Verifier, VerifierError } from "@harness/core"
+} from "@difmp/core"
+import { decodeStrict, formatSchemaError, ModelProvider, Verifier, VerifierError } from "@difmp/core"
 import { Crypto, Effect, Layer, Ref } from "effect"
 import { scriptedProviderId } from "../scripted/provider.js"
 import { verifierPrompt } from "./prompt.js"
@@ -29,7 +29,7 @@ export interface VerifierOptions {
    * whole action budget on the same criterion.
    *
    * This is `budgets.maxEvidenceRequests`: the CLI passes the resolved configuration's value, so
-   * it is declared in `harness.config.ts`, printed with the resolved configuration and recorded in
+   * it is declared in `difmp.config.ts`, printed with the resolved configuration and recorded in
    * `manifest.json` like every other blocking budget. The default here exists only for a verifier
    * built outside a run (tests, probes).
    */

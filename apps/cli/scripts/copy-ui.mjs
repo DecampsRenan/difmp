@@ -10,11 +10,11 @@ const source = resolve(here, "..", "..", "ui", "dist")
 const target = resolve(here, "..", "assets", "ui")
 
 if (!existsSync(source)) {
-  console.log(`[harness] no built UI at ${source} — the CLI will serve assets/dashboard.html instead`)
+  console.log(`[difmp] no built UI at ${source} — the CLI will serve assets/dashboard.html instead`)
   mkdirSync(target, { recursive: true })
   process.exit(0)
 }
 rmSync(target, { recursive: true, force: true })
 mkdirSync(target, { recursive: true })
 cpSync(source, target, { recursive: true })
-console.log(`[harness] copied ${source} -> ${target}`)
+console.log(`[difmp] copied ${source} -> ${target}`)

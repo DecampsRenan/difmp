@@ -1,4 +1,4 @@
-import type { ReportInput } from "@harness/core"
+import type { ReportInput } from "@difmp/core"
 import { escapeXml } from "./escape.js"
 import type { CriterionView, ReportView } from "./view.js"
 import { buildReportView } from "./view.js"

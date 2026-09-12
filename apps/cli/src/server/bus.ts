@@ -1,4 +1,4 @@
-import type { HarnessEvent } from "@harness/core"
+import type { HarnessEvent } from "@difmp/core"
 import { Cause, Deferred, Effect, Queue, Scope } from "effect"
 
 /**

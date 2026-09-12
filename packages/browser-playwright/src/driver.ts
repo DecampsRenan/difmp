@@ -1,5 +1,5 @@
-import type { BrowserSession, CaptureOutcome, OpenContextOptions, StorageStateLike } from "@harness/core"
-import { BrowserDriver, BrowserError } from "@harness/core"
+import type { BrowserSession, CaptureOutcome, OpenContextOptions, StorageStateLike } from "@difmp/core"
+import { BrowserDriver, BrowserError } from "@difmp/core"
 import { Effect, Layer } from "effect"
 import type { Scope } from "effect/Scope"
 import { mkdir } from "node:fs/promises"

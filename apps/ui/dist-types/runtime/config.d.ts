@@ -1,7 +1,7 @@
 /**
  * Endpoints the CLI's SSE server exposes. Defaults are RELATIVE so the page works wherever the CLI
  * mounts `apps/ui/dist` (vite `base: "./"`). The CLI may override them by injecting
- * `globalThis.__HARNESS_UI__ = { ... }` in a script tag before the bundle.
+ * `globalThis.__DIFMP_UI__ = { ... }` in a script tag before the bundle.
  */
 export interface UiRuntimeConfig {
     /** SSE stream of `HarnessEvent`s, `id:` = event `seq`. Must honour `Last-Event-ID`. */

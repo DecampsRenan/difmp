@@ -1,4 +1,4 @@
-import type { Criterion, EvidenceItem, InputsRecord, Prompt as HarnessPrompt } from "@harness/core"
+import type { Criterion, EvidenceItem, InputsRecord, Prompt as HarnessPrompt } from "@difmp/core"
 import { criterionMarker } from "./verdict.js"
 
 /**

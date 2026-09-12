@@ -1,5 +1,5 @@
-import type { ScriptedProviderScript, VerdictScript, VerdictSpec } from "@harness/agent-runtime"
-import type { Variant } from "@harness/fixture-app"
+import type { ScriptedProviderScript, VerdictScript, VerdictSpec } from "@difmp/agent-runtime"
+import type { Variant } from "@difmp/fixture-app"
 import type { JourneyOptions } from "./journey.js"
 import { loginThenCreateScript, projectCreateScript } from "./journey.js"
 import { budgetExhaustionScript, exceedActionsThenSucceed, prematureFinishOnFixtureApp, skipLastCriterion, slowExplorationScript, staleObservationOnFixtureApp } from "./risky.js"

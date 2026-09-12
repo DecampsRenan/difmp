@@ -1,6 +1,6 @@
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
-import type { ReportOutput } from "@harness/core"
-import { Reporter } from "@harness/core"
+import type { ReportOutput } from "@difmp/core"
+import { Reporter } from "@difmp/core"
 import { Effect, Layer } from "effect"
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -52,7 +52,7 @@ let browser: Browser
 let outputDir: string
 
 beforeAll(async () => {
-  outputDir = mkdtempSync(join(tmpdir(), "harness-report-"))
+  outputDir = mkdtempSync(join(tmpdir(), "difmp-report-"))
   browser = await chromium.launch()
 }, 60_000)
 

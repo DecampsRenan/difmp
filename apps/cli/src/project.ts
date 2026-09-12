@@ -1,5 +1,5 @@
-import type { ConfigOverrides, ProviderName, ReporterName, ResolvedProject } from "@harness/core"
-import { resolveConfig } from "@harness/core"
+import type { ConfigOverrides, ProviderName, ReporterName, ResolvedProject } from "@difmp/core"
+import { resolveConfig } from "@difmp/core"
 import { Effect } from "effect"
 import { UsageError } from "./errors.js"
 import type { ConfigLocation } from "./loadConfig.js"

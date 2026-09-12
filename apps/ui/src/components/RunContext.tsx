@@ -32,7 +32,7 @@ export const RunContext = (props: { readonly model: RunModel }) => {
           <dd className="mono">{model.contractHash === undefined ? "—" : model.contractHash.slice(0, 16)}</dd>
         </div>
         <div>
-          <dt>Version harness</dt>
+          <dt>Version difmp</dt>
           <dd>{model.harnessVersion ?? "—"}</dd>
         </div>
       </dl>

@@ -54,8 +54,8 @@ export const discoverSpecs = (options: DiscoverOptions): Effect.Effect<ReadonlyA
       const literals = requested.filter(isLiteralPath)
       const globs = requested.filter((p) => !isLiteralPath(p))
       // Naming ONE file on the command line is an unambiguous instruction, so it is not filtered
-      // by `exclude`; a glob or a directory still is, otherwise `harness run .` would walk
-      // node_modules. This is what makes `harness run examples/scenarios/invalid/x.e2e.md`
+      // by `exclude`; a glob or a directory still is, otherwise `difmp run .` would walk
+      // node_modules. This is what makes `difmp run examples/scenarios/invalid/x.e2e.md`
       // reach the loader (and be rejected by it) rather than silently select nothing.
       const namedFiles = literals.filter((p) => p.endsWith(".e2e.md"))
       const searched = requested.length === 0

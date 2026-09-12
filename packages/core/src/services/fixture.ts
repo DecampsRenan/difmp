@@ -58,4 +58,4 @@ export class FixtureManager extends Context.Service<FixtureManager, {
    * `AbortSignal` so a cancelled setup is aborted rather than abandoned.
    */
   readonly setup: (request: FixtureSetupRequest) => Effect.Effect<FixtureSession, FixtureError>
-}>()("@harness/core/services/FixtureManager") {}
+}>()("@difmp/core/services/FixtureManager") {}

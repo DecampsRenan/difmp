@@ -97,7 +97,7 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
 
     /** A frame we cannot use is counted and logged rather than silently swallowed. */
     const drop = (raw: string, why: string) => {
-      console.warn(`[harness-ui] trame ignorée (${why}) :`, raw.slice(0, 200))
+      console.warn(`[difmp-ui] trame ignorée (${why}) :`, raw.slice(0, 200))
       dispatch({ kind: "malformed" })
     }
 

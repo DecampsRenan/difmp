@@ -1,4 +1,4 @@
-import type { ReportInput, RunResult } from "@harness/core"
+import type { ReportInput, RunResult } from "@difmp/core"
 
 /** Recursively sort object keys so two identical results always serialise byte-for-byte alike. */
 const sortKeysDeep = (value: unknown): unknown => {

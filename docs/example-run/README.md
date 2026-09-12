@@ -4,13 +4,17 @@ A real, unedited run directory, produced by:
 
 ```sh
 node examples/fixture-app/dist/main.js --port 0 --variant false-success --seed   # note the URL + x-seed-token it prints
-HARNESS_BASE_URL=<url> FIXTURE_APP_SEED_TOKEN=<token> \
-  node apps/cli/dist/bin/harness.js run examples/scenarios/project-create.e2e.md \
-       --config examples/support/harness.config.ts
+DIFMP_BASE_URL=<url> FIXTURE_APP_SEED_TOKEN=<token> FIXTURE_APP_VARIANT=false-success \
+  node apps/cli/dist/bin/difmp.js run examples/scenarios/project-create.e2e.md \
+       --config examples/support/difmp.config.ts
 ```
 
+`FIXTURE_APP_VARIANT` is what tells the `auto` entry of the scripted adapter which walkthrough it is
+about to meet; `--variant` alone only changes the application. Without it the adapter drives the
+healthy journey and the run passes, which is not what this directory shows.
+
 `runs/` is gitignored, so this is a copy. **One file was pruned: `attempts/a1/trace.zip`
-(1.3 MB).** It is still listed in `artifacts.json` as `art_9`, `state: "present"` — that record
+(1.1 MB).** It is still listed in `artifacts.json` as `art_9`, `state: "present"` — that record
 describes the run as it happened, and editing it to hide the pruning would be a lie about the
 evidence. Everything else is byte-for-byte what the harness wrote.
 

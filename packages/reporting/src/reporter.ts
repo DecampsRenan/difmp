@@ -1,5 +1,5 @@
-import type { ReportInput, ReportOutput, RunLayout } from "@harness/core"
-import { Reporter, ReporterError } from "@harness/core"
+import type { ReportInput, ReportOutput, RunLayout } from "@difmp/core"
+import { Reporter, ReporterError } from "@difmp/core"
 import { Effect, FileSystem, Layer, Path } from "effect"
 import { renderHtmlFromView } from "./html.js"
 import { renderJsonReport } from "./json.js"

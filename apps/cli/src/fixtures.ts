@@ -1,5 +1,5 @@
-import type { FixtureCleanupReport, FixtureSession, Registries, StorageStateLike } from "@harness/core"
-import { FixtureError, FixtureManager, recordingSecrets } from "@harness/core"
+import type { FixtureCleanupReport, FixtureSession, Registries, StorageStateLike } from "@difmp/core"
+import { FixtureError, FixtureManager, recordingSecrets } from "@difmp/core"
 import { Duration, Effect, Exit, Layer, Option } from "effect"
 
 type Cleanup = () => Promise<void> | void

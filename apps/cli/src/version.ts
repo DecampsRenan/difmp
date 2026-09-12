@@ -43,7 +43,7 @@ const versionOf = (name: string): string => {
 
 /** Persisted into `manifest.json` so a report can say exactly what produced it. */
 export const dependencyVersions = (): Readonly<Record<string, string>> => {
-  const out: Record<string, string> = { node: process.version, "@harness/cli": harnessVersion }
+  const out: Record<string, string> = { node: process.version, "difmp": harnessVersion }
   for (const name of trackedDependencies) out[name] = versionOf(name)
   return out
 }

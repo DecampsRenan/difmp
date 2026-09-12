@@ -1,4 +1,4 @@
-import { defineConfig } from "@harness/core"
+import { defineConfig } from "@difmp/core"
 
 export default defineConfig({
   baseUrl: "http://127.0.0.1:3000",

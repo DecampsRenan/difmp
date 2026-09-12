@@ -1,12 +1,12 @@
-import type { ScriptFactory, ScriptFactoryContext } from "@harness/core"
-import type { ScriptedProviderScript } from "@harness/agent-runtime"
-import type { Variant } from "@harness/fixture-app"
-import { isVariant } from "@harness/fixture-app"
+import type { ScriptFactory, ScriptFactoryContext } from "@difmp/core"
+import type { ScriptedProviderScript } from "@difmp/agent-runtime"
+import type { Variant } from "@difmp/fixture-app"
+import { isVariant } from "@difmp/fixture-app"
 import type { FixtureAppScriptOptions } from "./index.js"
 import { fixtureAppScripts } from "./index.js"
 
 /**
- * The `scripts` registry of `harness.config.ts`, for the deterministic (scripted) adapter.
+ * The `scripts` registry of `difmp.config.ts`, for the deterministic (scripted) adapter.
  *
  * A script is registered as a FACTORY rather than as a finished object because it has to name the
  * value the run will really type into the form — `Projet {{ run.id }}` is only a concrete string

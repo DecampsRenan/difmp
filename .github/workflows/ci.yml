@@ -22,7 +22,7 @@
 #
 # WHAT WAS ACTUALLY VERIFIED, AND WHAT WAS NOT. Every `run:` step's command was executed locally,
 # on Node 24.19.0 / pnpm 10.29.3, exactly as written: `pnpm install --frozen-lockfile`,
-# `pnpm run typecheck`, `pnpm run build`, `pnpm --filter @harness/fixture-app build`,
+# `pnpm run typecheck`, `pnpm run build`, `pnpm --filter @difmp/fixture-app build`,
 # `pnpm run test`, `apps/cli/scripts/consumer-smoke/run.sh` (the step below passes `npm pnpm yarn`
 # = 6 cells; adding `yarn1` gives the 8 cells the README quotes — 24/24 assertions in each),
 # `apps/cli/scripts/ci/run-examples.sh` (healthy and alt-layout, 3 scenarios each, exit 0 through
@@ -68,7 +68,7 @@ env:
   NODE_VERSION: "24.19.0"
 
 jobs:
-  harness:
+  difmp:
     name: typecheck, tests, packaging, example scenarios
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -118,9 +118,9 @@ jobs:
       # project-references typecheck above already emits `examples/fixture-app/dist`, but the demo
       # app is what the scenarios drive, so build it explicitly rather than by side effect.
       - name: Build the demo application the scenarios drive
-        run: pnpm --filter @harness/fixture-app build
+        run: pnpm --filter @difmp/fixture-app build
 
-      - name: Harness test suites (Vitest)
+      - name: Test suites (Vitest)
         run: pnpm run test
 
       # Spec §13, last bullet. Packs the tarball, installs it into consumer projects OUTSIDE the
@@ -149,7 +149,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: harness-ci-${{ github.run_id }}
+          name: difmp-ci-${{ github.run_id }}
           path: ci-artifacts/**
           retention-days: 14
           if-no-files-found: ignore
@@ -170,8 +170,8 @@ jobs:
     continue-on-error: true
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      HARNESS_PROVIDER: anthropic
-      HARNESS_MODEL: ${{ inputs.model }}
+      DIFMP_PROVIDER: anthropic
+      DIFMP_MODEL: ${{ inputs.model }}
     steps:
       - name: Require the API key secret
         run: |
@@ -201,7 +201,7 @@ jobs:
         run: pnpm exec playwright install-deps chromium
 
       - run: pnpm run build
-      - run: pnpm --filter @harness/fixture-app build
+      - run: pnpm --filter @difmp/fixture-app build
 
       # `alt-layout` is the variant worth pointing a real model at: same functional affordances,
       # a different arrangement, so it measures navigation rather than memorised coordinates.

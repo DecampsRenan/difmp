@@ -48,7 +48,7 @@ export const schemaProblems = (error: Schema.SchemaError): ReadonlyArray<SchemaP
 
 /**
  * Human message naming the field and its path, e.g.
- * `harness.config.ts: invalid value\n  - budgets.maxTokens: Expected a value greater than 0, got -1`
+ * `difmp.config.ts: invalid value\n  - budgets.maxTokens: Expected a value greater than 0, got -1`
  */
 export const formatSchemaError = (
   error: Schema.SchemaError,

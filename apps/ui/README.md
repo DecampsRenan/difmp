@@ -1,14 +1,14 @@
-# `@harness/ui` — the live dashboard
+# `@difmp/ui` — the live dashboard
 
 A small React app that follows **one run** as it happens. `vite build` emits static assets into
 `dist/`, which `apps/cli` copies into its own `assets/ui` at build time and serves from memory. There
 is no server here and no build step in the consumer's project.
 
 ```sh
-pnpm --filter @harness/ui build     # or: pnpm --filter @harness/ui dev
+pnpm --filter @difmp/ui build     # or: pnpm --filter @difmp/ui dev
 ```
 
-It is an **option of the runner** (`harness run --ui`), never a requirement: a CI run starts no
+It is an **option of the runner** (`difmp run --ui`), never a requirement: a CI run starts no
 server at all, and a run progresses identically with nothing attached.
 
 ## How it finds the CLI
@@ -17,7 +17,7 @@ Every URL is **relative to the page** (`base: "./"`), so the CLI may mount the b
 The CLI overrides the four endpoints by injecting one script tag before the bundle:
 
 ```html
-<script id="harness-ui-runtime">globalThis.__HARNESS_UI__ = {
+<script id="difmp-ui-runtime">globalThis.__DIFMP_UI__ = {
   eventsUrl: "/api/ui/events", cancelUrl: "/api/cancel",
   contractUrl: "/api/contract", artifactBaseUrl: "/api/artifacts/"
 }</script>

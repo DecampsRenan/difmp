@@ -91,16 +91,16 @@ importers:
         specifier: ^2.9.0
         version: 2.9.0
     devDependencies:
-      '@harness/agent-runtime':
+      '@difmp/agent-runtime':
         specifier: workspace:*
         version: link:../../packages/agent-runtime
-      '@harness/browser-playwright':
+      '@difmp/browser-playwright':
         specifier: workspace:*
         version: link:../../packages/browser-playwright
-      '@harness/core':
+      '@difmp/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@harness/reporting':
+      '@difmp/reporting':
         specifier: workspace:*
         version: link:../../packages/reporting
       tsdown:
@@ -139,13 +139,13 @@ importers:
 
   examples/support:
     dependencies:
-      '@harness/agent-runtime':
+      '@difmp/agent-runtime':
         specifier: workspace:*
         version: link:../../packages/agent-runtime
-      '@harness/core':
+      '@difmp/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@harness/fixture-app':
+      '@difmp/fixture-app':
         specifier: workspace:*
         version: link:../fixture-app
       effect:
@@ -157,7 +157,7 @@ importers:
       '@effect/ai-anthropic':
         specifier: 4.0.0-rc.113
         version: 4.0.0-rc.113(effect@4.0.0-rc.113)
-      '@harness/core':
+      '@difmp/core':
         specifier: workspace:*
         version: link:../core
       effect:
@@ -166,7 +166,7 @@ importers:
 
   packages/browser-playwright:
     dependencies:
-      '@harness/core':
+      '@difmp/core':
         specifier: workspace:*
         version: link:../core
       effect:
@@ -190,7 +190,7 @@ importers:
 
   packages/reporting:
     dependencies:
-      '@harness/core':
+      '@difmp/core':
         specifier: workspace:*
         version: link:../core
       effect:

@@ -2,7 +2,7 @@
 
 Three `*.e2e.md` scenarios that run, and four that must be **rejected**. They target
 [`examples/fixture-app`](../fixture-app/README.md) through
-[`examples/support`](../support/README.md)'s `harness.config.ts`.
+[`examples/support`](../support/README.md)'s `difmp.config.ts`.
 
 The scenarios are written in French, like the spec. The harness itself is language-agnostic: the body
 and the criteria are text handed to a model, and the frontmatter keys are the only fixed vocabulary.
@@ -32,8 +32,8 @@ field, a duplicate YAML key, and a missing `version`. They are excluded from dis
 still reaches the loader, which is how the rejection is demonstrated:
 
 ```sh
-node apps/cli/dist/bin/harness.js run examples/scenarios/invalid/missing-version.e2e.md \
-     --config examples/support/harness.config.ts
+node apps/cli/dist/bin/difmp.js run examples/scenarios/invalid/missing-version.e2e.md \
+     --config examples/support/difmp.config.ts
 ```
 
 ```

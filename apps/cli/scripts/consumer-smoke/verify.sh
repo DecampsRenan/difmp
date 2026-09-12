@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# Exercise an installed `@harness/cli` from inside a consumer project: the bin, discovery, the
+# Exercise an installed `difmp` from inside a consumer project: the bin, discovery, the
 # TypeScript config, the package.json scripts, the run-directory assets and every exit code.
 #
 #   verify.sh <dir> <npm|pnpm|yarn> <esm|cjs>
 #
-# `HARNESS_REPO_ROOT`, when set, is the development workspace the installed package must NOT
+# `DIFMP_REPO_ROOT`, when set, is the development workspace the installed package must NOT
 # reference (see the last check).
 set -uo pipefail
 DIR="$1"; PM="$2"; KIND="$3"
@@ -16,11 +16,11 @@ PASS=0; FAIL=0
 declare -a RESULTS=()
 
 case "$PM" in
-  npm)  EXEC=(npx --no-install harness); RUNSCRIPT=(npm run --silent) ;;
-  pnpm) EXEC=(pnpm exec harness);        RUNSCRIPT=(pnpm run --silent) ;;
-  yarn) EXEC=(corepack yarn run harness); RUNSCRIPT=(corepack yarn run) ;;
+  npm)  EXEC=(npx --no-install difmp); RUNSCRIPT=(npm run --silent) ;;
+  pnpm) EXEC=(pnpm exec difmp);        RUNSCRIPT=(pnpm run --silent) ;;
+  yarn) EXEC=(corepack yarn run difmp); RUNSCRIPT=(corepack yarn run) ;;
   # Yarn 1 (classic), when one is installed standalone — corepack is the Yarn 4 path above.
-  yarn1) EXEC=(yarn run harness); RUNSCRIPT=(yarn run) ;;
+  yarn1) EXEC=(yarn run difmp); RUNSCRIPT=(yarn run) ;;
   *) echo "unknown package manager: $PM" >&2; exit 64 ;;
 esac
 
@@ -55,7 +55,7 @@ check "list (discovery + config)" 0 "${EXEC[@]}" list
 check "list via package.json script" 0 "${RUNSCRIPT[@]}" e2e:list
 check "validate"                  0 "${EXEC[@]}" validate
 check "list --tag smoke"          0 "${EXEC[@]}" list --tag smoke
-# A real run, through the documented `"test:e2e": "harness run"` script. Exit 0.
+# A real run, through the documented `"test:e2e": "difmp run"` script. Exit 0.
 check "test:e2e script (passing)" 0 "${RUNSCRIPT[@]}" test:e2e
 # A failing verdict. Exit 1.
 echo "### failing scenario" >> "$LOG"
@@ -93,7 +93,7 @@ fi
 CLI=$!
 UIOK=fail
 for _ in $(seq 1 300); do curl -sf -o /dev/null http://127.0.0.1:45123/api/health && { UIOK=ok; break; }; sleep 0.1; done
-if [ "$UIOK" = ok ] && curl -sf http://127.0.0.1:45123/ | grep -q "__HARNESS_UI__"; then
+if [ "$UIOK" = ok ] && curl -sf http://127.0.0.1:45123/ | grep -q "__DIFMP_UI__"; then
   record PASS "dashboard served from the installed package"
 else
   record FAIL "dashboard not served (see $DIR/ui.out)"
@@ -101,8 +101,8 @@ fi
 wait $CLI
 
 # The installed package must not reach back into the development workspace.
-if [ -n "${HARNESS_REPO_ROOT:-}" ]; then
-  HIT=$(grep -rl -- "$HARNESS_REPO_ROOT" node_modules/@harness/cli/dist .yarn/unplugged 2>/dev/null | head -3)
+if [ -n "${DIFMP_REPO_ROOT:-}" ]; then
+  HIT=$(grep -rl -- "$DIFMP_REPO_ROOT" node_modules/difmp/dist .yarn/unplugged 2>/dev/null | head -3)
   if [ -n "$HIT" ]; then record FAIL "installed package references the development workspace: $HIT"
   else record PASS "installed package references no workspace path"; fi
 fi

@@ -1,5 +1,5 @@
-import type { GenerateRequest, ModelProvider, ProviderResponse } from "@harness/core"
-import { ProviderError } from "@harness/core"
+import type { GenerateRequest, ModelProvider, ProviderResponse } from "@difmp/core"
+import { ProviderError } from "@difmp/core"
 import { Effect, SchemaAST } from "effect"
 import type { Schema } from "effect"
 import { LanguageModel } from "effect/unstable/ai"

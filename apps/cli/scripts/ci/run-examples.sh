@@ -2,10 +2,10 @@
 #
 # Spec §12: run the example scenarios with the SCRIPTED adapter through the DISTRIBUTED CLI.
 #
-#   run-examples.sh [workdir] [variant...]     default workdir: $TMPDIR/harness-dist-cli
+#   run-examples.sh [workdir] [variant...]     default workdir: $TMPDIR/difmp-dist-cli
 #                                              default variants: healthy alt-layout
 #
-# `HARNESS_PROVIDER` (default `scripted`) and `HARNESS_MODEL` select the adapter. The optional
+# `DIFMP_PROVIDER` (default `scripted`) and `DIFMP_MODEL` select the adapter. The optional
 # real-model smoke job sets them to `anthropic` and a model id; every other caller leaves them
 # alone and gets the deterministic, network-free double.
 #
@@ -23,14 +23,14 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 CLI_DIR=$(cd "$HERE/../.." && pwd)
 REPO_ROOT=$(cd "$CLI_DIR/../.." && pwd)
 
-WORK="${1:-${TMPDIR:-/tmp}/harness-dist-cli}"
+WORK="${1:-${TMPDIR:-/tmp}/difmp-dist-cli}"
 shift 2>/dev/null || true
 VARIANTS=("$@")
 [ ${#VARIANTS[@]} -eq 0 ] && VARIANTS=(healthy alt-layout)
 
-PROVIDER="${HARNESS_PROVIDER:-scripted}"
+PROVIDER="${DIFMP_PROVIDER:-scripted}"
 PROVIDER_FLAGS=(--provider "$PROVIDER")
-[ -n "${HARNESS_MODEL:-}" ] && PROVIDER_FLAGS+=(--model "$HARNESS_MODEL")
+[ -n "${DIFMP_MODEL:-}" ] && PROVIDER_FLAGS+=(--model "$DIFMP_MODEL")
 if [ "$PROVIDER" != "scripted" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
   echo "provider '$PROVIDER' needs ANTHROPIC_API_KEY in the environment" >&2
   exit 2
@@ -41,7 +41,7 @@ APP_MAIN="$REPO_ROOT/examples/fixture-app/dist/main.js"
 if [ ! -f "$APP_MAIN" ]; then
   echo "the demo app is not built: $APP_MAIN" >&2
   echo "run \`pnpm typecheck\` (the project-references build emits it) or" >&2
-  echo "\`pnpm --filter @harness/fixture-app build\` — \`pnpm build\` alone does NOT cover examples/*" >&2
+  echo "\`pnpm --filter @difmp/fixture-app build\` — \`pnpm build\` alone does NOT cover examples/*" >&2
   exit 2
 fi
 
@@ -51,9 +51,9 @@ echo "==> packing and installing the distributed CLI"
 ( cd "$CLI_DIR" && pnpm pack --pack-destination "$WORK/pack" ) >/dev/null || exit 1
 TGZ=$(ls -1 "$WORK"/pack/*.tgz | head -1)
 ( cd "$WORK/consumer" && npm init -y >/dev/null && npm install --no-audit --no-fund "$TGZ" ) >/dev/null || exit 1
-HARNESS="$WORK/consumer/node_modules/.bin/harness"
-[ -x "$HARNESS" ] || { echo "no harness bin at $HARNESS" >&2; exit 1; }
-echo "==> $("$HARNESS" --version | head -1)"
+DIFMP="$WORK/consumer/node_modules/.bin/difmp"
+[ -x "$DIFMP" ] || { echo "no difmp bin at $DIFMP" >&2; exit 1; }
+echo "==> $("$DIFMP" --version | head -1)"
 
 STATUS=0
 for VARIANT in "${VARIANTS[@]}"; do
@@ -75,11 +75,11 @@ for VARIANT in "${VARIANTS[@]}"; do
   # The CLI is invoked from the repository root because the scenarios and the support config live
   # there; `--config` is explicit so discovery does not depend on the working directory.
   ( cd "$REPO_ROOT" && \
-    HARNESS_BASE_URL="$URL" \
+    DIFMP_BASE_URL="$URL" \
     FIXTURE_APP_SEED_TOKEN="$TOKEN" \
     FIXTURE_APP_VARIANT="$VARIANT" \
-    "$HARNESS" run \
-      --config examples/support/harness.config.ts \
+    "$DIFMP" run \
+      --config examples/support/difmp.config.ts \
       "${PROVIDER_FLAGS[@]}" \
       --reporter console --reporter junit \
       --output "$WORK/runs/$VARIANT" )

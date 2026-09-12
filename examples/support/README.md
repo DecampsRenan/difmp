@@ -1,7 +1,7 @@
-# `@harness/example-support` — demo config, fixture, TS check and scripted runs
+# `@difmp/example-support` — demo config, fixture, TS check and scripted runs
 
 This package is the *project side* of the demo: the things a real consumer of the harness would
-write for themselves. It holds the `harness.config.ts` the example scenarios run against, the
+write for themselves. It holds the `difmp.config.ts` the example scenarios run against, the
 `authenticated-workspace` fixture, the optional `project-unique-in-storage` TS check, and the
 deterministic adapter scripts used by the repository's tests.
 
@@ -10,7 +10,7 @@ in [`examples/scenarios`](../scenarios).
 
 ```
 examples/support/
-  harness.config.ts                     the configuration itself
+  difmp.config.ts                     the configuration itself
   fixtures/authenticated-workspace.ts   seeds an isolated workspace + signed-in session
   fixtures/attempt-state.ts             private per-attempt channel between the fixture and the check
   checks/project-unique-in-storage.ts   authoritative, deterministic uniqueness verdict
@@ -21,8 +21,8 @@ examples/support/
 
 ```bash
 # build everything the examples need
-pnpm --filter @harness/fixture-app --filter @harness/core --filter @harness/agent-runtime build
-pnpm --filter @harness/example-support typecheck
+pnpm --filter @difmp/fixture-app --filter @difmp/core --filter @difmp/agent-runtime build
+pnpm --filter @difmp/example-support typecheck
 
 # start the demo app on a fixed port, with a demo workspace and the seed token printed
 node examples/fixture-app/dist/main.js --port 3000 --variant healthy --seed
@@ -34,21 +34,27 @@ the environment:
 ```bash
 export FIXTURE_APP_SEED_TOKEN=<the token printed above>
 # optional; only needed when the app did NOT bind 127.0.0.1:3000
-export HARNESS_BASE_URL=http://127.0.0.1:3000
+export DIFMP_BASE_URL=http://127.0.0.1:3000
 ```
 
-Then, from anywhere (these use the built CLI directly; `harness` works the same once the package is
+`DIFMP_BASE_URL` and `DIFMP_SCRIPT` (§6) were called `HARNESS_BASE_URL` and `HARNESS_SCRIPT` before
+the tool was renamed to `difmp`. They are read by **this demo configuration**, not by the CLI — the
+CLI has no environment interface of its own — so they were renamed outright, with no fallback: the
+only callers are this repository's own scripts, and they were all updated. If you kept a shell
+snippet from before the rename, change the prefix.
+
+Then, from anywhere (these use the built CLI directly; `difmp` works the same once the package is
 installed):
 
 ```bash
-node apps/cli/dist/bin/harness.js run examples/scenarios/project-create.e2e.md          --config examples/support/harness.config.ts
-node apps/cli/dist/bin/harness.js run examples/scenarios/project-create-checked.e2e.md  --config examples/support/harness.config.ts
-node apps/cli/dist/bin/harness.js run examples/scenarios/project-create-no-fixture.e2e.md --config examples/support/harness.config.ts
-node apps/cli/dist/bin/harness.js run --config examples/support/harness.config.ts        # all three
+node apps/cli/dist/bin/difmp.js run examples/scenarios/project-create.e2e.md          --config examples/support/difmp.config.ts
+node apps/cli/dist/bin/difmp.js run examples/scenarios/project-create-checked.e2e.md  --config examples/support/difmp.config.ts
+node apps/cli/dist/bin/difmp.js run examples/scenarios/project-create-no-fixture.e2e.md --config examples/support/difmp.config.ts
+node apps/cli/dist/bin/difmp.js run --config examples/support/difmp.config.ts        # all three
 ```
 
 With no path argument, discovery uses the configured `include` (`../scenarios/**/*.e2e.md`)
-resolved against **this directory** — the one holding `harness.config.ts` — so the selection does
+resolved against **this directory** — the one holding `difmp.config.ts` — so the selection does
 not depend on where you invoke the CLI from. Paths you pass as arguments are resolved against the
 invocation directory instead.
 
@@ -83,7 +89,7 @@ curl -sS -X POST http://127.0.0.1:3000/__seed/workspace \
   -d '{"workspaceName":"Espace de démonstration","email":"demo@example.test","password":"demo-password"}'
 ```
 
-## 2. `harness.config.ts`
+## 2. `difmp.config.ts`
 
 `defineConfig` is identity + types; the real validation happens in core's `resolveConfig`, which
 rejects unknown top-level keys.
@@ -121,7 +127,7 @@ providerOptions: { maxTokens: 2048, temperature: 0 }
 ```
 
 with `ANTHROPIC_API_KEY` in the environment — or, without editing the file,
-`harness run --provider anthropic --model claude-sonnet-5`. `alt-layout` is the variant worth
+`difmp run --provider anthropic --model claude-sonnet-5`. `alt-layout` is the variant worth
 pointing a real model at: it is functionally identical to `healthy` and differently shaped.
 
 ## 3. The `authenticated-workspace` fixture
@@ -205,7 +211,7 @@ the model, and the workspace id is a probe coordinate.
 
 ## 6. Scripted adapter runs (`scripts/`)
 
-The script *format* and the app-agnostic patterns belong to `@harness/agent-runtime`
+The script *format* and the app-agnostic patterns belong to `@difmp/agent-runtime`
 (`src/scripted/script.ts`, `src/scripted/scenarios.ts`); that package already ships that location,
 so nothing is re-implemented here. What lives in `scripts/` is the part that can only be written
 against a concrete application.
@@ -219,7 +225,7 @@ against a concrete application.
   run that can only end on a blocking budget.
 - `scripts/index.ts` — `fixtureAppScripts({ baseUrl, projectName, variant })` returns every case
   keyed by name, each as a `ScriptedProviderScript` (browsing script + canned verifier answers).
-- `scripts/registry.ts` — the same cases as the `scripts` **registry** of `harness.config.ts`. Each
+- `scripts/registry.ts` — the same cases as the `scripts` **registry** of `difmp.config.ts`. Each
   entry is a FACTORY, because a script has to type the value the run will really use
   (`Projet {{ run.id }}` is only a string once the run id exists) and to name the criteria of the
   spec being run; the harness calls it with `ScriptFactoryContext` after minting the run id,
@@ -229,12 +235,12 @@ against a concrete application.
 
 ```bash
 # the default: `auto` picks the journey from the scenario and from FIXTURE_APP_VARIANT
-FIXTURE_APP_VARIANT=false-success node apps/cli/dist/bin/harness.js run \
-  examples/scenarios/project-create.e2e.md --config examples/support/harness.config.ts
+FIXTURE_APP_VARIANT=false-success node apps/cli/dist/bin/difmp.js run \
+  examples/scenarios/project-create.e2e.md --config examples/support/difmp.config.ts
 
 # any other case, by name
-HARNESS_SCRIPT=stale-observation node apps/cli/dist/bin/harness.js run \
-  examples/scenarios/project-create.e2e.md --config examples/support/harness.config.ts
+DIFMP_SCRIPT=stale-observation node apps/cli/dist/bin/difmp.js run \
+  examples/scenarios/project-create.e2e.md --config examples/support/difmp.config.ts
 ```
 
 | key | drives | expected harness behaviour |
@@ -262,6 +268,6 @@ fixtures, not runs — but naming one explicitly still reaches the loader, which
 is demonstrated:
 
 ```bash
-node apps/cli/dist/bin/harness.js run examples/scenarios/invalid/missing-version.e2e.md \
-  --config examples/support/harness.config.ts     # exit 2, no browser started, no run directory
+node apps/cli/dist/bin/difmp.js run examples/scenarios/invalid/missing-version.e2e.md \
+  --config examples/support/difmp.config.ts     # exit 2, no browser started, no run directory
 ```

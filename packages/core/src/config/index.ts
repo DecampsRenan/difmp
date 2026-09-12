@@ -8,7 +8,7 @@ import { makeRegistry, validateRegistryShape } from "../registry/index.js"
 
 export type HarnessConfigData = typeof ResolvedConfig["Encoded"]
 
-/** The type a consumer's `harness.config.ts` is written against. */
+/** The type a consumer's `difmp.config.ts` is written against. */
 export interface HarnessUserConfig extends HarnessConfigData {
   /** Names referenced by specs resolve HERE, never as import paths. */
   readonly fixtures?: Record<string, Fixture>

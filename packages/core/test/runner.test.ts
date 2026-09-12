@@ -57,9 +57,9 @@ interface RawRunOutput extends Omit<RunOutput, "result"> {
 const executeRaw = (options: RunOptions) =>
   Effect.gen(function*() {
     const fs = yield* FileSystem.FileSystem
-    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harness-runner-" }).pipe(Effect.orDie)
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "difmp-runner-" }).pipe(Effect.orDie)
     const project = yield* expectSuccess(resolveConfig({
-      source: "harness.config.ts",
+      source: "difmp.config.ts",
       config: { outputDir: dir, ...options.configOverrides }
     }))
     for (const entry of options.blockWrites ?? []) {

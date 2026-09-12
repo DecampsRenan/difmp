@@ -207,7 +207,7 @@ apps/<a>/tsconfig.json       same
     "verbatimModuleSyntax": true, "isolatedModules": true, "skipLibCheck": true,
     "declaration": true, "declarationMap": true, "sourceMap": true,
     "composite": true, "incremental": true,
-    "customConditions": ["@harness/source"]     // see 2.3
+    "customConditions": ["@difmp/source"]     // see 2.3
   }
 }
 ```
@@ -230,12 +230,12 @@ composite + emit declarations.
 
 ```jsonc
 {
-  "name": "@harness/core",
+  "name": "@difmp/core",
   "version": "0.1.0",
   "type": "module",
   "exports": {
     ".": {
-      "@harness/source": "./src/index.ts",   // dev-only condition, MUST be first
+      "@difmp/source": "./src/index.ts",   // dev-only condition, MUST be first
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
@@ -252,7 +252,7 @@ Condition order in `exports` is significant — first match wins, so the source 
 
 ### 2.3 Dev (src) **and** built (dist) resolution — verified both ways
 
-With `customConditions: ["@harness/source"]`, `tsc --traceResolution` shows:
+With `customConditions: ["@difmp/source"]`, `tsc --traceResolution` shows:
 
 ```
 Module name '@toy/core' was successfully resolved to '.../packages/core/src/index.ts'
@@ -266,17 +266,17 @@ At runtime the same condition is available to Node:
 
 ```bash
 # VERIFIED: with packages/core/dist DELETED, this still works on Node 24
-node --conditions=@harness/source apps/cli/src/bin.ts
-#   -> @harness/core resolves to packages/core/src/index.ts, types stripped natively
+node --conditions=@difmp/source apps/cli/src/bin.ts
+#   -> @difmp/core resolves to packages/core/src/index.ts, types stripped natively
 ```
 
 Two hard constraints on that trick:
 * **Node refuses to strip types under `node_modules`**:
   `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING: Stripping types is currently unsupported for files under node_modules`.
-  It works in a pnpm workspace only because `apps/cli/node_modules/@harness/core` is a **symlink**
+  It works in a pnpm workspace only because `apps/cli/node_modules/@difmp/core` is a **symlink**
   whose realpath (`packages/core/src/index.ts`) is outside `node_modules`. It breaks under
   `--preserve-symlinks` or `node-linker=hoisted` copies.
-* For vitest/vite dev, mirror it with `resolve: { conditions: ["@harness/source"] }`.
+* For vitest/vite dev, mirror it with `resolve: { conditions: ["@difmp/source"] }`.
   UNVERIFIED: not exercised here.
 
 Consumers never set the condition, so published installs fall through to `types`/`default` -> `dist`.
@@ -295,7 +295,7 @@ Optionally strip it at publish time with `publishConfig.exports`.
 
 ---
 
-## 3. Loading the consumer's `harness.config.ts` — THE ANSWER
+## 3. Loading the consumer's `difmp.config.ts` — THE ANSWER
 
 **Recommendation: try bare `import()` first, fall back to `tsx`'s `tsImport`.** Ship `tsx` as a real
 `dependency` of the CLI package. VERIFIED against a packed tarball installed into consumer dirs
@@ -353,7 +353,7 @@ export const importConfigModule = async (absPath: string): Promise<unknown> => {
   Use it as the fast path only.
 * **`register()` from `tsx/esm/api`.** Works, but **do not cache-bust with a query string**:
   `import(url + "?t=" + Date.now())` blows up with
-  `Error: Cannot find module '/…/harness.config.ts?tsx=1789…'` in a CJS-typed consumer, because the
+  `Error: Cannot find module '/…/difmp.config.ts?tsx=1789…'` in a CJS-typed consumer, because the
   file is routed through the **CJS** loader which does not accept URL queries. (Reproduced.)
   `tsImport(specifier, parentURL)` uses a namespaced loader internally and has no such problem.
 * **jiti.** Not installed here; would be a second transpiler in the dependency tree next to tsx's
@@ -366,9 +366,9 @@ export const importConfigModule = async (absPath: string): Promise<unknown> => {
 * tsx pulls in `esbuild@0.28.2`. Both npm 11 (`allow-scripts`) and pnpm 10 **block esbuild's
   postinstall by default** — verified that tsx still works anyway (the platform binary arrives via
   `optionalDependencies`, the postinstall is only a fallback). Don't tell users to `approve-builds`.
-* Resolve the config path with `path.resolve(process.cwd(), argv ?? "harness.config.ts")` and pass an
+* Resolve the config path with `path.resolve(process.cwd(), argv ?? "difmp.config.ts")` and pass an
   **absolute** path to `pathToFileURL`.
-* Recommend `harness.config.ts` but also accept `.mts` / `.js` / `.mjs`.
+* Recommend `difmp.config.ts` but also accept `.mts` / `.js` / `.mjs`.
 
 ---
 
@@ -454,7 +454,7 @@ const assetsRoot = fileURLToPath(new URL("../assets/", import.meta.url))  // dis
 
 ```jsonc
 {
-  "name": "@harness/cli",
+  "name": "difmp",
   "version": "0.1.0",
   "type": "module",
   "bin": { "harness": "./dist/bin.js" },
@@ -525,7 +525,7 @@ import { resolve } from "node:path"
 import { glob, isDynamicPattern } from "tinyglobby"
 
 export const DEFAULT_IGNORE = [
-  "**/node_modules/**", "**/dist/**", "**/.git/**", "**/coverage/**", "**/.harness-tmp/**"
+  "**/node_modules/**", "**/dist/**", "**/.git/**", "**/coverage/**", "**/.difmp-tmp/**"
 ] as const
 
 export const discover = async (
@@ -558,9 +558,9 @@ Key defaults: `absolute:false`, `dot:false`, `onlyFiles:true`, `expandDirectorie
 **Quoted-glob CLI args:** the shell must not expand them.
 
 ```bash
-harness run '**/*.e2e.md'                 # quote: bash without globstar expands ** as *
-harness run 'tests/**/*.e2e.md' --ignore '**/fixtures/**'
-harness run tests/login.e2e.md            # literal path -> isDynamicPattern() === false, skip crawling
+difmp run '**/*.e2e.md'                 # quote: bash without globstar expands ** as *
+difmp run 'tests/**/*.e2e.md' --ignore '**/fixtures/**'
+difmp run tests/login.e2e.md            # literal path -> isDynamicPattern() === false, skip crawling
 ```
 
 Note bash's `**` only recurses with `shopt -s globstar`; unquoted it silently behaves like `*`.

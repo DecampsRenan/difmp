@@ -1,4 +1,4 @@
-import type { ReportInput } from "@harness/core"
+import type { ReportInput } from "@difmp/core"
 import {
   ArtifactInventory,
   decodeStrictSync,
@@ -8,7 +8,7 @@ import {
   RunResult,
   ScenarioContract,
   scanJsonl
-} from "@harness/core"
+} from "@difmp/core"
 import { NodePath } from "@effect/platform-node"
 import { Effect, Path } from "effect"
 import { existsSync, readFileSync } from "node:fs"
@@ -43,7 +43,7 @@ const decodeInventory = decodeStrictSync(ArtifactInventory)
 const decodeEvent = decodeStrictSync(HarnessEvent)
 
 /**
- * Build a `ReportInput` the way `harness report <run-directory>` does: persisted files only,
+ * Build a `ReportInput` the way `difmp report <run-directory>` does: persisted files only,
  * every one of them validated against the schema that owns it.
  */
 export const loadFixture = (name: FixtureName, outputDir = join(here, "fixtures")): ReportInput => {

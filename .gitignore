@@ -3,7 +3,7 @@ dist/
 runs/
 .env
 *.tsbuildinfo
-.harness-tmp/
+.difmp-tmp/
 coverage/
 .recon/
 examples/fixture-app/dist/

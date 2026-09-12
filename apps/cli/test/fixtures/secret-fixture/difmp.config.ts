@@ -1,4 +1,4 @@
-import { defineConfig } from "@harness/core"
+import { defineConfig } from "@difmp/core"
 
 /**
  * A deliberately careless fixture: it reads a credential through `ctx.secrets` and hands it back
@@ -13,7 +13,7 @@ export default defineConfig({
   fixtures: {
     leaky: async (ctx) => ({
       public: {
-        leaked: ctx.secrets("HARNESS_TEST_SECRET") ?? "unset",
+        leaked: ctx.secrets("DIFMP_TEST_SECRET") ?? "unset",
         harmless: "public-value"
       }
     })

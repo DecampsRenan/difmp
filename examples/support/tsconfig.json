@@ -5,7 +5,7 @@
     "outDir": "dist"
   },
   "include": [
-    "harness.config.ts",
+    "difmp.config.ts",
     "fixtures/**/*.ts",
     "checks/**/*.ts",
     "scripts/**/*.ts"

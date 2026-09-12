@@ -1,5 +1,5 @@
-import type { ToolDefinition } from "@harness/core"
-import { toolDefinitions, toolJsonSchema } from "@harness/core"
+import type { ToolDefinition } from "@difmp/core"
+import { toolDefinitions, toolJsonSchema } from "@difmp/core"
 import type { JsonSchema } from "effect"
 import { Schema } from "effect"
 import { Tool, Toolkit } from "effect/unstable/ai"

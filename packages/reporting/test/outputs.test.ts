@@ -1,4 +1,4 @@
-import { decodeStrictSync, RunResult } from "@harness/core"
+import { decodeStrictSync, RunResult } from "@difmp/core"
 import { describe, expect, it } from "vitest"
 import { renderHtmlReport } from "../src/html.js"
 import { renderJsonReport } from "../src/json.js"

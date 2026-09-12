@@ -1,5 +1,5 @@
-import type { ObserveResult, Prompt as HarnessPrompt } from "@harness/core"
-import { ModelProvider } from "@harness/core"
+import type { ObserveResult, Prompt as HarnessPrompt } from "@difmp/core"
+import { ModelProvider } from "@difmp/core"
 import { Effect, Layer, Ref, Stream } from "effect"
 import { AiError, LanguageModel } from "effect/unstable/ai"
 import type { Response } from "effect/unstable/ai"

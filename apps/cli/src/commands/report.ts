@@ -4,7 +4,7 @@ import { loadReportInput } from "../reportInput.js"
 import { renderRunLines, writeReportFiles } from "../reporters.js"
 
 /**
- * `harness report <run-directory>` rebuilds `report.html` (and `result.json` / `junit.xml`) from
+ * `difmp report <run-directory>` rebuilds `report.html` (and `result.json` / `junit.xml`) from
  * the PERSISTED data alone: no model call, no browser, no replay, and no configuration
  * re-resolution — `manifest.json` is the sole source of "which adapter was used".
  */

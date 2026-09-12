@@ -36,7 +36,7 @@ export class InterpolationError extends Schema.TaggedError<InterpolationError>()
   }
 }
 
-/** `harness.config.ts` (or a CLI override) is not a valid configuration. */
+/** `difmp.config.ts` (or a CLI override) is not a valid configuration. */
 export class ConfigInvalidError extends Schema.TaggedError<ConfigInvalidError>()("ConfigInvalidError", {
   source: Schema.String,
   problems: Schema.Array(Schema.String)

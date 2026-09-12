@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "runId": "r_334qewxw37sjy",
-  "createdAt": "2026-09-11T20:10:48.623Z",
+  "runId": "r_t2suucd2gj4qi",
+  "createdAt": "2026-09-12T07:27:15.483Z",
   "specPath": "../scenarios/project-create.e2e.md",
   "harnessVersion": "0.1.0",
   "nodeVersion": "v24.19.0",
   "dependencies": {
     "node": "v24.19.0",
-    "@harness/cli": "0.1.0",
+    "difmp": "0.1.0",
     "effect": "4.0.0-rc.113",
     "@effect/platform-node": "4.0.0-rc.113",
     "@effect/ai-anthropic": "4.0.0-rc.113",
@@ -31,9 +31,9 @@
       "**/dist/**",
       "**/invalid/**"
     ],
-    "baseUrl": "http://127.0.0.1:41835",
+    "baseUrl": "http://127.0.0.1:40899",
     "allowedOrigins": [
-      "http://127.0.0.1:41835"
+      "http://127.0.0.1:40899"
     ],
     "inputs": {
       "projectName": "Projet {{ run.id }}"
@@ -41,7 +41,7 @@
     "provider": "scripted",
     "providerOptions": {
       "script": "auto",
-      "maxTokens": "[redacted]",
+      "maxTokens": 2048,
       "temperature": 0
     },
     "maxActions": 25,
@@ -62,20 +62,23 @@
       "screenshots": "checkpoints",
       "retainTraceOn": "all"
     },
-    "outputDir": "/tmp/claude-1000/-home-ubuntu-apps-difmp/bbcff204-5cd9-4221-a1c9-6a2a72d1f1b2/scratchpad/runs2",
+    "outputDir": "/tmp/claude-1000/-home-ubuntu-apps-difmp/bbcff204-5cd9-4221-a1c9-6a2a72d1f1b2/scratchpad/example-run2",
     "reporters": [
-      "console"
+      "console",
+      "json",
+      "junit",
+      "html"
     ]
   },
   "stage": "final",
   "scenarioId": "project-create",
   "hashes": {
     "spec": "e880ac1ae62012d7d05f905cc64446eb3593f98a9b5ac41d12a28070c76b97c3",
-    "contract": "27a57a903363fc6240ed96469bbebc9e5120ec3ea98dd9ed0b540df1e18afebc",
+    "contract": "05bbe6eaa5aa098df324e01596749968a7b6f382fde9d9ae40a7da8d69a6756a",
     "criteria": {
-      "c1": "5bc36524c40c3945e4a7f518a5660ccca2143c6159c639727b1d0055982d6a9d",
-      "c2": "234a178099d19f7641096cad531568c87ba40a7942fc0bf189e85230de829fc1",
-      "c3": "53c9a986aea2003ae2b3a3f3b6ce6e2620e9b28f4ee620464c728b9e8d2a7cb3"
+      "c1": "0c9d4101b421550814d69cf6d144fb4514d45a046c84c5b203df750f31fc645e",
+      "c2": "ea1a28c45d0115e58a40a983a75ea5645acce7b44b0957e49d907a9daf2bf554",
+      "c3": "c319e4061581fc4a0554ed52cbb896615dfcc6b1c5a6b910cc212f29778747b9"
     },
     "prompts": {}
   }

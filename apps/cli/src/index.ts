@@ -1,12 +1,12 @@
 /**
- * Public API of the `@harness/cli` package, whose `bin` is `harness`. A consumer writes:
+ * Public API of the `difmp` package, whose `bin` is `difmp`. A consumer writes:
  *
  * ```ts
- * import { defineConfig } from "@harness/cli"
+ * import { defineConfig } from "difmp"
  * export default defineConfig({ baseUrl: "http://127.0.0.1:3000" })
  * ```
  */
-export { defineConfig } from "@harness/core"
+export { defineConfig } from "@difmp/core"
 export type {
   Budgets,
   CaptureConfig,
@@ -36,9 +36,9 @@ export type {
   RunStatus,
   ScenarioContract,
   StorageStateLike
-} from "@harness/core"
+} from "@difmp/core"
 
-export { cli, exitCodeOf, harness, reportFailures, teardown } from "./cli.js"
+export { cli, difmp, exitCodeOf, reportFailures, teardown } from "./cli.js"
 export { harnessVersion } from "./version.js"
 export { importConfigModule, findConfigUpwards, locateConfig } from "./loadConfig.js"
 export { loadProject } from "./project.js"

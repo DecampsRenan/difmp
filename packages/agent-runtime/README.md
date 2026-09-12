@@ -1,4 +1,4 @@
-# `@harness/agent-runtime`
+# `@difmp/agent-runtime`
 
 The model seam: the two `ModelProvider` implementations, the prompts, and the `Verifier`.
 
@@ -10,7 +10,7 @@ differs — `AnthropicLanguageModel` for the real adapter, a `LanguageModel.make
 double for the scripted one. Prompt plumbing, tool derivation, usage accounting and error mapping are
 therefore shared, and a bug in one is a bug in both.
 
-`effect/unstable/ai` ships inside `effect`, so `@harness/core` declaring the seam over it does not
+`effect/unstable/ai` ships inside `effect`, so `@difmp/core` declaring the seam over it does not
 make core depend on a model SDK.
 
 **`disableToolCallResolution: true` on every `generateText`.** Tool handlers never run inside the
@@ -52,5 +52,5 @@ the hash-binding guard, the evidence-integrity rule and the persistence rule app
 twice.
 
 ```sh
-pnpm --filter @harness/agent-runtime build
+pnpm --filter @difmp/agent-runtime build
 ```

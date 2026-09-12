@@ -12,7 +12,7 @@ import { expectFailure, expectSuccess } from "./helpers.js"
 describe("config resolution", () => {
   it.effect("fills in a default for every documented field", () =>
     Effect.gen(function*() {
-      const project = yield* expectSuccess(resolveConfig({ source: "harness.config.ts", config: {} }))
+      const project = yield* expectSuccess(resolveConfig({ source: "difmp.config.ts", config: {} }))
       const config = project.config
       expect(config.include).toEqual(["**/*.e2e.md"])
       expect(config.exclude).toEqual([...alwaysExcluded])
@@ -35,7 +35,7 @@ describe("config resolution", () => {
   it.effect("rejects an unknown top-level key", () =>
     Effect.gen(function*() {
       const error = yield* expectFailure(
-        resolveConfig({ source: "harness.config.ts", config: { retries: 3 } })
+        resolveConfig({ source: "difmp.config.ts", config: { retries: 3 } })
       )
       expect(error.problems.join("\n")).toContain("retries")
     }))
@@ -43,7 +43,7 @@ describe("config resolution", () => {
   it.effect("always merges the mandatory excludes and keeps the project's own", () =>
     Effect.gen(function*() {
       const project = yield* expectSuccess(resolveConfig({
-        source: "harness.config.ts",
+        source: "difmp.config.ts",
         config: defineConfig({ exclude: ["**/tmp/**"] })
       }))
       expect(project.config.exclude).toEqual([...alwaysExcluded, "**/tmp/**"])
@@ -52,7 +52,7 @@ describe("config resolution", () => {
   it.effect("lets CLI overrides win over the config file", () =>
     Effect.gen(function*() {
       const project = yield* expectSuccess(resolveConfig({
-        source: "harness.config.ts",
+        source: "difmp.config.ts",
         config: { provider: "scripted", outputDir: "runs" },
         overrides: { provider: "anthropic", outputDir: "out" }
       }))
@@ -63,7 +63,7 @@ describe("config resolution", () => {
   it.effect("rejects a non-positive budget and names the field", () =>
     Effect.gen(function*() {
       const error = yield* expectFailure(resolveConfig({
-        source: "harness.config.ts",
+        source: "difmp.config.ts",
         config: { budgets: { maxModelCalls: 0 } }
       }))
       expect(error.problems.join("\n")).toContain("budgets.maxModelCalls")
@@ -72,7 +72,7 @@ describe("config resolution", () => {
   it.effect("rejects a verifier reserve that is not withheld from a smaller total", () =>
     Effect.gen(function*() {
       const error = yield* expectFailure(resolveConfig({
-        source: "harness.config.ts",
+        source: "difmp.config.ts",
         config: { budgets: { maxTokens: 1000, verifierReserveTokens: 1000 } }
       }))
       expect(error.problems.join("\n")).toContain("verifierReserveTokens")
@@ -81,7 +81,7 @@ describe("config resolution", () => {
   it.effect("rejects a registry entry that is not a function", () =>
     Effect.gen(function*() {
       const error = yield* expectFailure(resolveConfig({
-        source: "harness.config.ts",
+        source: "difmp.config.ts",
         config: { fixtures: { broken: "./fixtures/auth.ts" } }
       }))
       expect(error.problems.join("\n")).toContain("must be a function")
@@ -90,7 +90,7 @@ describe("config resolution", () => {
   it.effect("resolves fixtures by name and lists the registered names when one is missing", () =>
     Effect.gen(function*() {
       const project = yield* expectSuccess(resolveConfig({
-        source: "harness.config.ts",
+        source: "difmp.config.ts",
         config: defineConfig({
           fixtures: { "authenticated-workspace": async () => ({ public: { workspaceName: "W" } }) }
         })
@@ -104,7 +104,7 @@ describe("config resolution", () => {
 
 describe("input precedence", () => {
   const base = {
-    source: "harness.config.ts",
+    source: "difmp.config.ts",
     configInputs: { projectName: "config", shared: "config" },
     specInputs: { projectName: "spec" }
   }

@@ -10,13 +10,13 @@ import type {
   HarnessEvent,
   ReportInput,
   RunStatus
-} from "@harness/core"
-import { renderActionGuidance } from "@harness/core"
+} from "@difmp/core"
+import { renderActionGuidance } from "@difmp/core"
 
 /**
  * The one derived model the three reporters share. It is built from persisted data only —
  * `result.json`, `contract.json`, `artifacts.json`, `manifest.json`, `events.jsonl` — so
- * `harness report <run-directory>` reproduces it with no model call and no replay.
+ * `difmp report <run-directory>` reproduces it with no model call and no replay.
  */
 export interface ReportView {
   readonly runId: string

@@ -1,4 +1,4 @@
-import type { HarnessEvent } from "@harness/core"
+import type { HarnessEvent } from "@difmp/core"
 import { Sse } from "effect/unstable/encoding"
 import type { UiMessage } from "./bus.js"
 

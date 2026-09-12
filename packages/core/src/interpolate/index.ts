@@ -117,7 +117,7 @@ export const interpolate = (options: InterpolateOptions): Effect.Effect<string, 
         const value = options.scope.fixture?.[key]
         if (value === undefined) {
           if (mode === "validate") {
-            // `harness validate` runs before any fixture setup: keep the placeholder as written.
+            // `difmp validate` runs before any fixture setup: keep the placeholder as written.
             replacement = ref.raw
           } else if (options.scope.fixture === undefined) {
             return raise("no fixture ran for this scenario, so fixture values cannot be resolved")
@@ -203,6 +203,6 @@ export const resolveInputs = (
     return resolved
   })
 
-/** Convenience for `harness validate`: check every reference without requiring fixture values. */
+/** Convenience for `difmp validate`: check every reference without requiring fixture values. */
 export const validateReferences = (options: Omit<InterpolateOptions, "mode">) =>
   interpolate({ ...options, mode: "validate" }).pipe(Effect.asVoid)

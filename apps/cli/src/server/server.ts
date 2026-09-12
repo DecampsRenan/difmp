@@ -1,4 +1,4 @@
-// Subpath, not the barrel — see the note in `src/bin/harness.ts` (the barrel drags in `redis`).
+// Subpath, not the barrel — see the note in `src/bin/difmp.ts` (the barrel drags in `redis`).
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer"
 import { Context, Duration, Effect, Layer, Scope } from "effect"
 import { HttpRouter, HttpServer } from "effect/unstable/http"

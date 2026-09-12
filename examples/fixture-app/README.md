@@ -1,4 +1,4 @@
-# @harness/fixture-app
+# @difmp/fixture-app
 
 A deliberately tiny "Projects" web application, used as the **target** of the agent-driven E2E
 harness. It is server-rendered plain HTML plus one inline `<script>`; there is no client build step
@@ -10,7 +10,7 @@ three defect/shape variants that a browsing agent has to tell apart.
 ## Running it
 
 ```bash
-pnpm --filter @harness/fixture-app build
+pnpm --filter @difmp/fixture-app build
 node dist/main.js --port 3000 --variant healthy --seed
 ```
 
@@ -25,7 +25,7 @@ The server **always binds 127.0.0.1 only** — never `0.0.0.0`.
 ## Programmatic API
 
 ```ts
-import { startFixtureApp } from "@harness/fixture-app";
+import { startFixtureApp } from "@difmp/fixture-app";
 
 const app = await startFixtureApp({ variant: "false-success" }); // port defaults to 0
 // app.url   -> "http://127.0.0.1:<real bound port>"

@@ -1,7 +1,7 @@
 /**
  * Endpoints the CLI's SSE server exposes. Defaults are RELATIVE so the page works wherever the CLI
  * mounts `apps/ui/dist` (vite `base: "./"`). The CLI may override them by injecting
- * `globalThis.__HARNESS_UI__ = { ... }` in a script tag before the bundle.
+ * `globalThis.__DIFMP_UI__ = { ... }` in a script tag before the bundle.
  */
 export interface UiRuntimeConfig {
   /** SSE stream of `HarnessEvent`s, `id:` = event `seq`. Must honour `Last-Event-ID`. */
@@ -47,7 +47,7 @@ const readPricing = (v: unknown): UiRuntimeConfig["pricing"] => {
 }
 
 export const readRuntimeConfig = (): UiRuntimeConfig => {
-  const injected = (globalThis as { __HARNESS_UI__?: unknown }).__HARNESS_UI__
+  const injected = (globalThis as { __DIFMP_UI__?: unknown }).__DIFMP_UI__
   if (typeof injected !== "object" || injected === null) return defaults
   const raw = injected as Record<string, unknown>
   const pricing = readPricing(raw["pricing"])

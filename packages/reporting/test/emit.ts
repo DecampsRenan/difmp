@@ -1,6 +1,6 @@
 /**
  * Renders every fixture to a throwaway run directory so the three outputs can be opened by hand:
- *   npx tsx packages/reporting/test/emit.ts /tmp/harness-samples
+ *   npx tsx packages/reporting/test/emit.ts /tmp/difmp-samples
  */
 import { mkdirSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"

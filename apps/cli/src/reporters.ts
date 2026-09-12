@@ -1,7 +1,7 @@
-import type { ReportInput, ReportOutput, ReporterName, RunResult } from "@harness/core"
-import { Reporter } from "@harness/core"
+import type { ReportInput, ReportOutput, ReporterName, RunResult } from "@difmp/core"
+import { Reporter } from "@difmp/core"
 import type { RunOutcome } from "./runOne.js"
-import { fileReporterLayer } from "@harness/reporting"
+import { fileReporterLayer } from "@difmp/reporting"
 import { Console, Effect, FileSystem, Path } from "effect"
 import { ExecutionError } from "./errors.js"
 
@@ -176,7 +176,7 @@ export const renderJsonDocument = (
 
 /**
  * `result.json`, `junit.xml` and `report.html` are always rendered: they are the run directory of
- * design-contracts §9 and they are what `harness report` replays from.
+ * design-contracts §9 and they are what `difmp report` replays from.
  */
 export const writeReportFiles = (
   input: ReportInput

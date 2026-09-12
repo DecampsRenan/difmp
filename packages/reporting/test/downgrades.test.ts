@@ -1,4 +1,4 @@
-import type { AttemptResult, CriterionResult, ReportInput } from "@harness/core"
+import type { AttemptResult, CriterionResult, ReportInput } from "@difmp/core"
 import { describe, expect, it } from "vitest"
 import { renderHtmlReport } from "../src/html.js"
 import { buildReportView } from "../src/view.js"

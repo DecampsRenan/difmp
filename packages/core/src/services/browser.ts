@@ -91,4 +91,4 @@ export class BrowserDriver extends Context.Service<BrowserDriver, {
   readonly openContext: (
     options: OpenContextOptions
   ) => Effect.Effect<BrowserSession, BrowserError, Scope>
-}>()("@harness/core/services/BrowserDriver") {}
+}>()("@difmp/core/services/BrowserDriver") {}

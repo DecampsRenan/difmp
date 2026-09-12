@@ -8,6 +8,12 @@ authoritative source for names and shapes, this one is the rationale and the hon
 The specs (`docs/spec.md`) and the example scenarios are in French. The code, the comments and the
 documentation are in English. That is the only language rule.
 
+**On the `.recon/` paths cited below.** `.recon/` is the local scratch directory the probes and the
+adversarial reviews were written in. It is in `.gitignore` and is **not** part of the repository, so
+a reader who clones this project will not find those files. They are cited for provenance — to say
+which claim was checked by running something rather than by recollection — not as artifacts you can
+open. Every claim that a *shipped* test covers names that test instead.
+
 ---
 
 ## 1. Package layout, and why each seam is where it is
@@ -28,7 +34,7 @@ examples/
   support/              the project side of the demo: config, fixture, TS check, scripted scripts
 ```
 
-**`@harness/core` depends on no React, no Playwright and no model SDK.** That is the load-bearing
+**`@difmp/core` depends on no React, no Playwright and no model SDK.** That is the load-bearing
 constraint, and every other seam follows from it. The driver, the model provider, the verifier, the
 fixture manager and the reporter are `Context.Service` interfaces *declared in core* and implemented
 elsewhere; core owns the decisions, the other packages own the I/O.
@@ -153,7 +159,7 @@ and §12 maps exit `130` off that file. Signal handling belongs to the Effect ru
 
 ### The `tsx` fallback for loading a consumer's TypeScript config
 
-`harness.config.ts` is the consumer's own code. Node ≥ 22.18 strips types natively, so a bare
+`difmp.config.ts` is the consumer's own code. Node ≥ 22.18 strips types natively, so a bare
 `import()` is tried first — it is free and it is the future. It does not cover everything:
 non-erasable TypeScript (`enum`, `namespace`, parameter properties) and consumers whose package is
 CommonJS both fail. The fallback is `tsx`'s `tsImport`, which handles both.
@@ -269,7 +275,7 @@ Read them in this order when something went wrong.
    `state: "failed"` and a reason; it is never silently absent. Only artifacts whose state is
    `present` are citable as evidence.
 5. **`manifest.json`** — which adapter ran, which model, which dependency versions, and the hashes.
-   This is the only source of "was this a model run or the scripted double", and `harness report`
+   This is the only source of "was this a model run or the scripted double", and `difmp report`
    reads it rather than re-resolving any configuration.
 
 ### Opening the Playwright trace
@@ -410,8 +416,8 @@ not copied from the review that raised it.
   written into design-contracts §7 — but it is a decision, not a consequence, and a reader who
   expects the letter of the earlier wording will be surprised.
 * **The GitHub Actions workflow has run once on a runner, and it FAILED.** `main` was pushed to
-  `github.com/DecampsRenan/agentic-e2e-harness` at commit `8da6e6f`, which triggered run
-  [`34653238470`](https://github.com/DecampsRenan/agentic-e2e-harness/actions/runs/34653238470)
+  `github.com/DecampsRenan/difmp` at commit `8da6e6f`, which triggered run
+  [`34653238470`](https://github.com/DecampsRenan/difmp/actions/runs/34653238470)
   (2026-09-11T22:16Z, 4m17s). Everything up to and including the Vitest suites passed on the runner
   — `corepack enable`, `pnpm/action-setup`, `setup-node`, `pnpm install --frozen-lockfile`, the
   typecheck, the Playwright cache and `--with-deps` install, both builds, the harness test suites.

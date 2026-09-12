@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# Spec §13, last bullet: pack `@harness/cli`, install the TARBALL into consumer projects OUTSIDE
+# Spec §13, last bullet: pack `difmp`, install the TARBALL into consumer projects OUTSIDE
 # this workspace, and prove the CLI works there with no development dependency of the harness
 # present — for npm, pnpm and Yarn, and for ESM-typed and CommonJS-typed consumers.
 #
-#   run.sh [workdir] [package-manager...]      default: $TMPDIR/harness-consumer-smoke, npm pnpm yarn
+#   run.sh [workdir] [package-manager...]      default: $TMPDIR/difmp-consumer-smoke, npm pnpm yarn
 #
 # External system dependency: a Chromium matching the repository's Playwright version must already
 # be installed (`pnpm exec playwright install --with-deps chromium`). The consumers install
@@ -15,19 +15,19 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 CLI_DIR=$(cd "$HERE/../.." && pwd)
 REPO_ROOT=$(cd "$CLI_DIR/../.." && pwd)
 
-WORK="${1:-${TMPDIR:-/tmp}/harness-consumer-smoke}"
+WORK="${1:-${TMPDIR:-/tmp}/difmp-consumer-smoke}"
 shift 2>/dev/null || true
 PMS=("$@")
 [ ${#PMS[@]} -eq 0 ] && PMS=(npm pnpm yarn)
 
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-export HARNESS_REPO_ROOT="$REPO_ROOT"
+export DIFMP_REPO_ROOT="$REPO_ROOT"
 
 rm -rf "$WORK"
 mkdir -p "$WORK/pack"
 
-echo "==> packing @harness/cli (pnpm pack runs prepack -> tsdown bundle)"
-# `pnpm pack`, never `npm pack`: npm does not rewrite `workspace:*`, and the four @harness/*
+echo "==> packing difmp (pnpm pack runs prepack -> tsdown bundle)"
+# `pnpm pack`, never `npm pack`: npm does not rewrite `workspace:*`, and the four @difmp/*
 # workspace packages are bundled into the output rather than published.
 ( cd "$CLI_DIR" && pnpm pack --pack-destination "$WORK/pack" ) || exit 1
 TGZ=$(ls -1 "$WORK"/pack/*.tgz | head -1)
@@ -37,7 +37,7 @@ echo "==> declared runtime dependencies of the tarball"
 tar -xzOf "$TGZ" package/package.json | node -e '
 let s = ""; process.stdin.on("data", (c) => { s += c }).on("end", () => {
   const deps = JSON.parse(s).dependencies ?? {}
-  const workspace = Object.keys(deps).filter((n) => n.startsWith("@harness/"))
+  const workspace = Object.keys(deps).filter((n) => n.startsWith("@difmp/"))
   for (const [n, v] of Object.entries(deps)) console.log(`    ${n}@${v}`)
   if (workspace.length > 0) {
     console.error(`FAIL: the tarball declares unpublishable dependencies: ${workspace.join(", ")}`)
@@ -61,14 +61,14 @@ for PM in "${PMS[@]}"; do
         yarn)
           node -e 'const j=require("./package.json");j.packageManager="yarn@4.13.0";require("fs").writeFileSync("package.json",JSON.stringify(j,null,2))'
           printf 'nodeLinker: node-modules\nenableScripts: false\n' > .yarnrc.yml
-          cp "$TGZ" ./harness-cli.tgz
-          corepack yarn add ./harness-cli.tgz ;;
+          cp "$TGZ" ./difmp.tgz
+          corepack yarn add ./difmp.tgz ;;
         # Yarn 1 (classic) caches a local tarball by NAME AND VERSION, so a rebuilt
-        # `harness-cli-0.1.0.tgz` would silently reinstall the previous bytes: copy it under a
+        # `difmp-0.1.0.tgz` would silently reinstall the previous bytes: copy it under a
         # fresh name every time.
         yarn1)
-          cp "$TGZ" "./harness-cli-$(date +%s).tgz"
-          yarn add "./$(ls -1t harness-cli-*.tgz | head -1)" ;;
+          cp "$TGZ" "./difmp-$(date +%s).tgz"
+          yarn add "./$(ls -1t difmp-*.tgz | head -1)" ;;
       esac
     ) > "$DIR/install.log" 2>&1
     if [ $? -ne 0 ]; then

@@ -1,4 +1,4 @@
-# `@harness/core`
+# `@difmp/core`
 
 Everything the harness *decides*, with none of the I/O it decides about.
 
@@ -21,7 +21,7 @@ the whole runner against fakes.
 | `domain/` | Every schema: config, budgets, spec frontmatter, tools, events, results, manifest. Identifier minting and hashing. |
 | `spec/` | `SpecLoader`: frontmatter split, strict-data-mode YAML, body parsing, duration normalising, discovery. Errors name file, field and line. |
 | `interpolate/` | `{{ run.id }}`, `{{ attempt.id }}`, declared inputs, `{{ fixture.<key> }}`. Data substitution only — there is no expression engine. |
-| `config/` | Resolving and validating `harness.config.ts`, including input precedence and unknown-key rejection. |
+| `config/` | Resolving and validating `difmp.config.ts`, including input precedence and unknown-key rejection. |
 | `registry/` | `fixtures`, `checks` and `scripts` resolved **by name**, never by module path, plus the criterion↔check hash binding guard. |
 | `policy/` | The decision rules: action guidance, blocking budgets, origin allow-list, evidence integrity, the absence branch, verdict admission, aggregation, redaction. |
 | `store/` | `RunStore`: the serialised JSONL journal, the artifact inventory, atomic result writes, the live fan-out. |
@@ -30,7 +30,7 @@ the whole runner against fakes.
 
 ## Public entrypoint
 
-`@harness/core` exports everything above from one entrypoint; there are no deep `src/` imports.
+`@difmp/core` exports everything above from one entrypoint; there are no deep `src/` imports.
 `defineConfig` is here (the CLI re-exports it), along with the public types a consumer touches:
 `ResolvedConfig`, `Fixture`, `Check`, `ScriptFactory`, `RunResult`, `HarnessEvent`,
 `ScenarioContract`, `Manifest`, `ArtifactInventory`.
@@ -42,6 +42,6 @@ The authoritative names and shapes are in
 known limitations are in [`docs/architecture.md`](../../docs/architecture.md).
 
 ```sh
-pnpm --filter @harness/core build
+pnpm --filter @difmp/core build
 npx vitest run packages/core
 ```

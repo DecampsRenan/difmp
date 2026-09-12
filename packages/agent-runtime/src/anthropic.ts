@@ -1,5 +1,5 @@
-import type { ResolvedConfig } from "@harness/core"
-import { decodeStrict, formatSchemaError, ModelProvider, ProviderError } from "@harness/core"
+import type { ResolvedConfig } from "@difmp/core"
+import { decodeStrict, formatSchemaError, ModelProvider, ProviderError } from "@difmp/core"
 import { AnthropicClient, AnthropicLanguageModel } from "@effect/ai-anthropic"
 import { Config, Effect, Layer, Schema } from "effect"
 import type { LanguageModel } from "effect/unstable/ai"
@@ -13,7 +13,7 @@ export const anthropicAdapterId = "anthropic/@effect/ai-anthropic"
 export const defaultApiKeyEnvVar = "ANTHROPIC_API_KEY"
 
 /**
- * `providerOptions` from `harness.config.ts`. Unknown keys are rejected: a silently ignored typo in
+ * `providerOptions` from `difmp.config.ts`. Unknown keys are rejected: a silently ignored typo in
  * `maxTokens` would change cost and behaviour without anyone noticing.
  */
 export const AnthropicProviderOptions = Schema.Struct({

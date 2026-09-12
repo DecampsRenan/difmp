@@ -236,7 +236,7 @@ export class SpecLoader extends Context.Service<SpecLoader, {
   readonly load: (specPath: string) => Effect.Effect<LoadedSpec, SpecError>
   /** Loads a whole selection and rejects duplicate scenario ids across it. */
   readonly loadAll: (specPaths: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<LoadedSpec>, SpecError>
-}>()("@harness/core/spec/SpecLoader") {
+}>()("@difmp/core/spec/SpecLoader") {
   static readonly layer: Layer.Layer<SpecLoader, never, FileSystem.FileSystem> = Layer.effect(
     SpecLoader,
     Effect.gen(function*() {

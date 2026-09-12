@@ -9,7 +9,7 @@ const frozen = Effect.gen(function*() {
     content: readFixture("project-create.e2e.md")
   }))
   const project = yield* expectSuccess(resolveConfig({
-    source: "harness.config.ts",
+    source: "difmp.config.ts",
     config: {
       baseUrl: "http://127.0.0.1:3000",
       budgets: { maxModelCalls: 12, maxTokens: 90_000, verifierReserveTokens: 9_000, attemptTimeoutMs: 90_000 }

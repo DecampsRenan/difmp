@@ -18,7 +18,7 @@ const pkg = JSON.parse(readFileSync(join(cliRoot, "package.json"), "utf8")) as {
   devDependencies: Record<string, string>
 }
 
-/** Source trees whose code ends up INSIDE the published bundle (tsdown `noExternal: [/^@harness\//]`). */
+/** Source trees whose code ends up INSIDE the published bundle (tsdown `noExternal: [/^@difmp\//]`). */
 const bundledSources = [
   join(cliRoot, "src"),
   join(repoRoot, "packages", "core", "src"),
@@ -61,21 +61,21 @@ const packageOf = (specifier: string): string => {
 }
 
 describe("published package.json", () => {
-  it("declares no @harness/* runtime dependency — they are bundled, and exist on no registry", () => {
-    // `pnpm pack` rewrites `workspace:*` to `0.1.0`, so a @harness/* entry in `dependencies` makes
-    // the tarball uninstallable: npm would go looking for `@harness/core@0.1.0` on the registry.
-    expect(Object.keys(pkg.dependencies).filter((name) => name.startsWith("@harness/"))).toEqual([])
+  it("declares no @difmp/* runtime dependency — they are bundled, and exist on no registry", () => {
+    // `pnpm pack` rewrites `workspace:*` to `0.1.0`, so a @difmp/* entry in `dependencies` makes
+    // the tarball uninstallable: npm would go looking for `@difmp/core@0.1.0` on the registry.
+    expect(Object.keys(pkg.dependencies).filter((name) => name.startsWith("@difmp/"))).toEqual([])
   })
 
   it("keeps the bundled workspace packages as devDependencies", () => {
-    for (const name of ["@harness/core", "@harness/browser-playwright", "@harness/agent-runtime", "@harness/reporting"]) {
+    for (const name of ["@difmp/core", "@difmp/browser-playwright", "@difmp/agent-runtime", "@difmp/reporting"]) {
       expect(pkg.devDependencies[name], `${name} must stay a devDependency`).toBe("workspace:*")
     }
   })
 
   it("declares every package the bundle imports at runtime", () => {
     const undeclared = bareImports
-      .filter(({ specifier }) => !specifier.startsWith("@harness/"))
+      .filter(({ specifier }) => !specifier.startsWith("@difmp/"))
       .filter(({ specifier }) => pkg.dependencies[packageOf(specifier)] === undefined)
       .map(({ file, specifier }) => `${specifier} (${file})`)
     expect([...new Set(undeclared)]).toEqual([])

@@ -165,9 +165,9 @@ interface RunOutput {
 const execute = (options: RunOptions) =>
   Effect.gen(function*() {
     const fs = yield* FileSystem.FileSystem
-    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harness-verdicts-" }).pipe(Effect.orDie)
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "difmp-verdicts-" }).pipe(Effect.orDie)
     const project = yield* expectSuccess(resolveConfig({
-      source: "harness.config.ts",
+      source: "difmp.config.ts",
       config: { outputDir: dir, ...options.configOverrides }
     }))
 

@@ -1,4 +1,4 @@
-import { BrowserError } from "@harness/core"
+import { BrowserError } from "@difmp/core"
 import { errors as playwrightErrors } from "playwright"
 
 const ANSI_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g")

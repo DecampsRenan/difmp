@@ -1,4 +1,4 @@
-import type { ObservedElement } from "@harness/core"
+import type { ObservedElement } from "@difmp/core"
 
 /**
  * Refs carry a frame-instance prefix (`e1` on the first document, `f1e1` afterwards), so the

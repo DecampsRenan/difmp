@@ -11,7 +11,7 @@ const withStore = <A, E, R>(
 ) =>
   Effect.gen(function*() {
     const fs = yield* FileSystem.FileSystem
-    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harness-core-" })
+    const dir = yield* fs.makeTempDirectoryScoped({ prefix: "difmp-core-" })
     const store = yield* Effect.provide(RunStore, RunStore.layer({ runId, outputDir: dir }))
     return yield* use(store, fs)
   }).pipe(Effect.provide(platform))

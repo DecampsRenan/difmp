@@ -1,8 +1,8 @@
 /**
  * LOCAL MIRROR of `packages/core/src/domain/events.ts` (design-contracts §6).
  *
- * Why a mirror and not `import type { HarnessEvent } from "@harness/core"`: `@harness/core` is not
- * a dependency of `@harness/ui` and adding one requires a `pnpm install` this lane is not allowed
+ * Why a mirror and not `import type { HarnessEvent } from "@difmp/core"`: `@difmp/core` is not
+ * a dependency of `@difmp/ui` and adding one requires a `pnpm install` this lane is not allowed
  * to run. The shapes below are transcribed field-for-field from the core schemas; `Schema.optionalKey`
  * becomes `?`, `Schema.Literals([...])` becomes a string-literal union. If core changes an event,
  * this file must change with it — `packages/core/src/domain/events.ts` remains authoritative.

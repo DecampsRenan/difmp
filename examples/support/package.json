@@ -1,5 +1,5 @@
 {
-  "name": "@harness/example-support",
+  "name": "@difmp/example-support",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,9 +7,9 @@
     "typecheck": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@harness/agent-runtime": "workspace:*",
-    "@harness/core": "workspace:*",
-    "@harness/fixture-app": "workspace:*",
+    "@difmp/agent-runtime": "workspace:*",
+    "@difmp/core": "workspace:*",
+    "@difmp/fixture-app": "workspace:*",
     "effect": "4.0.0-rc.113"
   }
 }

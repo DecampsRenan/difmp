@@ -18,21 +18,21 @@ API facts live in the sibling `api-*.md` cheat-sheets — read the ones for your
 
 | package | name | owns |
 | --- | --- | --- |
-| `packages/core` | `@harness/core` | schemas, spec loader, interpolation, config, registries, policy/budgets, events, RunStore, runner |
-| `packages/browser-playwright` | `@harness/browser-playwright` | `BrowserDriver` impl, observation/aria refs, evidence capture |
-| `packages/agent-runtime` | `@harness/agent-runtime` | `ModelProvider` iface, Anthropic adapter, scripted adapter, agent loop, `Verifier` impls |
-| `packages/reporting` | `@harness/reporting` | JSON/JUnit/standalone-HTML reporters |
-| `apps/cli` | `@harness/cli` | commands, layer assembly, SSE server, console reporter, exit codes, packaging |
-| `apps/ui` | `@harness/ui` | React live UI (built to static assets consumed by the CLI) |
-| `examples/fixture-app` | `@harness/fixture-app` | demo app + variants + probe endpoint |
+| `packages/core` | `@difmp/core` | schemas, spec loader, interpolation, config, registries, policy/budgets, events, RunStore, runner |
+| `packages/browser-playwright` | `@difmp/browser-playwright` | `BrowserDriver` impl, observation/aria refs, evidence capture |
+| `packages/agent-runtime` | `@difmp/agent-runtime` | `ModelProvider` iface, Anthropic adapter, scripted adapter, agent loop, `Verifier` impls |
+| `packages/reporting` | `@difmp/reporting` | JSON/JUnit/standalone-HTML reporters |
+| `apps/cli` | `difmp` | commands, layer assembly, SSE server, console reporter, exit codes, packaging |
+| `apps/ui` | `@difmp/ui` | React live UI (built to static assets consumed by the CLI) |
+| `examples/fixture-app` | `@difmp/fixture-app` | demo app + variants + probe endpoint |
 | `examples/scenarios` | — | `*.e2e.md` demo specs |
-| `examples/support` | `@harness/example-support` | demo `harness.config.ts`, fixtures, TS checks, scripted-adapter scripts |
+| `examples/support` | `@difmp/example-support` | demo `difmp.config.ts`, fixtures, TS checks, scripted-adapter scripts |
 
-`@harness/core` must NOT depend on React, Playwright, or any model SDK. Driver/provider/verifier
+`@difmp/core` must NOT depend on React, Playwright, or any model SDK. Driver/provider/verifier
 are `Context.Service` interfaces declared in core and implemented in the other packages.
 
-Cross-package imports use workspace deps (`"@harness/core": "workspace:*"`) and the package's
-public entrypoint only (`@harness/core`), never deep `src/` paths.
+Cross-package imports use workspace deps (`"@difmp/core": "workspace:*"`) and the package's
+public entrypoint only (`@difmp/core`), never deep `src/` paths.
 
 ## 2. Identifiers
 
@@ -46,10 +46,10 @@ public entrypoint only (`@harness/core`), never deep `src/` paths.
 - Element refs inside an observation: whatever the driver mints (see api-playwright.md); they are
   only valid together with their `observationId`.
 
-## 3. `harness.config.ts`
+## 3. `difmp.config.ts`
 
 ```ts
-import { defineConfig } from "@harness/core"   // re-exported by the CLI package too
+import { defineConfig } from "@difmp/core"   // re-exported by the CLI package too
 
 export default defineConfig({
   // discovery
@@ -104,8 +104,15 @@ deepest directory containing every pattern, not from that base, so `exclude` (an
 config directory — `ignore` entries match paths relative to the glob's cwd, and `**/…` never matches
 a path beginning with `../`. **One literal `*.e2e.md` file named on the command line bypasses
 `exclude`**: naming a file is unambiguous, and it is what lets an intentionally invalid spec reach
-the loader and be rejected. `harness.config.ts` is loaded as trusted project code (see api-tooling.md for the
+the loader and be rejected. `difmp.config.ts` is loaded as trusted project code (see api-tooling.md for the
 TS loader); its path comes from `--config` or upward lookup from cwd, NEVER from a spec.
+
+**Config filename.** Discovery accepts exactly one basename, `difmp.config.{ts,mts,mjs,js}`, with
+`.ts` tried first. A deeper directory wins over a shallower one during the upward walk. A
+`harness.config.*` left over from the tool's former name is an ordinary file and is NOT loaded — the
+run falls back to the built-in defaults rather than silently adopting settings nobody asked for.
+`configFileNames` in `apps/cli/src/loadConfig.ts` is the single source of that list; the fixture
+`apps/cli/test/fixtures/stray-harness-config/` pins the ignoring.
 
 ## 4. Spec → contract
 
@@ -316,9 +323,12 @@ invented threshold. `evaluator.kind === "scripted-model"` marks the deterministi
 is never confused with a real model judgement.
 
 Aggregation (exact order): explicit cancellation → `cancelled`; else blocking execution error or a
-failure to persist mandatory evidence → `error`; else any mandatory criterion `failed` → `failed`;
+failure to persist mandatory evidence → `error`; else any criterion `failed` → `failed`;
 else any criterion not resolved → `inconclusive`; else `passed`.
 Individual criterion statuses are preserved in `result.json` even when the aggregate is `error`.
+There is **no optional criterion**: nothing in §4's `ScenarioContract.criteria` marks one, the spec
+never introduces the notion, and `policy/aggregate.ts` fails the run on *any* `failed` criterion.
+"Mandatory evidence" (below) is a different concept and is unaffected.
 
 **Absence rule**: a locator missing after uncertain navigation ⇒ `inconclusive`. A locator
 established as absent at the checkpoint the criterion names (page loaded, list rendered, settled)
@@ -471,8 +481,8 @@ A FACTORY, not a finished script: a deterministic walkthrough has to type the va
 really use (`Projet {{ run.id }}` is only a string once the run id exists) and to name the criteria
 of the spec being run. The CLI resolves `providerOptions.script` against this registry after minting
 the run id and resolving the inputs, and before opening the browser. Core declares the context and
-keeps the return value opaque (`ScriptFactory<A = unknown>`), so `@harness/core` still depends on no
-model SDK; `@harness/agent-runtime` owns the returned shape. `provider: "anthropic"` ignores the
+keeps the return value opaque (`ScriptFactory<A = unknown>`), so `@difmp/core` still depends on no
+model SDK; `@difmp/agent-runtime` owns the returned shape. `provider: "anthropic"` ignores the
 registry entirely.
 
 Every check probe is journalled as a harness operation. Cleanup runs after success, failure AND
@@ -491,6 +501,24 @@ silent success.**
 JUnit mapping: product criterion failures ⇒ `<failure>`; technical errors and indeterminate results
 ⇒ `<error>` with the real status preserved in the message; cancellations ⇒ `<error>` and documented.
 Never emit a green `skipped` for an indeterminate result.
+
+**Retained `harness` wire names — deliberate, and the rename does NOT touch them.** Persisted run
+artefacts keep the pre-rename identifiers so `difmp report` replays a run archived before the rename
+and so a CI job that already parses these keys keeps working:
+
+| where | name | source |
+| --- | --- | --- |
+| `manifest.json` | `harnessVersion` (the CLI's own version) | `apps/cli/src/version.ts` |
+| `junit.xml` | `<testsuites name="harness">` and `<testsuite … hostname="harness">` | `packages/reporting/src/junit.ts` |
+| `junit.xml` | the whole `harness.*` property namespace — `harness.runId`, `harness.status`, `harness.specPath`, `harness.contractHash`, `harness.provider`, `harness.model`, `harness.adapter`, `harness.finalized`, `harness.actions.<attemptId>`, `harness.artifacts.{present,missing,failed}` | same |
+| SSE `/api/events` | the frame type `harness` wrapping each raw event | `apps/cli/src/server/bus.ts` |
+| `@difmp/core` API | `HarnessEvent`, `HarnessEventType`, `harnessEventTypes`, `HarnessConfigData`, `HarnessUserConfig` | `core/domain/events.ts`, `core/config/index.ts` |
+| `difmp` API | the three types `HarnessEvent` / `HarnessConfigData` / `HarnessUserConfig` re-exported from core, plus `harnessVersion`, `renderHarnessEvent`, `makeHarnessFrameEncoder` | `apps/cli/src/index.ts` |
+
+Those are the surviving uses of the old name in **data the tool writes and in the API it exports**.
+Everywhere else "harness" is only the common noun for this kind of tool. Two things are explicitly
+NOT on the list: the config basename (see §3 — `harness.config.*` is no longer discovered) and the
+CLI binary, package and workspace scopes (all `difmp` / `@difmp/*`).
 
 ## 13. Security hygiene
 
@@ -522,57 +550,64 @@ is a documented limitation, not something the redactor claims to cover.
 
 ---
 
-## 14. Open decisions surfaced by the critic pass (decide these in step 1, not step 6)
+## 14. Decision record — the questions the critic pass raised, and how they were settled
 
-These are contract-shaped questions the cheat-sheets can now answer *technically* but that this file
-does not yet settle. Pick one and edit the relevant section above.
+Every item below was an OPEN question while this file was being written. All seven are now decided
+**and implemented**; this section is kept as the record of what was chosen and why, not as a to-do
+list. Each row names the section above that is authoritative and the code that implements it.
 
 1. **Is `ModelProvider` (§10) a real abstraction, or just a swapped `LanguageModel` layer?**
-   `effect/unstable/ai` is part of `effect` itself, not a vendor SDK, so putting
-   `LanguageModel.LanguageModel` in `@harness/core` does **not** violate "core must not depend on a
-   model SDK". `LanguageModel.make({ generateText, streamText })` gives a fully deterministic
-   scripted provider in ~20 lines (api-effect-ai.md §B2, compiled + executed) and lets the scripted
-   and real adapters share the entire loop, prompt plumbing, usage accounting and tool typing.
-   Hand-rolling the §10 `ModelProvider` interface duplicates all of that. **Recommendation: drop
-   §10's custom interface; make `provider` a choice of `Layer<LanguageModel>`.** If §10 is kept,
-   say explicitly what it buys.
+   **Decided: keep §10.** `effect/unstable/ai` is part of `effect` itself, not a vendor SDK, so
+   `LanguageModel.LanguageModel` under `ModelProvider` does not violate "core depends on no model
+   SDK", and the scripted and Anthropic adapters share the whole loop, prompt plumbing, usage
+   accounting and tool typing — only the `LanguageModel` layer differs. §10 is kept because the
+   runner needs three things the `LanguageModel` shape does not carry: `role: "browser" |
+   "verifier"` (which budget accounting and the journal both key on), an explicit `AbortSignal` for
+   the cancellation race, and a `ProviderResponse` whose `toolCalls` arrive in wire shape for the
+   harness to validate. One interface, one implementation (`makeLanguageModelProvider`), both
+   providers. `packages/core/src/services/model.ts`; rationale in `../architecture.md` §2.
 
-2. **`observationId` + element `ref` lifetime.** api-playwright.md §2 proves a ref is valid only
-   against the *most recent ai-mode snapshot in that frame*, and that **any** default-mode
-   `ariaSnapshot` anywhere disarms every ref. §5 above must state: one `observationId` is live at a
-   time per attempt; a ref from an older `observationId` is rejected **without** touching the page;
-   `observe` is the only caller of `ariaSnapshot`.
+2. **`observationId` + element `ref` lifetime.** **Decided and stated in §5:** exactly one
+   `observationId` is live per attempt; a ref from an older one is rejected **without touching the
+   page**, as a typed tool error telling the agent to re-observe; the rejection is double-gated
+   (runner and driver, the driver also treating `locator.count() > 1` as ambiguity); and `observe`
+   is the only caller of `ariaSnapshot` in the codebase, because any default-mode `ariaSnapshot`
+   anywhere disarms every outstanding ref. Tracing is therefore configured without `aria: true`.
 
-3. **`timeout: 90s` has no parser.** Effect rejects `"90s"` (api-effect-core.md §A1). Either
-   change the contract to the spaced form (`90 seconds`) — which contradicts the spec's own
-   example — or adopt the abbreviation normaliser. **Recommendation: normaliser, accept both.**
-   Record the decision in §4.
+3. **`timeout: 90s` has no parser.** **Decided: adopt the normaliser, accept both forms.** Effect's
+   `Duration` parser rejects the abbreviated form the spec's own example uses, so
+   `packages/core/src/spec/duration.ts` normalises first: `90s`, `2m`, `1500ms`, `90 seconds` and a
+   bare number of milliseconds are all accepted. Recorded in §4.
 
-4. **`artifactId` / `observationId` / `actionId` counters vs UUIDv7.** §2 specifies `art_<seq>`.
-   A per-attempt counter must be single-writer and shared with the `events.jsonl` `seq` writer.
-   `Crypto.randomUUIDv7` (api-effect-core.md §A2) is monotonic and needs no shared state. Keep
-   `art_<seq>` only if the event writer already owns the counter.
+4. **`artifactId` / `observationId` / `actionId` counters vs UUIDv7.** **Decided: keep `art_<seq>`**
+   as §2 specifies. The event writer already owns the per-attempt counter, which was the stated
+   condition for keeping it, so the shared-state objection does not apply.
 
-5. **Does the aggregate `passed` require every criterion, or only "mandatory" ones?** §8's
-   aggregation says "critère obligatoire", but nothing in §4's `ScenarioContract.criteria` marks a
-   criterion optional, and the spec never introduces optional criteria. **Either add a field or
-   drop the word "obligatoire"** — otherwise two implementers will read it differently.
+5. **Does the aggregate `passed` require every criterion, or only "mandatory" ones?**
+   **Decided: every criterion.** The word "obligatoire" is dropped — there is no optional criterion
+   in the model and the spec never introduces one. §8 now says "any criterion `failed`", which is
+   what `packages/core/src/policy/aggregate.ts` implements.
 
-6. **Where does `maxActions` counting live?** §7 says accepted browser tool calls including failed
-   ones. A rejected *stale ref* produces a typed tool error (§5) — the text says the action "still
-   counts". Make sure the counter increments in the tool dispatcher, before policy validation, and
-   that a **policy-rejected** `navigate` (disallowed origin) is stated one way or the other.
+6. **Where does `maxActions` counting live?** **Decided: in the tool dispatcher, before parameter
+   validation and before the policy check.** That is why a refused stale reference and a
+   policy-rejected `navigate` (disallowed origin) both still count — the counter must not be
+   escapable by sending an invalid call. §7 defines what is counted; `../architecture.md` §2
+   (`disableToolCallResolution: true`) explains why the harness, not the SDK, executes tool calls.
 
 7. **`report` (§12) must render without a model call and without the run's original config.**
-   `report <run-directory>` reads `result.json` + `contract.json` + `artifacts.json` only. State
-   that `manifest.json` is the sole source of "which adapter was used" so the reporter never has to
-   re-resolve config.
+   **Decided and implemented:** `difmp report <run-directory>` reads `result.json`, `contract.json`
+   and `artifacts.json` only, and `manifest.json` is the sole source of "which adapter was used", so
+   the reporter never re-resolves configuration. §9 states it; the packaging smoke matrix
+   (`apps/cli/scripts/consumer-smoke/run.sh`) asserts the rebuild in every consumer cell.
 
-Supporting facts now verified and available: run ids + sha256 via `Crypto.Crypto`
-(api-effect-core.md §A2), cancellation with finalizer-ordering guarantees (api-effect-core.md §A3 /
-api-effect-http-node.md §C2), frontmatter field→line mapping (api-tooling.md §A-L),
-`--inputs-file` typed decoding (api-tooling.md §A-I), tool JSON-Schema emission
-(api-effect-ai.md §B1).
+The one contract question that is still genuinely **open** is not in this list — it is the
+`contractFrozen` payload gap, stated at the end of §15.
+
+The API facts these decisions rest on are the compiled cheat-sheets next to this file: run ids and
+sha256 via `Crypto.Crypto` (api-effect-core.md §A2), cancellation with finalizer-ordering guarantees
+(api-effect-core.md §A3 / api-effect-http-node.md §C2), frontmatter field→line mapping
+(api-tooling.md §A-L), `--inputs-file` typed decoding (api-tooling.md §A-I), tool JSON-Schema
+emission (api-effect-ai.md §B1), and aria-ref lifetime (api-playwright.md §2).
 
 ---
 
@@ -583,7 +618,7 @@ path. Every URL the app uses is RELATIVE to the page, and the CLI may override t
 one script tag before the bundle:
 
 ```html
-<script>globalThis.__HARNESS_UI__ = {
+<script>globalThis.__DIFMP_UI__ = {
   eventsUrl: "events", cancelUrl: "cancel", contractUrl: "contract", artifactBaseUrl: "artifacts/",
   pricing: { currency: "USD", inputPerMillionTokens: 3, outputPerMillionTokens: 15 }  // OPTIONAL
 }</script>

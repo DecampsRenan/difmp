@@ -11,7 +11,7 @@ let output: string
 
 beforeAll(async () => {
   page = await startPage()
-  output = mkdtempSync(join(tmpdir(), "harness-runs-"))
+  output = mkdtempSync(join(tmpdir(), "difmp-runs-"))
 })
 
 afterAll(async () => {
@@ -99,14 +99,14 @@ describe("exit codes from real runs", () => {
   })
 
   it("1 when a criterion fails", async () => {
-    const result = await runAlpha(["--config", "harness.failed.config.ts"], join(output, "f"))
+    const result = await runAlpha(["--config", "difmp.failed.config.ts"], join(output, "f"))
     expect(result.code).toBe(1)
     expect(allOutput(result)).toContain("FAIL  alpha")
     expect(allOutput(result)).toContain("1 failed")
   })
 
   it("1 when a criterion is inconclusive — never a green skip", async () => {
-    const result = await runAlpha(["--config", "harness.inconclusive.config.ts"], join(output, "g"))
+    const result = await runAlpha(["--config", "difmp.inconclusive.config.ts"], join(output, "g"))
     expect(result.code).toBe(1)
     expect(allOutput(result)).toContain("INCO  alpha")
     expect(allOutput(result)).toContain("1 inconclusive")
@@ -150,7 +150,7 @@ describe("console and json reporters", () => {
   })
 })
 
-describe("harness report", () => {
+describe("difmp report", () => {
   it("rebuilds the HTML from persisted data, with no model call and no replay", async () => {
     const dir = join(output, "j")
     const run = await runAlpha([], dir)
@@ -239,7 +239,7 @@ describe("live dashboard (--ui)", () => {
 
     // The served page carries the endpoint overrides `apps/ui/src/runtime/config.ts` reads.
     const shell = await (await fetch(`http://127.0.0.1:${port}/`)).text()
-    expect(shell).toContain("__HARNESS_UI__")
+    expect(shell).toContain("__DIFMP_UI__")
     expect(shell).toContain("/api/ui/events")
 
     const [frames, uiFrames] = await Promise.all([
@@ -287,8 +287,8 @@ describe("a secret a fixture read is stripped from everything the run writes", (
 
   it("redacts it from the contract, the journal, the result and both reports", async () => {
     const dir = join(output, "secret-fixture")
-    const previous = process.env["HARNESS_TEST_SECRET"]
-    process.env["HARNESS_TEST_SECRET"] = secret
+    const previous = process.env["DIFMP_TEST_SECRET"]
+    process.env["DIFMP_TEST_SECRET"] = secret
     try {
       const result = await exec(["run", "--base-url", page.url, "--output", dir], { cwd: leaky })
       expect(result.code, allOutput(result)).toBe(0)
@@ -304,8 +304,8 @@ describe("a secret a fixture read is stripped from everything the run writes", (
       expect(contract).toContain("[redacted]")
       expect(allOutput(result)).not.toContain(secret)
     } finally {
-      if (previous === undefined) delete process.env["HARNESS_TEST_SECRET"]
-      else process.env["HARNESS_TEST_SECRET"] = previous
+      if (previous === undefined) delete process.env["DIFMP_TEST_SECRET"]
+      else process.env["DIFMP_TEST_SECRET"] = previous
     }
   })
 })
@@ -354,7 +354,7 @@ describe("a run that fails before the contract is frozen is still reported", () 
     expect(html).toContain("jamais été gelé")
   })
 
-  it("replays the same outputs through `harness report <run-directory>`", async () => {
+  it("replays the same outputs through `difmp report <run-directory>`", async () => {
     const dir = join(output, "setup-failure-replay")
     expect((await exec(["run", "--base-url", page.url, "--output", dir], { cwd: failing })).code).toBe(2)
     const runDir = latestRunDir(dir)

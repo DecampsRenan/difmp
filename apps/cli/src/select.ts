@@ -1,5 +1,5 @@
-import type { LoadedSpec, ResolvedConfig } from "@harness/core"
-import { discoverSpecs, SpecLoader } from "@harness/core"
+import type { LoadedSpec, ResolvedConfig } from "@difmp/core"
+import { discoverSpecs, SpecLoader } from "@difmp/core"
 import { Effect } from "effect"
 import { relative } from "node:path"
 import { UsageError } from "./errors.js"

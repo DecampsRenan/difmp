@@ -51,7 +51,7 @@ const withDefault = <S extends Schema.Codec<any, any, never, never>>(schema: S, 
   schema.pipe(Schema.withDecodingDefaultKey(Effect.succeed(value)))
 
 /**
- * The serialisable half of `harness.config.ts`. Fixtures and checks are functions and are
+ * The serialisable half of `difmp.config.ts`. Fixtures and checks are functions and are
  * validated separately (see registry/) — everything here round-trips to `manifest.json`.
  */
 export const ResolvedConfig = Schema.Struct({

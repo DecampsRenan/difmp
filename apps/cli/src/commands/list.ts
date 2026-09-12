@@ -1,11 +1,11 @@
-import { SpecLoader } from "@harness/core"
+import { SpecLoader } from "@difmp/core"
 import { Console, Effect, FileSystem, Option, Path } from "effect"
 import type { UsageError } from "../errors.js"
 import { loadProject } from "../project.js"
 import { selectSpecs } from "../select.js"
 import type { SelectFlags } from "./types.js"
 
-/** `harness list` starts NEITHER a model NOR a browser: it only reads spec files. */
+/** `difmp list` starts NEITHER a model NOR a browser: it only reads spec files. */
 export const listHandler = (
   flags: SelectFlags
 ): Effect.Effect<void, UsageError, FileSystem.FileSystem | Path.Path> =>

@@ -1,5 +1,5 @@
 {
-  "name": "@harness/browser-playwright",
+  "name": "@difmp/browser-playwright",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -22,6 +22,6 @@
   "dependencies": {
     "effect": "4.0.0-rc.113",
     "playwright": "1.63.0",
-    "@harness/core": "workspace:*"
+    "@difmp/core": "workspace:*"
   }
 }

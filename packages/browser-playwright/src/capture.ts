@@ -1,4 +1,4 @@
-import type { ConsoleEntry, NetworkEntry } from "@harness/core"
+import type { ConsoleEntry, NetworkEntry } from "@difmp/core"
 import type { BrowserContext, ConsoleMessage, Request, Response, WebError } from "playwright"
 import { stripAnsi } from "./errors.js"
 

@@ -1,5 +1,5 @@
 {
-  "name": "agentic-e2e-harness-workspace",
+  "name": "difmp-workspace",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.29.3",

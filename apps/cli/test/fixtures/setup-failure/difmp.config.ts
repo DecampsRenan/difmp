@@ -1,4 +1,4 @@
-import { defineConfig } from "@harness/core"
+import { defineConfig } from "@difmp/core"
 
 /**
  * A project whose fixture always fails. It exists to prove that a run dying in INFRASTRUCTURE

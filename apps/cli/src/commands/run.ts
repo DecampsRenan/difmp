@@ -1,5 +1,5 @@
-import type { InputsRecord, RunResult } from "@harness/core"
-import { SpecLoader } from "@harness/core"
+import type { InputsRecord, RunResult } from "@difmp/core"
+import { SpecLoader } from "@difmp/core"
 import { Crypto, Deferred, Effect, FileSystem, Option, Path } from "effect"
 import { resolve } from "node:path"
 import { Cancelled, ExecutionError, ScenariosNotPassing, UsageError } from "../errors.js"
@@ -22,10 +22,10 @@ import { harnessVersion } from "../version.js"
 import type { RunFlags } from "./types.js"
 
 /**
- * `harness run` — discover, execute once, report, exit.
+ * `difmp run` — discover, execute once, report, exit.
  *
  * Precedence, highest first: `--input` > `--inputs-file` > spec frontmatter > config `inputs`
- * for scenario data; CLI execution flags > `harness.config.ts` > built-in defaults for everything
+ * for scenario data; CLI execution flags > `difmp.config.ts` > built-in defaults for everything
  * else.
  */
 export const runHandler = (flags: RunFlags): Effect.Effect<

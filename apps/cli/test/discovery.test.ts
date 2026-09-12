@@ -1,4 +1,4 @@
-import { resolveConfig } from "@harness/core"
+import { resolveConfig } from "@difmp/core"
 import { Effect } from "effect"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join, relative } from "node:path"
@@ -84,7 +84,7 @@ describe("spec discovery", () => {
       .toEqual(["tests/nested/gamma.e2e.md"])
   })
 
-  it("`harness list` prints the same stable order and starts no browser", async () => {
+  it("`difmp list` prints the same stable order and starts no browser", async () => {
     const result = await exec(["list"], { cwd: project })
     expect(result.code).toBe(0)
     const parsed = JSON.parse((await exec(["list", "--json"], { cwd: project })).stdout.join("\n")) as {
@@ -98,7 +98,7 @@ describe("spec discovery", () => {
     ])
   })
 
-  it("`harness list --tag` filters, and a quoted glob narrows the selection", async () => {
+  it("`difmp list --tag` filters, and a quoted glob narrows the selection", async () => {
     const smoke = await exec(["list", "--tag", "smoke"], { cwd: project })
     expect(smoke.code).toBe(0)
     expect(smoke.stdout.join("\n")).toContain("alpha")

@@ -8,29 +8,29 @@ import { runConfig, selectConfig } from "./flags.js"
 import { harnessVersion } from "./version.js"
 
 /**
- * The root command declares the SAME config as `run`, which is what makes `harness <globs>` an
- * alias of `harness run <globs>`: the parser only treats the first positional as a subcommand when
+ * The root command declares the SAME config as `run`, which is what makes `difmp <globs>` an
+ * alias of `difmp run <globs>`: the parser only treats the first positional as a subcommand when
  * it matches a subcommand name, and otherwise collects it as a positional for the root's own
  * handler (api-effect-cli.md §4). There is no `withDefaultSubcommand` in Effect v4.
  *
  * Consequence to document: a file literally named `run`, `list`, `validate` or `report` in first
- * position is read as the subcommand — write `harness ./run` or `harness -- run`.
+ * position is read as the subcommand — write `difmp ./run` or `difmp -- run`.
  */
-export const harness = Command.make("harness", runConfig, runHandler).pipe(
+export const difmp = Command.make("difmp", runConfig, runHandler).pipe(
   Command.withDescription(
-    "Agent-driven end-to-end test harness. `harness [paths...]` is an alias of `harness run [paths...]`."
+    "Agent-driven end-to-end test harness. `difmp [paths...]` is an alias of `difmp run [paths...]`."
   ),
   Command.withExamples([
-    { command: "harness run", description: "Run every **/*.e2e.md the configuration selects" },
-    { command: "harness run 'tests/e2e/**/*.e2e.md'", description: "Run a quoted glob (the shell must not expand it)" },
-    { command: "harness run --tag smoke --reporter json", description: "Smoke scenarios, machine-readable stdout" },
-    { command: "harness run --input projectName=Demo -i seed=7", description: "Scenario inputs (always strings)" },
-    { command: "harness run --ui", description: "Run with the live dashboard on loopback" }
+    { command: "difmp run", description: "Run every **/*.e2e.md the configuration selects" },
+    { command: "difmp run 'tests/e2e/**/*.e2e.md'", description: "Run a quoted glob (the shell must not expand it)" },
+    { command: "difmp run --tag smoke --reporter json", description: "Smoke scenarios, machine-readable stdout" },
+    { command: "difmp run --input projectName=Demo -i seed=7", description: "Scenario inputs (always strings)" },
+    { command: "difmp run --ui", description: "Run with the live dashboard on loopback" }
   ])
 )
 
 export const run = Command.make("run", runConfig, runHandler).pipe(
-  Command.withDescription("Discover, execute once and report. This is what `harness` alone does.")
+  Command.withDescription("Discover, execute once and report. This is what `difmp` alone does.")
 )
 
 export const list = Command.make("list", selectConfig, listHandler).pipe(
@@ -52,7 +52,7 @@ export const report = Command.make("report", {
   Command.withDescription("Rebuild the HTML report from persisted data. No model call, no replay.")
 )
 
-export const cli = harness.pipe(Command.withSubcommands([run, list, validate, report]))
+export const cli = difmp.pipe(Command.withSubcommands([run, list, validate, report]))
 
 /**
  * Our own errors carry `Runtime.errorReported = false` so the runtime does not dump a cause on top

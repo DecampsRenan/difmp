@@ -1,4 +1,4 @@
-import type { ReportInput } from "@harness/core"
+import type { ReportInput } from "@difmp/core"
 import {
   ArtifactInventory,
   Manifest,
@@ -6,7 +6,7 @@ import {
   readRunJournal,
   RunResult,
   ScenarioContract
-} from "@harness/core"
+} from "@difmp/core"
 import { Effect, FileSystem, Path, Schema } from "effect"
 import { ExecutionError } from "./errors.js"
 
@@ -43,7 +43,7 @@ const decoded = <A>(
 /**
  * Rebuild everything a reporter is allowed to read from the PERSISTED run directory only —
  * no model call, no replay, no config re-resolution. `manifest.json` is the sole source of
- * "which adapter was used" (design-contracts §14.7). `harness report` and the post-run reporting
+ * "which adapter was used" (design-contracts §14.7). `difmp report` and the post-run reporting
  * pass go through this same function, so the two can never drift.
  *
  * `manifest.json` is the only mandatory file: it is written at spec §6 step 2, before anything can
