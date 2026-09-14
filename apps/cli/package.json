@@ -2,7 +2,15 @@
   "name": "@decampsrenan/difmp",
   "version": "0.0.2",
   "description": "Agent-driven end-to-end test harness: run *.e2e.md scenarios from any project",
+  "homepage": "https://github.com/DecampsRenan/difmp#readme",
+  "bugs": {
+    "url": "https://github.com/DecampsRenan/difmp/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DecampsRenan/difmp.git"
+  },
   "bin": {
     "difmp": "./dist/bin/difmp.js"
   },
@@ -37,7 +45,7 @@
     "typecheck": "tsc -b tsconfig.json tsconfig.examples.json",
     "test": "vitest run --config vitest.config.ts",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "prepack": "npm run build:bundle"
+    "prepack": "pnpm --filter @difmp/core --filter @difmp/agent-runtime --filter @difmp/browser-playwright --filter @difmp/reporting run build && npm run build:bundle"
   },
   "dependencies": {
     "@effect/ai-anthropic": "4.0.0-rc.113",
