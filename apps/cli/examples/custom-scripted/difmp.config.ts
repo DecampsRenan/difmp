@@ -1,4 +1,4 @@
-import { defineConfig } from "@stylishedcoyote/difmp";
+import { defineConfig } from "@decampsrenan/difmp";
 import { createProject } from "./custom-script.js";
 
 export default defineConfig({

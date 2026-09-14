@@ -7,7 +7,7 @@ import {
   screenshot,
   type ScriptFactory,
   type ScriptedProviderScript,
-} from "@stylishedcoyote/difmp/scripted";
+} from "@decampsrenan/difmp/scripted";
 
 /**
  * A consumer-owned walkthrough. The factory receives the resolved inputs and criterion ids for

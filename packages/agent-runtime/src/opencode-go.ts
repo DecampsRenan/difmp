@@ -1,0 +1,142 @@
+import type { ResolvedConfig } from "@difmp/core";
+import { decodeStrict, formatSchemaError, ModelProvider, ProviderError } from "@difmp/core";
+import { Config, Effect, Layer, Schema } from "effect";
+import type { HttpClient } from "effect/unstable/http";
+import { anthropicModelProviderLayer, type AnthropicAdapterOptions } from "./anthropic.js";
+
+export const opencodeGoProviderId = "opencode-go";
+/** Recorded in `manifest.model.adapterId` so a report can name the adapter that really ran. */
+export const opencodeGoAdapterId = "opencode-go/@effect/ai-anthropic";
+export const defaultOpencodeGoApiKeyEnvVar = "OPENCODE_API_KEY";
+export const defaultOpencodeGoApiUrl = "https://opencode.ai/zen/go";
+/** OpenCode Go monitors User-Agent; identify as difmp, not a generic HTTP library. */
+export const opencodeGoUserAgent = "difmp/0.0.2";
+
+/**
+ * OpenCode Go models that speak the Anthropic Messages API (`/v1/messages`). Other Go models use
+ * OpenAI chat/completions or responses and need a different adapter — rejected here with a clear
+ * message rather than a cryptic InvalidOutputError from the Anthropic client.
+ */
+const anthropicCompatibleModels = new Set([
+  "minimax-m3",
+  "minimax-m2.7",
+  "minimax-m2.5",
+  "qwen3.8-max",
+  "qwen3.8-flash",
+  "qwen3.7-max",
+  "qwen3.7-plus",
+  "qwen3.6-plus",
+]);
+
+/**
+ * `providerOptions` for `provider: "opencode-go"`. Unknown keys are rejected.
+ *
+ * Auth is env-only (`OPENCODE_API_KEY` by default). Go requires `x-opencode-session` on every
+ * request — the harness sets it from the run id unless `sessionId` overrides.
+ */
+export const OpencodeGoProviderOptions = Schema.Struct({
+  apiKeyEnvVar: Schema.optionalKey(Schema.NonEmptyString),
+  apiUrl: Schema.optionalKey(Schema.NonEmptyString),
+  apiVersion: Schema.optionalKey(Schema.NonEmptyString),
+  /** Stable conversation id for Go routing / prompt cache. Defaults to the run id. */
+  sessionId: Schema.optionalKey(Schema.NonEmptyString),
+  maxTokens: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThan(0))),
+  temperature: Schema.optionalKey(Schema.Finite),
+  topP: Schema.optionalKey(Schema.Finite),
+  topK: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThan(0))),
+  stopSequences: Schema.optionalKey(Schema.Array(Schema.NonEmptyString)),
+}).annotate({ identifier: "OpencodeGoProviderOptions" });
+export type OpencodeGoProviderOptions = (typeof OpencodeGoProviderOptions)["Type"];
+
+export interface OpencodeGoAdapterOptions extends OpencodeGoProviderOptions {
+  readonly model: string;
+  /** Required at run time; validation may omit it (no HTTP call yet). */
+  readonly sessionId: string;
+}
+
+const providerError = (reason: string): ProviderError =>
+  new ProviderError({ provider: opencodeGoProviderId, reason, retryable: false });
+
+const assertAnthropicCompatible = (model: string): Effect.Effect<void, ProviderError> =>
+  anthropicCompatibleModels.has(model)
+    ? Effect.void
+    : Effect.fail(
+        providerError(
+          `model "${model}" is not served on OpenCode Go's Anthropic Messages endpoint ` +
+            `(/v1/messages). Supported ids: ${[...anthropicCompatibleModels].toSorted().join(", ")}. ` +
+            "Chat/completions and Responses models need a separate adapter.",
+        ),
+      );
+
+/** Resolve adapter options from config. `sessionId` falls back to `fallbackSessionId` when unset. */
+export const opencodeGoOptionsFromConfig = (
+  config: ResolvedConfig,
+  fallbackSessionId?: string,
+): Effect.Effect<OpencodeGoAdapterOptions, ProviderError> =>
+  Effect.gen(function* () {
+    if (config.model === undefined) {
+      return yield* Effect.fail(
+        providerError(
+          '`model` is required when `provider: "opencode-go"` — no model id is defaulted in code',
+        ),
+      );
+    }
+    yield* assertAnthropicCompatible(config.model);
+    const options = yield* decodeStrict(OpencodeGoProviderOptions)(config.providerOptions).pipe(
+      Effect.mapError((error) =>
+        providerError(
+          formatSchemaError(error, {
+            source: "providerOptions",
+            summary: "invalid provider options",
+          }),
+        ),
+      ),
+    );
+    const sessionId = options.sessionId ?? fallbackSessionId;
+    if (sessionId === undefined || sessionId.length === 0) {
+      return yield* Effect.fail(
+        providerError(
+          "OpenCode Go requires x-opencode-session; pass providerOptions.sessionId or run via `difmp run` (session defaults to the run id)",
+        ),
+      );
+    }
+    return { ...options, model: config.model, sessionId };
+  });
+
+const toAnthropicAdapterOptions = (options: OpencodeGoAdapterOptions): AnthropicAdapterOptions => ({
+  model: options.model,
+  providerId: opencodeGoProviderId,
+  apiKeyEnvVar: options.apiKeyEnvVar ?? defaultOpencodeGoApiKeyEnvVar,
+  apiUrl: options.apiUrl ?? defaultOpencodeGoApiUrl,
+  ...(options.apiVersion === undefined ? {} : { apiVersion: options.apiVersion }),
+  ...(options.maxTokens === undefined ? {} : { maxTokens: options.maxTokens }),
+  ...(options.temperature === undefined ? {} : { temperature: options.temperature }),
+  ...(options.topP === undefined ? {} : { topP: options.topP }),
+  ...(options.topK === undefined ? {} : { topK: options.topK }),
+  ...(options.stopSequences === undefined ? {} : { stopSequences: options.stopSequences }),
+  headers: {
+    "user-agent": opencodeGoUserAgent,
+    "x-opencode-session": options.sessionId,
+  },
+});
+
+/**
+ * OpenCode Go over the Anthropic Messages surface. Same LanguageModel plumbing as `anthropic`,
+ * with Go's base URL, `OPENCODE_API_KEY`, User-Agent, and required `x-opencode-session`.
+ */
+export const opencodeGoModelProviderLayer = (
+  options: OpencodeGoAdapterOptions,
+  httpClient?: Layer.Layer<HttpClient.HttpClient>,
+): Layer.Layer<ModelProvider, Config.ConfigError> =>
+  anthropicModelProviderLayer(toAnthropicAdapterOptions(options), httpClient);
+
+export const opencodeGoModelProviderLayerFromConfig = (
+  config: ResolvedConfig,
+  fallbackSessionId?: string,
+): Layer.Layer<ModelProvider, ProviderError | Config.ConfigError> =>
+  Layer.unwrap(
+    Effect.map(
+      opencodeGoOptionsFromConfig(config, fallbackSessionId),
+      opencodeGoModelProviderLayer,
+    ),
+  );

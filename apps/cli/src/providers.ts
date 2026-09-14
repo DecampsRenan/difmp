@@ -11,6 +11,9 @@ import {
   anthropicAdapterId,
   anthropicModelProviderLayer,
   happyPathScript,
+  opencodeGoAdapterId,
+  opencodeGoOptionsFromConfig,
+  opencodeGoModelProviderLayer,
   prematureFinishScript,
   scriptedAdapterId,
   scriptedModelId,
@@ -75,6 +78,13 @@ export const validateProviderConfig = (
   Effect.gen(function* () {
     if (config.provider === "anthropic") {
       yield* anthropicOptionsFromConfig(config).pipe(
+        Effect.mapError((error) => new UsageError({ message: error.message })),
+      );
+      return;
+    }
+    if (config.provider === "opencode-go") {
+      // Session defaults to the run id at execute time; validation only checks model + options.
+      yield* opencodeGoOptionsFromConfig(config, "difmp-validate").pipe(
         Effect.mapError((error) => new UsageError({ message: error.message })),
       );
       return;
@@ -231,6 +241,28 @@ export const modelProviderFor = (
         providerId: "anthropic",
         modelId: config.model ?? "unknown",
         adapterId: anthropicAdapterId,
+      };
+    }
+    if (config.provider === "opencode-go") {
+      const options = yield* opencodeGoOptionsFromConfig(config, context?.runId).pipe(
+        Effect.mapError((error) => new UsageError({ message: error.message })),
+      );
+      return {
+        layer: opencodeGoModelProviderLayer(options).pipe(
+          Layer.catchCause((cause) =>
+            Layer.effect(
+              ModelProvider,
+              Effect.fail(
+                new UsageError({
+                  message: `provider "opencode-go" could not be configured: ${describeCause(cause)}`,
+                }),
+              ),
+            ),
+          ),
+        ),
+        providerId: "opencode-go",
+        modelId: config.model ?? "unknown",
+        adapterId: opencodeGoAdapterId,
       };
     }
     const script = yield* scriptFor(config, spec, registries, context);

@@ -56,10 +56,11 @@ export const outputFlag = Flag.String("output").pipe(
   Flag.optional,
 );
 
-export const providerFlag = Flag.Literals("provider", ["scripted", "anthropic"]).pipe(
-  Flag.withDescription("Model provider (overrides difmp.config.ts)"),
-  Flag.optional,
-);
+export const providerFlag = Flag.Literals("provider", [
+  "scripted",
+  "anthropic",
+  "opencode-go",
+]).pipe(Flag.withDescription("Model provider (overrides difmp.config.ts)"), Flag.optional);
 
 export const modelFlag = Flag.String("model").pipe(
   Flag.withDescription("Provider-specific model id (overrides difmp.config.ts)"),

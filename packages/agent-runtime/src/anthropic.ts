@@ -4,7 +4,11 @@ import { AnthropicClient, AnthropicLanguageModel } from "@effect/ai-anthropic";
 import { Config, Effect, Layer, Schema } from "effect";
 import type { LanguageModel } from "effect/unstable/ai";
 import type { HttpClient } from "effect/unstable/http";
-import { FetchHttpClient } from "effect/unstable/http";
+import {
+  FetchHttpClient,
+  HttpClient as HttpClientModule,
+  HttpClientRequest,
+} from "effect/unstable/http";
 import { makeLanguageModelProvider } from "./provider.js";
 
 export const anthropicProviderId = "anthropic";
@@ -32,6 +36,13 @@ export type AnthropicProviderOptions = (typeof AnthropicProviderOptions)["Type"]
 export interface AnthropicAdapterOptions extends AnthropicProviderOptions {
   /** Provider-specific model id, always from configuration. */
   readonly model: string;
+  /**
+   * Extra request headers (e.g. OpenCode Go's `x-opencode-session`). Applied after the Anthropic
+   * client sets `x-api-key` / `anthropic-version`, so they cannot override auth.
+   */
+  readonly headers?: Readonly<Record<string, string>>;
+  /** Recorded on `ModelProvider.id`. Defaults to {@link anthropicProviderId}. */
+  readonly providerId?: string;
 }
 
 const providerError = (reason: string): ProviderError =>
@@ -91,18 +102,28 @@ export const anthropicOptionsFromConfig = (
     return { ...options, model: config.model };
   });
 
+const withExtraHeaders =
+  (
+    headers: Readonly<Record<string, string>>,
+  ): ((client: HttpClient.HttpClient) => HttpClient.HttpClient) =>
+  (client) =>
+    HttpClientModule.mapRequest(client, HttpClientRequest.setHeaders(headers));
+
 /**
  * `httpClient` exists so a test can drive the REAL adapter against a recorded transport: the
  * request is built, signed and serialised exactly as in production, without reaching the network.
  */
 export const anthropicClientLayer = (
-  options: Pick<AnthropicAdapterOptions, "apiKeyEnvVar" | "apiUrl" | "apiVersion">,
+  options: Pick<AnthropicAdapterOptions, "apiKeyEnvVar" | "apiUrl" | "apiVersion" | "headers">,
   httpClient: Layer.Layer<HttpClient.HttpClient> = FetchHttpClient.layer,
 ): Layer.Layer<AnthropicClient.AnthropicClient, Config.ConfigError> =>
   AnthropicClient.layerConfig({
     apiKey: Config.Redacted(options.apiKeyEnvVar ?? defaultApiKeyEnvVar),
     ...(options.apiUrl === undefined ? {} : { apiUrl: Config.succeed(options.apiUrl) }),
     ...(options.apiVersion === undefined ? {} : { apiVersion: Config.succeed(options.apiVersion) }),
+    ...(options.headers === undefined || Object.keys(options.headers).length === 0
+      ? {}
+      : { transformClient: withExtraHeaders(options.headers) }),
   }).pipe(Layer.provide(httpClient));
 
 /** Map our neutral option names onto Anthropic's request parameters. */
@@ -135,7 +156,10 @@ export const anthropicModelProviderLayer = (
 ): Layer.Layer<ModelProvider, Config.ConfigError> =>
   Layer.effect(
     ModelProvider,
-    makeLanguageModelProvider({ id: anthropicProviderId, modelId: options.model }),
+    makeLanguageModelProvider({
+      id: options.providerId ?? anthropicProviderId,
+      modelId: options.model,
+    }),
   ).pipe(Layer.provide(anthropicLanguageModelLayer(options, httpClient)));
 
 /** Convenience for the CLI: config in, layer out. */
