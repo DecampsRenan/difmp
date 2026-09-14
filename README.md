@@ -2,12 +2,12 @@
 
 > [!WARNING]
 > **difmp is under active development, is not stable, and will change in breaking ways without
-> notice.** The package is not published to any registry — every install is a local tarball you
-> built yourself. The shape of `difmp.config.ts` and the layout of a `runs/<run-id>/` directory are
-> both still moving, so a config and a run archive written today may not be readable by a later
-> build. The verification behaviour — when a criterion is judged, and when difmp downgrades a
-> verdict to `inconclusive` — is still being tuned, so verdicts can shift between versions on
-> unchanged scenarios. Pin the tarball you tested and re-read this file before you rebuild.
+> notice.** Published on npm as `@stylishedcoyote/difmp`, but expect breaking changes between versions. The shape of
+> `difmp.config.ts` and the layout of a `runs/<run-id>/` directory are both still moving, so a config
+> and a run archive written today may not be readable by a later build. The verification behaviour —
+> when a criterion is judged, and when difmp downgrades a verdict to `inconclusive` — is still being
+> tuned, so verdicts can shift between versions on unchanged scenarios. Pin the version you tested and
+> re-read this file before you upgrade.
 
 **difmp** runs end-to-end scenarios that are written as prose instead of as selectors. You describe
 a journey and what you expect at the end, in Markdown with a YAML header; a model drives the browser
@@ -75,43 +75,17 @@ project's configuration.
 | OS      | Linux/macOS.                                                                  |
 | API key | Only if you use the `anthropic` provider. The `scripted` provider needs none. |
 
-### 1. Get the tarball
-
-> **The package is not published to any registry yet.** You install it from a local tarball. Clone
-> this repository once, build it, and pack:
+### 1. Install it
 
 ```sh
-git clone https://github.com/DecampsRenan/difmp.git
-cd difmp
-pnpm install --frozen-lockfile
-pnpm build
-cd apps/cli && pnpm pack --pack-destination /tmp
-# -> /tmp/difmp-0.1.0.tgz
+npm  i -D @stylishedcoyote/difmp
+pnpm add -D --allow-build=esbuild @stylishedcoyote/difmp
+yarn add -D @stylishedcoyote/difmp
 ```
 
-Those five commands need pnpm (`10.29.3`, pinned in the root `packageManager`). That requirement
-stops here: your own project installs the tarball with whatever package manager it already uses.
-
-> **Everything from step 2 on happens in _your_ project, not in this clone.** The last command above
-> leaves your shell in `difmp/apps/cli/`. `cd` back to the project you want to test before you run
-> anything below, or you will install difmp into difmp's own CLI package.
-
-`pnpm pack` runs `prepack`, which bundles the four private `@difmp/*` workspace packages into the
-artifact, so the tarball depends on no unpublished package. Everything below substitutes the plain
-name `difmp` once the package is published; the invocations do not change.
-
-> **If you re-pack, give the tarball a fresh name before installing it with Yarn 1.** Yarn 1 caches
-> a local tarball by name and version, so `yarn add -D ./difmp-0.1.0.tgz` after a rebuild silently
-> reinstalls the previous bytes. `cp difmp-0.1.0.tgz difmp-$(date +%s).tgz` first. npm, pnpm and
-> Yarn 4 via corepack do not need this.
-
-### 2. Install it
-
-```sh
-npm  i   -D /tmp/difmp-0.1.0.tgz
-pnpm add -D --allow-build=esbuild /tmp/difmp-0.1.0.tgz
-yarn add -D ./difmp-local.tgz            # Yarn 1: copy the tarball in first, see above
-```
+> **Want to test a build that is not published yet?** Install from a local tarball instead — see
+> [Working on difmp itself](#working-on-difmp-itself) and [Verifying the distributed
+> package](#verifying-the-distributed-package).
 
 Two install-time notes, both about the same transitive dependency:
 
@@ -122,7 +96,7 @@ approve-builds` afterwards) is the fix and is harmless on pnpm 10. The installed
   either way — including the `tsx` fallback a CommonJS-typed config needs.
 - **npm:** npm 11 prints `npm warn allow-scripts … esbuild@0.28.2` and exits 0. Nothing to do.
 
-### 3. Install Chromium
+### 2. Install Chromium
 
 ```sh
 npx --no-install playwright install chromium
@@ -132,7 +106,7 @@ Silent, exit 0. On a bare Linux box that has never run a browser, add `--with-de
 `libnss3`, `libnspr4`, `libasound2` and friends through apt, so it needs root. `playwright` comes
 from difmp's own dependencies and the browsers land in the shared `~/.cache/ms-playwright`.
 
-### 4. Add the scripts
+### 3. Add the scripts
 
 ```jsonc
 // package.json
@@ -159,12 +133,12 @@ Nothing is broken — it is a performance warning, the config loads and the run 
 genuinely CommonJS project has two ways out: ignore the noise, or name the file `difmp.config.mts`,
 whose extension declares the module type on its own. Both are verified.
 
-### 5. Write `difmp.config.ts`
+### 4. Write `difmp.config.ts`
 
 At the root of your project, beside `package.json`:
 
 ```ts
-import { defineConfig } from "difmp";
+import { defineConfig } from "@stylishedcoyote/difmp";
 
 export default defineConfig({
   baseUrl: process.env.APP_URL ?? "http://127.0.0.1:3000",
@@ -182,7 +156,7 @@ A project with no config file at all runs on the built-in defaults.
 only from `--config` or an upward lookup from the working directory — never from a name inside a
 scenario.
 
-### 6. Write your first scenario
+### 5. Write your first scenario
 
 ```sh
 mkdir -p tests/e2e
@@ -219,7 +193,7 @@ OK    home  1 criteria  tests/e2e/home.e2e.md
 `npx --no-install` is deliberate: it refuses to go and fetch an unverified package of the same name
 from the public registry. `pnpm exec difmp …` and `yarn difmp …` are the equivalents.
 
-### 7. Run it
+### 6. Run it
 
 Start your application on `baseUrl` first. It has to stay up for the whole run, and a dev server
 holds the terminal, so start it in a second terminal or in the background. Then:
@@ -261,7 +235,7 @@ runs/r_ovf7cxv5hmbx2/
 
 Open `report.html` in any browser. It is standalone and offline, so the file path is all you need.
 
-### 8. Make it assert something
+### 7. Make it assert something
 
 Two ways, and you have to pick one:
 
@@ -301,11 +275,11 @@ Exit code `0`. The built-in walkthrough is observe → fill → submit → obser
 every criterion → finish. `fills`, `submit` and `scenario` shape what it does; `verdict` is what the
 double answers with, and it defaults to `"inconclusive"` because evidence is never assumed — which is
 exactly why step 7 came back `INCO`. The installed package's own README,
-`node_modules/difmp/README.md`, lists every option.
+`node_modules/@stylishedcoyote/difmp/README.md`, lists every option.
 
 For complete control, the installed package also exposes the `scripts: { … }` registry authoring
-API at `difmp/scripted`. Its factory types, step builders, and a complete example under
-`node_modules/difmp/examples/custom-scripted/` are all part of the tarball; no private workspace
+API at `@stylishedcoyote/difmp/scripted`. Its factory types, step builders, and a complete example under
+`node_modules/@stylishedcoyote/difmp/examples/custom-scripted/` are all part of the tarball; no private workspace
 package or repository checkout is required.
 
 See [Choosing a provider](#choosing-a-provider). Next, add expectations worth judging: read
@@ -419,8 +393,8 @@ or sends a model request. They remain available for model ids whose Anthropic AP
 and difmp refuses to call that evidence. The lightest way to make a `scripted` run mean something is
 `providerOptions` — `verdict`, plus `fills`/`submit`/`scenario` to shape the built-in walkthrough —
 which works from a plain tarball install. For full control, register a walkthrough by name. The
-factory and all step builders are available from the installed package's public `difmp/scripted`
-entry point:
+factory and all step builders are available from the installed package's public
+`@stylishedcoyote/difmp/scripted` entry point:
 
 ```ts
 import {
@@ -428,7 +402,7 @@ import {
   screenshot,
   type ScriptFactory,
   type ScriptedProviderScript,
-} from "difmp/scripted";
+} from "@stylishedcoyote/difmp/scripted";
 
 const myScriptFactory: ScriptFactory<ScriptedProviderScript> = (ctx) => ({
   agent: {
@@ -828,6 +802,29 @@ pnpm build                               # packages/* and apps/* — tsc -b, plu
 pnpm --filter @difmp/fixture-app build   # the demo app; `pnpm build` does NOT cover examples/*
 ```
 
+**Install a build that is not published yet.** From a clean checkout above, pack a tarball and install
+it from your own project, with whatever package manager that project already uses:
+
+```sh
+cd apps/cli && pnpm pack --pack-destination /tmp
+# -> /tmp/stylishedcoyote-difmp-0.0.1.tgz
+```
+
+`pnpm pack` runs `prepack`, which bundles the four private `@difmp/*` workspace packages into the
+artifact, so the tarball depends on no unpublished package. In your project:
+
+```sh
+npm  i   -D /tmp/stylishedcoyote-difmp-0.0.1.tgz
+pnpm add -D --allow-build=esbuild /tmp/stylishedcoyote-difmp-0.0.1.tgz
+yarn add -D ./difmp-local.tgz            # Yarn 1: copy the tarball in first
+```
+
+> **If you re-pack, give the tarball a fresh name before installing it with Yarn 1.** Yarn 1 caches a
+> local tarball by name and version, so `yarn add -D ./stylishedcoyote-difmp-0.0.1.tgz` after a
+> rebuild silently reinstalls the previous bytes. `cp stylishedcoyote-difmp-0.0.1.tgz
+stylishedcoyote-difmp-$(date +%s).tgz` first. npm, pnpm and
+> Yarn 4 via corepack do not need this.
+
 Then:
 
 ```sh
@@ -865,7 +862,7 @@ references build of `tsconfig.build.json`.
 > runs tsdown (`clean: true`), which **replaces `apps/cli/dist` with the bundled artifact**. The
 > bundle runs fine, but it has the
 > `@difmp/*` packages baked in, so it will not pick up an edit under `packages/` until you rebuild.
-> `pnpm --filter difmp build` restores the `tsc -b` layout; it deletes `tsconfig.tsbuildinfo` first,
+> `pnpm --filter @stylishedcoyote/difmp build` restores the `tsc -b` layout; it deletes `tsconfig.tsbuildinfo` first,
 > without which `tsc -b` would consider itself up to date and leave the stale bundle in place.
 
 ### Run the demo

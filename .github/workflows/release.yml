@@ -1,0 +1,66 @@
+# Publish `difmp` to npm when a `v*` tag is pushed.
+#
+# The tag is the release trigger, the version comes from `apps/cli/package.json` (bump it, commit,
+# tag `v0.0.1`, push). `prepack` in that package rebuilds the UI and bundles the private `@difmp/*`
+# workspace packages into the artifact, so nothing unpublished reaches the tarball.
+#
+# Uses npm TRUSTED PUBLISHING (OIDC): no long-lived npm token. Requires a "Trusted Publisher" bound
+# to this workflow (`.github/workflows/release.yml`) configured once in the package settings on
+# npmjs.com — owner `DecampsRenan`, repo `difmp`, workflow `release.yml`. That section only exists
+# after the package's first version has been published, so the initial release (0.0.1) is done
+# locally, then the publisher is added, then this workflow takes over. The only extra requirement
+# here is `id-token: write`, which lets GitHub mint the short-lived OIDC credential npm accepts.
+#
+# Guard against re-publishing: if the version is already on the registry (e.g. it was published
+# manually first), the job skips the publish step and exits 0. Publishing the same version twice
+# would fail the run, and that is the only failure this guard papers over.
+
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write # OIDC for npm trusted publishing
+
+env:
+  NODE_VERSION: "24.19.0"
+
+jobs:
+  publish:
+    name: publish difmp to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm BEFORE setup-node, as in ci.yml: `cache: pnpm` needs pnpm already on PATH.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: https://registry.npmjs.org/
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Resolve the version this tag is releasing
+        id: version
+        run: echo "version=$(node -p "require('./apps/cli/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if the version is already published
+        id: already-published
+        run: |
+          if [ -n "$(npm view "@stylishedcoyote/difmp@${{ steps.version.outputs.version }}" version 2>/dev/null)" ]; then
+            echo "@stylishedcoyote/difmp@${{ steps.version.outputs.version }} is already on the registry — skipping."
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm (trusted publishing)
+        if: steps.already-published.outputs.published != 'true'
+        run: pnpm --filter @stylishedcoyote/difmp publish --no-git-checks

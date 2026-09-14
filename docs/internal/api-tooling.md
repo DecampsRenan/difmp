@@ -500,7 +500,7 @@ const assetsRoot = fileURLToPath(new URL("../assets/", import.meta.url)); // dis
 
 ```jsonc
 {
-  "name": "difmp",
+  "name": "@stylishedcoyote/difmp",
   "version": "0.1.0",
   "type": "module",
   "bin": { "harness": "./dist/bin.js" },

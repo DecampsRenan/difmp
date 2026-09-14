@@ -1,6 +1,6 @@
 {
-  "name": "difmp",
-  "version": "0.1.0",
+  "name": "@stylishedcoyote/difmp",
+  "version": "0.0.1",
   "description": "Agent-driven end-to-end test harness: run *.e2e.md scenarios from any project",
   "license": "MIT",
   "bin": {
@@ -26,6 +26,10 @@
       "default": "./dist/scripted.js"
     },
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "build": "node scripts/copy-ui.mjs && rm -rf dist tsconfig.tsbuildinfo && tsc -b tsconfig.json tsconfig.examples.json",
