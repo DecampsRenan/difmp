@@ -4,6 +4,7 @@ import { ModelProvider, defaultBudgets, defaultCapture } from "@difmp/core";
 import { ConfigProvider, Effect, Layer } from "effect";
 import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import {
+  CriterionVerdict,
   defaultOpencodeGoApiUrl,
   normalizeOpencodeGoAnthropicJson,
   opencodeGoModelProviderLayer,
@@ -15,7 +16,13 @@ interface RecordedRequest {
   readonly url: string;
   readonly method: string;
   readonly headers: Readonly<Record<string, string>>;
+  readonly body?: Record<string, unknown>;
 }
+
+const bodyOf = (request: Parameters<typeof HttpClientResponse.fromWeb>[0]) => {
+  if (request.body._tag !== "Uint8Array") throw new Error("expected a JSON request body");
+  return JSON.parse(new TextDecoder().decode(request.body.body)) as Record<string, unknown>;
+};
 
 const baseConfig = (
   overrides: Partial<ResolvedConfig> & Pick<ResolvedConfig, "provider" | "model">,
@@ -183,6 +190,89 @@ describe("OpenCode Go adapter", () => {
       expect(req.headers["x-api-key"]).toBe("go-recorded-key");
       expect(req.headers["x-opencode-session"]).toBe("run_session_abc");
       expect(req.headers["user-agent"]).toBe(opencodeGoUserAgent);
+    }),
+  );
+
+  it.effect("forces the tool-JSON structured-output path instead of Anthropic json_schema", () =>
+    Effect.gen(function* () {
+      const recorded: Array<RecordedRequest> = [];
+      const transport = HttpClient.make((request) => {
+        recorded.push({
+          url: "",
+          method: request.method,
+          headers: request.headers,
+          body: bodyOf(request),
+        });
+        return Effect.succeed(
+          jsonResponse(
+            request,
+            message(
+              [
+                {
+                  type: "tool_use",
+                  id: "toolu_go_verdict",
+                  name: "CriterionVerdict",
+                  input: {
+                    criterionId: "c1",
+                    status: "passed",
+                    observed: "Home rendered.",
+                  },
+                  caller: { type: "direct" },
+                },
+              ],
+              "tool_use",
+            ),
+          ),
+        );
+      });
+      const providerLayer = opencodeGoModelProviderLayer(
+        {
+          model: "qwen3.8-flash",
+          sessionId: "run_session_verdict",
+          maxTokens: 256,
+        },
+        Layer.succeed(HttpClient.HttpClient, transport),
+      ).pipe(
+        Layer.provide(
+          ConfigProvider.layer(ConfigProvider.fromUnknown({ OPENCODE_API_KEY: "go-recorded-key" })),
+        ),
+      );
+
+      const provider: ModelProviderService["Service"] = yield* ModelProvider.pipe(
+        Effect.provide(providerLayer),
+      );
+      const response = yield* provider.generate({
+        role: "verifier",
+        prompt: {
+          messages: [{ role: "user", parts: [{ type: "text", text: "Judge c1." }] }],
+        },
+        responseSchema: CriterionVerdict,
+      });
+
+      expect(response.object).toMatchObject({
+        criterionId: "c1",
+        status: "passed",
+        observed: "Home rendered.",
+        evidence: [],
+        limitations: null,
+        missingEvidence: [],
+      });
+
+      const body = recorded[0]!.body!;
+      expect(body).not.toMatchObject({
+        output_config: { format: { type: "json_schema" } },
+      });
+      expect(body["tool_choice"]).toEqual({
+        type: "tool",
+        name: "CriterionVerdict",
+        disable_parallel_tool_use: true,
+      });
+      expect(body["tools"]).toEqual([
+        expect.objectContaining({
+          name: "CriterionVerdict",
+          input_schema: expect.objectContaining({ type: "object" }),
+        }),
+      ]);
     }),
   );
 });

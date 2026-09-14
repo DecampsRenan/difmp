@@ -6,19 +6,13 @@ import type {
   VerificationResponse,
   Verifier as VerifierService,
 } from "@difmp/core";
-import {
-  decodeStrict,
-  formatSchemaError,
-  ModelProvider,
-  Verifier,
-  VerifierError,
-} from "@difmp/core";
-import { Crypto, Effect, Layer, Ref } from "effect";
+import { formatSchemaError, ModelProvider, Verifier, VerifierError } from "@difmp/core";
+import { Crypto, Effect, Layer, Ref, Schema } from "effect";
 import { scriptedProviderId } from "../scripted/provider.js";
 import { verifierPrompt } from "./prompt.js";
 import { validateVerdict } from "./validate.js";
 import type { CriterionVerdictShape } from "./verdict.js";
-import { CriterionVerdict } from "./verdict.js";
+import { CriterionVerdict, criterionVerdictParseOptions } from "./verdict.js";
 
 export interface VerifierOptions {
   /**
@@ -65,7 +59,10 @@ export const makeVerifier = (
     const evidenceRequests = yield* Ref.make<Readonly<Record<string, number>>>({});
     const maxEvidenceRequests = options.maxEvidenceRequests ?? 1;
     const evaluator = evaluatorFor(provider);
-    const decodeVerdict = decodeStrict(CriterionVerdict);
+    const decodeVerdict = Schema.decodeUnknownEffect(
+      CriterionVerdict,
+      criterionVerdictParseOptions,
+    );
 
     /**
      * `method: "code"` does NOT run here.

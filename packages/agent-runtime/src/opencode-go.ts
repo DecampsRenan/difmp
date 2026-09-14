@@ -46,6 +46,12 @@ export const OpencodeGoProviderOptions = Schema.Struct({
   topP: Schema.optionalKey(Schema.Finite),
   topK: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThan(0))),
   stopSequences: Schema.optionalKey(Schema.Array(Schema.NonEmptyString)),
+  /**
+   * Anthropic native `json_schema` structured outputs. Defaults to `false`: Go models are detected
+   * as "unknown → supports structured output" by `@effect/ai-anthropic`, which then asks for a
+   * format they do not honour. Override to `true` only if a specific Go model is known to support it.
+   */
+  structuredOutputs: Schema.optionalKey(Schema.Boolean),
 }).annotate({ identifier: "OpencodeGoProviderOptions" });
 export type OpencodeGoProviderOptions = (typeof OpencodeGoProviderOptions)["Type"];
 
@@ -205,6 +211,8 @@ const toAnthropicAdapterOptions = (options: OpencodeGoAdapterOptions): Anthropic
   providerId: opencodeGoProviderId,
   apiKeyEnvVar: options.apiKeyEnvVar ?? defaultOpencodeGoApiKeyEnvVar,
   apiUrl: options.apiUrl ?? defaultOpencodeGoApiUrl,
+  // Go models are not Claude: force the tool-JSON structured-output path unless the user opts in.
+  structuredOutputs: options.structuredOutputs ?? false,
   ...(options.apiVersion === undefined ? {} : { apiVersion: options.apiVersion }),
   ...(options.maxTokens === undefined ? {} : { maxTokens: options.maxTokens }),
   ...(options.temperature === undefined ? {} : { temperature: options.temperature }),
