@@ -102,7 +102,7 @@ wait $CLI
 
 # The installed package must not reach back into the development workspace.
 if [ -n "${DIFMP_REPO_ROOT:-}" ]; then
-  HIT=$(grep -rl -- "$DIFMP_REPO_ROOT" node_modules/difmp/dist .yarn/unplugged 2>/dev/null | head -3)
+  HIT=$(grep -rl -- "$DIFMP_REPO_ROOT" node_modules/@stylishedcoyote/difmp/dist .yarn/unplugged 2>/dev/null | head -3)
   if [ -n "$HIT" ]; then record FAIL "installed package references the development workspace: $HIT"
   else record PASS "installed package references no workspace path"; fi
 fi

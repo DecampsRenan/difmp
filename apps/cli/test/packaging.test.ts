@@ -83,7 +83,7 @@ describe("published package.json", () => {
       join(cliRoot, "examples", "custom-scripted", "custom-script.ts"),
       "utf8",
     );
-    expect(example).toContain('from "difmp/scripted"');
+    expect(example).toContain('from "@stylishedcoyote/difmp/scripted"');
     expect(example).not.toContain("@difmp/");
   });
 

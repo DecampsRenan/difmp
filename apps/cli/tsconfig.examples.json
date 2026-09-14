@@ -6,8 +6,8 @@
     "tsBuildInfoFile": "dist/examples/tsconfig.tsbuildinfo",
     "baseUrl": ".",
     "paths": {
-      "difmp": ["./src/index.ts"],
-      "difmp/scripted": ["./src/scripted.ts"]
+      "@stylishedcoyote/difmp": ["./src/index.ts"],
+      "@stylishedcoyote/difmp/scripted": ["./src/scripted.ts"]
     }
   },
   "include": ["examples/custom-scripted/**/*.ts"],
