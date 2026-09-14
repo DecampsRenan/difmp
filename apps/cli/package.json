@@ -1,6 +1,6 @@
 {
   "name": "@decampsrenan/difmp",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Agent-driven end-to-end test harness: run *.e2e.md scenarios from any project",
   "homepage": "https://github.com/DecampsRenan/difmp#readme",
   "bugs": {

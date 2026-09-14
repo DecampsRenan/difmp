@@ -2,6 +2,7 @@ import type { ResolvedConfig } from "@difmp/core";
 import { decodeStrict, formatSchemaError, ModelProvider, ProviderError } from "@difmp/core";
 import { Config, Effect, Layer, Schema } from "effect";
 import type { HttpClient } from "effect/unstable/http";
+import { HttpClient as HttpClientModule, HttpClientResponse } from "effect/unstable/http";
 import { anthropicModelProviderLayer, type AnthropicAdapterOptions } from "./anthropic.js";
 
 export const opencodeGoProviderId = "opencode-go";
@@ -10,7 +11,7 @@ export const opencodeGoAdapterId = "opencode-go/@effect/ai-anthropic";
 export const defaultOpencodeGoApiKeyEnvVar = "OPENCODE_API_KEY";
 export const defaultOpencodeGoApiUrl = "https://opencode.ai/zen/go";
 /** OpenCode Go monitors User-Agent; identify as difmp, not a generic HTTP library. */
-export const opencodeGoUserAgent = "difmp/0.0.2";
+export const opencodeGoUserAgent = "difmp/0.0.3";
 
 /**
  * OpenCode Go models that speak the Anthropic Messages API (`/v1/messages`). Other Go models use
@@ -68,6 +69,78 @@ const assertAnthropicCompatible = (model: string): Effect.Effect<void, ProviderE
         ),
       );
 
+const goErrorTypesToAnthropic = new Set(["AuthError", "MissingSessionID"]);
+
+/**
+ * OpenCode Go's Messages responses are Anthropic-shaped but omit required keys the Effect schema
+ * expects as present-even-when-null (notably `stop_sequence`). Error envelopes also use Go-specific
+ * `error.type` values (`AuthError`, …) that fail Anthropic's error union. Rewrite both so the
+ * shared Anthropic client can decode them.
+ */
+export const normalizeOpencodeGoAnthropicJson = (body: unknown): unknown => {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) return body;
+  const record = body as Record<string, unknown>;
+
+  if (record["type"] === "error") {
+    const error = record["error"];
+    if (error !== null && typeof error === "object" && !Array.isArray(error)) {
+      const err = error as Record<string, unknown>;
+      const goType = err["type"];
+      if (typeof goType === "string" && goErrorTypesToAnthropic.has(goType)) {
+        return {
+          type: "error",
+          error: {
+            type: "authentication_error",
+            message: typeof err["message"] === "string" ? `${goType}: ${err["message"]}` : goType,
+          },
+        };
+      }
+    }
+    return body;
+  }
+
+  if (record["type"] !== "message") return body;
+  return {
+    ...record,
+    ...(!Object.hasOwn(record, "stop_sequence") ? { stop_sequence: null } : {}),
+    ...(!Object.hasOwn(record, "stop_reason") ? { stop_reason: null } : {}),
+  };
+};
+
+const rewriteJsonResponse = (
+  response: HttpClientResponse.HttpClientResponse,
+  body: unknown,
+): HttpClientResponse.HttpClientResponse =>
+  HttpClientResponse.fromWeb(
+    response.request,
+    new Response(JSON.stringify(body), {
+      status: response.status,
+      headers: { "content-type": "application/json" },
+    }),
+  );
+
+/** HttpClient transform: normalize Go JSON before `@effect/ai-anthropic` decodes it. */
+export const withOpencodeGoAnthropicNormalize = (
+  client: HttpClient.HttpClient,
+): HttpClient.HttpClient =>
+  HttpClientModule.transformResponse(client, (effect) =>
+    Effect.flatMap(effect, (response) =>
+      Effect.gen(function* () {
+        const text = yield* response.text;
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text) as unknown;
+        } catch {
+          return HttpClientResponse.fromWeb(
+            response.request,
+            new Response(text, { status: response.status }),
+          );
+        }
+        return rewriteJsonResponse(response, normalizeOpencodeGoAnthropicJson(parsed));
+      }),
+    ),
+  );
+
 /** Resolve adapter options from config. `sessionId` falls back to `fallbackSessionId` when unset. */
 export const opencodeGoOptionsFromConfig = (
   config: ResolvedConfig,
@@ -118,6 +191,7 @@ const toAnthropicAdapterOptions = (options: OpencodeGoAdapterOptions): Anthropic
     "user-agent": opencodeGoUserAgent,
     "x-opencode-session": options.sessionId,
   },
+  transformClient: withOpencodeGoAnthropicNormalize,
 });
 
 /**
