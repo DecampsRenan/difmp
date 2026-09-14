@@ -61,6 +61,12 @@ jobs:
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # `prepack` also builds `./packages/*` before tsdown; this step makes the dependency
+      # explicit so a broken bundle cannot be mistaken for an OIDC failure.
+      - name: Build workspace packages (needed for tsdown to bundle @difmp/*)
+        if: steps.already-published.outputs.published != 'true'
+        run: pnpm --filter @difmp/core --filter @difmp/agent-runtime --filter @difmp/browser-playwright --filter @difmp/reporting run build
+
       - name: Publish to npm (trusted publishing)
         if: steps.already-published.outputs.published != 'true'
         run: pnpm --filter @decampsrenan/difmp publish --no-git-checks

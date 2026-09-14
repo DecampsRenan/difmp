@@ -78,3 +78,11 @@ main`), get it merged. Then `git fetch origin main` and reset local `main` to `o
   the `tsc -b` layout with `pnpm --filter @decampsrenan/difmp build`.
 - The tag must equal the `apps/cli/package.json` version. A mismatch does not fail the workflow
   loudly (it publishes whatever the manifest says), so check it before pushing the tag.
+- **Provenance requires `repository.url`.** npm trusted publishing signs a Sigstore bundle that
+  checks `package.json` → `repository.url` against the GitHub repo that built the artifact. Keep
+  `"repository": { "type": "git", "url": "git+https://github.com/DecampsRenan/difmp.git" }` on
+  `apps/cli/package.json` or the publish step fails with `E422` / provenance validation.
+- **`prepack` must build the private packages first.** tsdown can only bundle `@difmp/*` when their
+  `dist/` exists. `prepack` runs
+  `pnpm --filter @difmp/core --filter @difmp/agent-runtime --filter @difmp/browser-playwright --filter @difmp/reporting run build`
+  before the UI + tsdown bundle; `release.yml` repeats that build as an explicit step.
