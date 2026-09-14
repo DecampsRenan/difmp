@@ -72,10 +72,33 @@ const assertAnthropicCompatible = (model: string): Effect.Effect<void, ProviderE
 const goErrorTypesToAnthropic = new Set(["AuthError", "MissingSessionID"]);
 
 /**
+ * Nullable `usage` keys that Anthropic's beta Messages schema requires as present-even-when-null.
+ * OpenCode Go often omits them entirely, which surfaces as
+ * `InvalidOutputError: Missing key at ["usage"]["cache_creation"]` (and siblings).
+ */
+const nullableUsageDefaults = {
+  cache_creation: null,
+  cache_creation_input_tokens: null,
+  cache_read_input_tokens: null,
+  inference_geo: null,
+  service_tier: null,
+} as const;
+
+const normalizeMessageUsage = (usage: unknown): unknown => {
+  if (usage === null || typeof usage !== "object" || Array.isArray(usage)) return usage;
+  const record = usage as Record<string, unknown>;
+  const filled: Record<string, unknown> = { ...record };
+  for (const [key, value] of Object.entries(nullableUsageDefaults)) {
+    if (!Object.hasOwn(filled, key)) filled[key] = value;
+  }
+  return filled;
+};
+
+/**
  * OpenCode Go's Messages responses are Anthropic-shaped but omit required keys the Effect schema
- * expects as present-even-when-null (notably `stop_sequence`). Error envelopes also use Go-specific
- * `error.type` values (`AuthError`, …) that fail Anthropic's error union. Rewrite both so the
- * shared Anthropic client can decode them.
+ * expects as present-even-when-null (`stop_sequence`, nullable `usage.*`). Error envelopes also use
+ * Go-specific `error.type` values (`AuthError`, …) that fail Anthropic's error union. Rewrite both
+ * so the shared Anthropic client can decode them.
  */
 export const normalizeOpencodeGoAnthropicJson = (body: unknown): unknown => {
   if (body === null || typeof body !== "object" || Array.isArray(body)) return body;
@@ -104,6 +127,7 @@ export const normalizeOpencodeGoAnthropicJson = (body: unknown): unknown => {
     ...record,
     ...(!Object.hasOwn(record, "stop_sequence") ? { stop_sequence: null } : {}),
     ...(!Object.hasOwn(record, "stop_reason") ? { stop_reason: null } : {}),
+    ...(Object.hasOwn(record, "usage") ? { usage: normalizeMessageUsage(record["usage"]) } : {}),
   };
 };
 
