@@ -5,6 +5,7 @@ import { ConfigProvider, Effect, Layer } from "effect";
 import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import {
   defaultOpencodeGoApiUrl,
+  normalizeOpencodeGoAnthropicJson,
   opencodeGoModelProviderLayer,
   opencodeGoOptionsFromConfig,
   opencodeGoUserAgent,
@@ -40,7 +41,7 @@ const message = (content: ReadonlyArray<Record<string, unknown>>, stopReason: st
   content,
   model: "qwen3.7-max",
   stop_reason: stopReason,
-  stop_sequence: null,
+  // OpenCode Go omits `stop_sequence` entirely; the adapter must fill `null` before decode.
   usage: {
     cache_creation: null,
     cache_creation_input_tokens: null,
@@ -62,6 +63,31 @@ const jsonResponse = (request: Parameters<typeof HttpClientResponse.fromWeb>[0],
   );
 
 describe("OpenCode Go adapter", () => {
+  it("fills stop_sequence when Go omits it", () => {
+    const normalized = normalizeOpencodeGoAnthropicJson({
+      id: "msg_1",
+      type: "message",
+      role: "assistant",
+      content: [],
+      model: "qwen3.7-max",
+      stop_reason: "end_turn",
+    }) as Record<string, unknown>;
+    expect(normalized["stop_sequence"]).toBeNull();
+    expect(normalized["stop_reason"]).toBe("end_turn");
+  });
+
+  it("maps Go AuthError onto Anthropic authentication_error", () => {
+    expect(
+      normalizeOpencodeGoAnthropicJson({
+        type: "error",
+        error: { type: "AuthError", message: "Invalid API key." },
+      }),
+    ).toEqual({
+      type: "error",
+      error: { type: "authentication_error", message: "AuthError: Invalid API key." },
+    });
+  });
+
   it.effect("rejects models that are not on the Anthropic Messages surface", () =>
     Effect.gen(function* () {
       const error = yield* opencodeGoOptionsFromConfig(

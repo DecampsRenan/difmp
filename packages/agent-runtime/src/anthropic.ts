@@ -41,6 +41,11 @@ export interface AnthropicAdapterOptions extends AnthropicProviderOptions {
    * client sets `x-api-key` / `anthropic-version`, so they cannot override auth.
    */
   readonly headers?: Readonly<Record<string, string>>;
+  /**
+   * Extra `HttpClient` transform composed after header injection (response rewrites, logging, …).
+   * Used by OpenCode Go to fill Anthropic-required keys the gateway omits.
+   */
+  readonly transformClient?: (client: HttpClient.HttpClient) => HttpClient.HttpClient;
   /** Recorded on `ModelProvider.id`. Defaults to {@link anthropicProviderId}. */
   readonly providerId?: string;
 }
@@ -109,22 +114,42 @@ const withExtraHeaders =
   (client) =>
     HttpClientModule.mapRequest(client, HttpClientRequest.setHeaders(headers));
 
+const composeClientTransforms = (
+  ...transforms: ReadonlyArray<
+    ((client: HttpClient.HttpClient) => HttpClient.HttpClient) | undefined
+  >
+): ((client: HttpClient.HttpClient) => HttpClient.HttpClient) | undefined => {
+  const active = transforms.filter(
+    (t): t is (client: HttpClient.HttpClient) => HttpClient.HttpClient => t !== undefined,
+  );
+  if (active.length === 0) return undefined;
+  return (client) => active.reduce((current, transform) => transform(current), client);
+};
+
 /**
  * `httpClient` exists so a test can drive the REAL adapter against a recorded transport: the
  * request is built, signed and serialised exactly as in production, without reaching the network.
  */
 export const anthropicClientLayer = (
-  options: Pick<AnthropicAdapterOptions, "apiKeyEnvVar" | "apiUrl" | "apiVersion" | "headers">,
+  options: Pick<
+    AnthropicAdapterOptions,
+    "apiKeyEnvVar" | "apiUrl" | "apiVersion" | "headers" | "transformClient"
+  >,
   httpClient: Layer.Layer<HttpClient.HttpClient> = FetchHttpClient.layer,
-): Layer.Layer<AnthropicClient.AnthropicClient, Config.ConfigError> =>
-  AnthropicClient.layerConfig({
+): Layer.Layer<AnthropicClient.AnthropicClient, Config.ConfigError> => {
+  const transformClient = composeClientTransforms(
+    options.headers === undefined || Object.keys(options.headers).length === 0
+      ? undefined
+      : withExtraHeaders(options.headers),
+    options.transformClient,
+  );
+  return AnthropicClient.layerConfig({
     apiKey: Config.Redacted(options.apiKeyEnvVar ?? defaultApiKeyEnvVar),
     ...(options.apiUrl === undefined ? {} : { apiUrl: Config.succeed(options.apiUrl) }),
     ...(options.apiVersion === undefined ? {} : { apiVersion: Config.succeed(options.apiVersion) }),
-    ...(options.headers === undefined || Object.keys(options.headers).length === 0
-      ? {}
-      : { transformClient: withExtraHeaders(options.headers) }),
+    ...(transformClient === undefined ? {} : { transformClient }),
   }).pipe(Layer.provide(httpClient));
+};
 
 /** Map our neutral option names onto Anthropic's request parameters. */
 export const anthropicRequestConfig = (
