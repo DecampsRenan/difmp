@@ -41,15 +41,10 @@ const message = (content: ReadonlyArray<Record<string, unknown>>, stopReason: st
   content,
   model: "qwen3.7-max",
   stop_reason: stopReason,
-  // OpenCode Go omits `stop_sequence` entirely; the adapter must fill `null` before decode.
+  // OpenCode Go omits `stop_sequence` and nullable `usage.*` keys; the adapter fills them before decode.
   usage: {
-    cache_creation: null,
-    cache_creation_input_tokens: null,
-    cache_read_input_tokens: null,
-    inference_geo: null,
     input_tokens: 11,
     output_tokens: 4,
-    service_tier: "standard",
   },
 });
 
@@ -74,6 +69,29 @@ describe("OpenCode Go adapter", () => {
     }) as Record<string, unknown>;
     expect(normalized["stop_sequence"]).toBeNull();
     expect(normalized["stop_reason"]).toBe("end_turn");
+  });
+
+  it("fills nullable usage keys when Go omits them", () => {
+    const normalized = normalizeOpencodeGoAnthropicJson({
+      id: "msg_1",
+      type: "message",
+      role: "assistant",
+      content: [],
+      model: "qwen3.7-max",
+      stop_reason: "end_turn",
+      usage: {
+        input_tokens: 11,
+        output_tokens: 4,
+      },
+    }) as Record<string, unknown>;
+    const usage = normalized["usage"] as Record<string, unknown>;
+    expect(usage["input_tokens"]).toBe(11);
+    expect(usage["output_tokens"]).toBe(4);
+    expect(usage["cache_creation"]).toBeNull();
+    expect(usage["cache_creation_input_tokens"]).toBeNull();
+    expect(usage["cache_read_input_tokens"]).toBeNull();
+    expect(usage["inference_geo"]).toBeNull();
+    expect(usage["service_tier"]).toBeNull();
   });
 
   it("maps Go AuthError onto Anthropic authentication_error", () => {
