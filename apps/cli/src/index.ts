@@ -2,7 +2,7 @@
  * Public API of the `difmp` package, whose `bin` is `difmp`. A consumer writes:
  *
  * ```ts
- * import { defineConfig } from "@stylishedcoyote/difmp"
+ * import { defineConfig } from "@decampsrenan/difmp"
  * export default defineConfig({ baseUrl: "http://127.0.0.1:3000" })
  * ```
  */

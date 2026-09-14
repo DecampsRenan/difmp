@@ -2,8 +2,8 @@
  * Public authoring surface for deterministic scripted walkthroughs.
  *
  * The implementation lives in a private workspace package, but this entry point is bundled into
- * the distributed `@stylishedcoyote/difmp` package. Consumers must import from
- * `@stylishedcoyote/difmp/scripted`, never from an
+ * the distributed `@decampsrenan/difmp` package. Consumers must import from
+ * `@decampsrenan/difmp/scripted`, never from an
  * unpublished `@difmp/*` package.
  */
 export type { ScriptFactory, ScriptFactoryContext } from "@difmp/core";

@@ -2,7 +2,7 @@
 
 > [!WARNING]
 > **difmp is under active development, is not stable, and will change in breaking ways without
-> notice.** Published on npm as `@stylishedcoyote/difmp`, but expect breaking changes between versions. The shape of
+> notice.** Published on npm as `@decampsrenan/difmp`, but expect breaking changes between versions. The shape of
 > `difmp.config.ts` and the layout of a `runs/<run-id>/` directory are both still moving, so a config
 > and a run archive written today may not be readable by a later build. The verification behaviour —
 > when a criterion is judged, and when difmp downgrades a verdict to `inconclusive` — is still being
@@ -78,9 +78,9 @@ project's configuration.
 ### 1. Install it
 
 ```sh
-npm  i -D @stylishedcoyote/difmp
-pnpm add -D --allow-build=esbuild @stylishedcoyote/difmp
-yarn add -D @stylishedcoyote/difmp
+npm  i -D @decampsrenan/difmp
+pnpm add -D --allow-build=esbuild @decampsrenan/difmp
+yarn add -D @decampsrenan/difmp
 ```
 
 > **Want to test a build that is not published yet?** Install from a local tarball instead — see
@@ -138,7 +138,7 @@ whose extension declares the module type on its own. Both are verified.
 At the root of your project, beside `package.json`:
 
 ```ts
-import { defineConfig } from "@stylishedcoyote/difmp";
+import { defineConfig } from "@decampsrenan/difmp";
 
 export default defineConfig({
   baseUrl: process.env.APP_URL ?? "http://127.0.0.1:3000",
@@ -275,11 +275,11 @@ Exit code `0`. The built-in walkthrough is observe → fill → submit → obser
 every criterion → finish. `fills`, `submit` and `scenario` shape what it does; `verdict` is what the
 double answers with, and it defaults to `"inconclusive"` because evidence is never assumed — which is
 exactly why step 7 came back `INCO`. The installed package's own README,
-`node_modules/@stylishedcoyote/difmp/README.md`, lists every option.
+`node_modules/@decampsrenan/difmp/README.md`, lists every option.
 
 For complete control, the installed package also exposes the `scripts: { … }` registry authoring
-API at `@stylishedcoyote/difmp/scripted`. Its factory types, step builders, and a complete example under
-`node_modules/@stylishedcoyote/difmp/examples/custom-scripted/` are all part of the tarball; no private workspace
+API at `@decampsrenan/difmp/scripted`. Its factory types, step builders, and a complete example under
+`node_modules/@decampsrenan/difmp/examples/custom-scripted/` are all part of the tarball; no private workspace
 package or repository checkout is required.
 
 See [Choosing a provider](#choosing-a-provider). Next, add expectations worth judging: read
@@ -361,21 +361,31 @@ advanced extension, not the norm.
 
 ## Choosing a provider
 
-|                         | `scripted`                                | `anthropic`                                               |
-| ----------------------- | ----------------------------------------- | --------------------------------------------------------- |
-| what it is              | a deterministic, network-free test double | the real adapter, on `@effect/ai-anthropic`               |
-| needs a key             | no                                        | `ANTHROPIC_API_KEY`                                       |
-| network                 | none                                      | yes                                                       |
-| what a green run proves | that _difmp_ behaves as specified         | that _a model_ navigated your app and judged the evidence |
-| verdict label           | `evaluator.kind: "scripted-model"`        | `evaluator.kind: "model"`                                 |
+|                         | `scripted`                                | `anthropic`                                               | `opencode-go`                                                          |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------- |
+| what it is              | a deterministic, network-free test double | the real adapter, on `@effect/ai-anthropic`               | OpenCode Go via the Anthropic Messages surface (`/zen/go/v1/messages`) |
+| needs a key             | no                                        | `ANTHROPIC_API_KEY`                                       | `OPENCODE_API_KEY`                                                     |
+| network                 | none                                      | yes                                                       | yes                                                                    |
+| what a green run proves | that _difmp_ behaves as specified         | that _a model_ navigated your app and judged the evidence | same as anthropic, on Go-hosted open models (Qwen / MiniMax)           |
+| verdict label           | `evaluator.kind: "scripted-model"`        | `evaluator.kind: "model"`                                 | `evaluator.kind: "model"`                                              |
 
 Pick `scripted` for difmp's own tests, for CI smoke lanes that must not cost money, and for pinning
-a known journey. Pick `anthropic` for the thing difmp is actually for.
+a known journey. Pick `anthropic` for Claude on Anthropic's API. Pick `opencode-go` for Go-curated
+open models that speak `/v1/messages` — difmp sets `x-opencode-session` (run id) and a dedicated
+User-Agent automatically.
 
 ```ts
 export default defineConfig({
   provider: "anthropic",
   model: "claude-sonnet-5",
+  providerOptions: { maxTokens: 2048 },
+});
+```
+
+```ts
+export default defineConfig({
+  provider: "opencode-go",
+  model: "qwen3.7-max",
   providerOptions: { maxTokens: 2048 },
 });
 ```
@@ -394,7 +404,7 @@ and difmp refuses to call that evidence. The lightest way to make a `scripted` r
 `providerOptions` — `verdict`, plus `fills`/`submit`/`scenario` to shape the built-in walkthrough —
 which works from a plain tarball install. For full control, register a walkthrough by name. The
 factory and all step builders are available from the installed package's public
-`@stylishedcoyote/difmp/scripted` entry point:
+`@decampsrenan/difmp/scripted` entry point:
 
 ```ts
 import {
@@ -402,7 +412,7 @@ import {
   screenshot,
   type ScriptFactory,
   type ScriptedProviderScript,
-} from "@stylishedcoyote/difmp/scripted";
+} from "@decampsrenan/difmp/scripted";
 
 const myScriptFactory: ScriptFactory<ScriptedProviderScript> = (ctx) => ({
   agent: {
@@ -681,21 +691,21 @@ Because the bare `difmp` is an alias of `difmp run`, a file literally named `run
 
 ### `difmp run` options
 
-| option                               | meaning                                                                                |
-| ------------------------------------ | -------------------------------------------------------------------------------------- |
-| `--config, -c <path>`                | Path to `difmp.config.ts`. Default: the nearest one at or above the working directory. |
-| `--tag <name>`                       | Repeatable. A scenario is selected if it carries **any** of the given tags.            |
-| `--input, -i <key=value>`            | Repeatable scenario input. **Always a string.**                                        |
-| `--inputs-file <file.json>`          | Scenario inputs with JSON types preserved (string / number / boolean).                 |
-| `--reporter, -r <name>`              | Repeatable: `console`, `json`, `junit`. Default: `console`.                            |
-| `--output, -o <dir>`                 | Where run directories are written. Default: `runs`.                                    |
-| `--provider <scripted\|anthropic>`   | Model provider.                                                                        |
-| `--model <id>`                       | Provider-specific model id. Never defaulted in code.                                   |
-| `--base-url <url>`                   | The application under test.                                                            |
-| `--max-actions <n>`                  | The **indicative** action threshold. Crossing it warns once and changes no verdict.    |
-| `--ui`                               | Serve the live dashboard while the run progresses.                                     |
-| `--ui-port <n>` / `--ui-host <host>` | Default `0` (ephemeral) and `127.0.0.1`.                                               |
-| `--headed`                           | Run Chromium with a visible window.                                                    |
+| option                                          | meaning                                                                                |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `--config, -c <path>`                           | Path to `difmp.config.ts`. Default: the nearest one at or above the working directory. |
+| `--tag <name>`                                  | Repeatable. A scenario is selected if it carries **any** of the given tags.            |
+| `--input, -i <key=value>`                       | Repeatable scenario input. **Always a string.**                                        |
+| `--inputs-file <file.json>`                     | Scenario inputs with JSON types preserved (string / number / boolean).                 |
+| `--reporter, -r <name>`                         | Repeatable: `console`, `json`, `junit`. Default: `console`.                            |
+| `--output, -o <dir>`                            | Where run directories are written. Default: `runs`.                                    |
+| `--provider <scripted\|anthropic\|opencode-go>` | Model provider.                                                                        |
+| `--model <id>`                                  | Provider-specific model id. Never defaulted in code.                                   |
+| `--base-url <url>`                              | The application under test.                                                            |
+| `--max-actions <n>`                             | The **indicative** action threshold. Crossing it warns once and changes no verdict.    |
+| `--ui`                                          | Serve the live dashboard while the run progresses.                                     |
+| `--ui-port <n>` / `--ui-host <host>`            | Default `0` (ephemeral) and `127.0.0.1`.                                               |
+| `--headed`                                      | Run Chromium with a visible window.                                                    |
 
 `--reporter` chooses what reaches your **terminal**, and accepts only those three names —
 `--reporter html` is rejected with `unknown reporter (available: console, json, junit)`. The config
@@ -807,22 +817,22 @@ it from your own project, with whatever package manager that project already use
 
 ```sh
 cd apps/cli && pnpm pack --pack-destination /tmp
-# -> /tmp/stylishedcoyote-difmp-0.0.1.tgz
+# -> /tmp/decampsrenan-difmp-0.0.2.tgz
 ```
 
 `pnpm pack` runs `prepack`, which bundles the four private `@difmp/*` workspace packages into the
 artifact, so the tarball depends on no unpublished package. In your project:
 
 ```sh
-npm  i   -D /tmp/stylishedcoyote-difmp-0.0.1.tgz
-pnpm add -D --allow-build=esbuild /tmp/stylishedcoyote-difmp-0.0.1.tgz
+npm  i   -D /tmp/decampsrenan-difmp-0.0.2.tgz
+pnpm add -D --allow-build=esbuild /tmp/decampsrenan-difmp-0.0.2.tgz
 yarn add -D ./difmp-local.tgz            # Yarn 1: copy the tarball in first
 ```
 
 > **If you re-pack, give the tarball a fresh name before installing it with Yarn 1.** Yarn 1 caches a
-> local tarball by name and version, so `yarn add -D ./stylishedcoyote-difmp-0.0.1.tgz` after a
-> rebuild silently reinstalls the previous bytes. `cp stylishedcoyote-difmp-0.0.1.tgz
-stylishedcoyote-difmp-$(date +%s).tgz` first. npm, pnpm and
+> local tarball by name and version, so `yarn add -D ./decampsrenan-difmp-0.0.2.tgz` after a
+> rebuild silently reinstalls the previous bytes. `cp decampsrenan-difmp-0.0.2.tgz
+decampsrenan-difmp-$(date +%s).tgz` first. npm, pnpm and
 > Yarn 4 via corepack do not need this.
 
 Then:
@@ -862,7 +872,7 @@ references build of `tsconfig.build.json`.
 > runs tsdown (`clean: true`), which **replaces `apps/cli/dist` with the bundled artifact**. The
 > bundle runs fine, but it has the
 > `@difmp/*` packages baked in, so it will not pick up an edit under `packages/` until you rebuild.
-> `pnpm --filter @stylishedcoyote/difmp build` restores the `tsc -b` layout; it deletes `tsconfig.tsbuildinfo` first,
+> `pnpm --filter @decampsrenan/difmp build` restores the `tsc -b` layout; it deletes `tsconfig.tsbuildinfo` first,
 > without which `tsc -b` would consider itself up to date and leave the stale bundle in place.
 
 ### Run the demo

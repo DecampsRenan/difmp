@@ -102,7 +102,7 @@ An entry is a **factory**, not a finished script. It is called with `ScriptFacto
 spec — once the run id is minted and the inputs are resolved, and **before the browser opens**,
 because a deterministic script has to type the value the run will really use. It returns
 `{ agent, verdicts?, defaultUsage? }`. Import the factory types and step builders from the public
-`@stylishedcoyote/difmp/scripted` entry point:
+`@decampsrenan/difmp/scripted` entry point:
 
 ```ts
 import {
@@ -110,7 +110,7 @@ import {
   screenshot,
   type ScriptFactory,
   type ScriptedProviderScript,
-} from "@stylishedcoyote/difmp/scripted";
+} from "@decampsrenan/difmp/scripted";
 
 export const healthy: ScriptFactory<ScriptedProviderScript> = (ctx) => ({
   agent: {
@@ -269,7 +269,7 @@ on this machine and the same step is **red on GitHub Actions**, where the consum
 pnpm 12.4.1. npm 11 prints `npm warn allow-scripts` and exits 0. The installed tree is complete either
 way, `tsx` fallback included.
 
-The package is published to npm as `@stylishedcoyote/difmp`; the same matrix runs against a published version at
+The package is published to npm as `@decampsrenan/difmp`; the same matrix runs against a published version at
 release time. The tarball path is the same code — `pnpm pack` produces the exact artifact `npm
 publish` uploads.
 

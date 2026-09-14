@@ -71,7 +71,7 @@ for PM in "${PMS[@]}"; do
           cp "$TGZ" ./difmp.tgz
           corepack yarn add ./difmp.tgz ;;
         # Yarn 1 (classic) caches a local tarball by NAME AND VERSION, so a rebuilt
-        # `stylishedcoyote-difmp-0.0.1.tgz` would silently reinstall the previous bytes: copy it
+        # `decampsrenan-difmp-0.0.2.tgz` would silently reinstall the previous bytes: copy it
         # under a fresh name every time.
         yarn1)
           cp "$TGZ" "./difmp-$(date +%s).tgz"

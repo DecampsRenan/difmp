@@ -1,6 +1,6 @@
 {
-  "name": "@stylishedcoyote/difmp",
-  "version": "0.0.1",
+  "name": "@decampsrenan/difmp",
+  "version": "0.0.2",
   "description": "Agent-driven end-to-end test harness: run *.e2e.md scenarios from any project",
   "license": "MIT",
   "bin": {

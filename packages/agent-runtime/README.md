@@ -2,13 +2,13 @@
 
 The model seam: the two `ModelProvider` implementations, the prompts, and the `Verifier`.
 
-## One provider implementation, two layers
+## One provider implementation, shared LanguageModel layer
 
-Both providers are the same code. `makeLanguageModelProvider` implements the core-declared
-`ModelProvider` on top of `LanguageModel` from `effect/unstable/ai`; only the `LanguageModel` layer
-differs — `AnthropicLanguageModel` for the real adapter, a `LanguageModel.make({ generateText })`
-double for the scripted one. Prompt plumbing, tool derivation, usage accounting and error mapping are
-therefore shared, and a bug in one is a bug in both.
+`anthropic` and `opencode-go` are the same code path: `makeLanguageModelProvider` on top of
+`LanguageModel` from `effect/unstable/ai`. Only the client defaults differ — Anthropic's API vs
+OpenCode Go's Messages gateway (`OPENCODE_API_KEY`, `https://opencode.ai/zen/go`, required
+`x-opencode-session` + User-Agent). The scripted double uses a `LanguageModel.make({ generateText })`
+stand-in. Prompt plumbing, tool derivation, usage accounting and error mapping are therefore shared.
 
 `effect/unstable/ai` ships inside `effect`, so `@difmp/core` declaring the seam over it does not
 make core depend on a model SDK.

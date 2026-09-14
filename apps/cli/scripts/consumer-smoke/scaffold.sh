@@ -83,8 +83,8 @@ JS
 # ---------------------------------------------------------------------------------------------
 if [ "$KIND" = "esm" ]; then
 cat > "$DIR/difmp.config.ts" <<'TS'
-import { defineConfig } from "@stylishedcoyote/difmp"
-import { happyPathScript, type ScriptFactory, type ScriptedProviderScript } from "@stylishedcoyote/difmp/scripted"
+import { defineConfig } from "@decampsrenan/difmp"
+import { happyPathScript, type ScriptFactory, type ScriptedProviderScript } from "@decampsrenan/difmp/scripted"
 
 // Erasable TypeScript: a type alias and annotations only. Node >= 22.18 strips this natively.
 type Verdict = "passed" | "failed" | "inconclusive"
@@ -121,8 +121,8 @@ export default defineConfig({
 TS
 else
 cat > "$DIR/difmp.config.ts" <<'TS'
-import { defineConfig } from "@stylishedcoyote/difmp"
-import { happyPathScript, type ScriptFactory, type ScriptedProviderScript } from "@stylishedcoyote/difmp/scripted"
+import { defineConfig } from "@decampsrenan/difmp"
+import { happyPathScript, type ScriptFactory, type ScriptedProviderScript } from "@decampsrenan/difmp/scripted"
 
 // NON-ERASABLE TypeScript inside a CommonJS-typed package. Node's native type stripping refuses
 // `enum`, and the CommonJS loader refuses the `import` statement above, so this file loads ONLY

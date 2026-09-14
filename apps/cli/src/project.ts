@@ -5,7 +5,7 @@ import { UsageError } from "./errors.js";
 import type { ConfigLocation } from "./loadConfig.js";
 import { locateConfig, readConfigModule } from "./loadConfig.js";
 
-export const providerNames: ReadonlyArray<ProviderName> = ["scripted", "anthropic"];
+export const providerNames: ReadonlyArray<ProviderName> = ["scripted", "anthropic", "opencode-go"];
 /** What `--reporter` accepts. `html` is not offered: the HTML report is always produced. */
 export const reporterNames: ReadonlyArray<ReporterName> = ["console", "json", "junit"];
 

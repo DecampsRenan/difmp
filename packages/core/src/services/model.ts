@@ -79,7 +79,7 @@ export interface ProviderResponse {
 export class ModelProvider extends Context.Service<
   ModelProvider,
   {
-    /** `"anthropic"` | `"scripted"` — surfaced in the manifest and the report. */
+    /** `"anthropic"` | `"scripted"` | `"opencode-go"` — surfaced in the manifest and the report. */
     readonly id: string;
     readonly modelId: string;
     readonly generate: (request: GenerateRequest) => Effect.Effect<ProviderResponse, ProviderError>;
