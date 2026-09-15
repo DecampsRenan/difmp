@@ -26,6 +26,32 @@ describe("CriterionVerdict decode tolerance", () => {
     }),
   );
 
+  it.effect("coerces evidence null and a lone string — the OpenCode Go / Qwen failure mode", () =>
+    Effect.gen(function* () {
+      const fromNull = yield* decode({
+        criterionId: "c1",
+        status: "passed",
+        expected: null,
+        observed: "Home rendered.",
+        evidence: null,
+        missingEvidence: null,
+      });
+      expect(fromNull.expected).toBe("");
+      expect(fromNull.evidence).toEqual([]);
+      expect(fromNull.missingEvidence).toEqual([]);
+
+      const fromString = yield* decode({
+        criterionId: "c1",
+        status: "passed",
+        observed: "Home rendered.",
+        evidence: "art_1",
+        missingEvidence: "need-screenshot",
+      });
+      expect(fromString.evidence).toEqual(["art_1"]);
+      expect(fromString.missingEvidence).toEqual(["need-screenshot"]);
+    }),
+  );
+
   it.effect("ignores excess keys a model invents outside the verdict shape", () =>
     Effect.gen(function* () {
       const verdict = yield* decode({
