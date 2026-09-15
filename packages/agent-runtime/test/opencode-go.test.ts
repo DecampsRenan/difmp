@@ -216,6 +216,9 @@ describe("OpenCode Go adapter", () => {
                     criterionId: "c1",
                     status: "passed",
                     observed: "Home rendered.",
+                    // Weak Go models often emit null / a lone string here — must still decode.
+                    evidence: null,
+                    missingEvidence: "need-more",
                   },
                   caller: { type: "direct" },
                 },
@@ -255,7 +258,7 @@ describe("OpenCode Go adapter", () => {
         observed: "Home rendered.",
         evidence: [],
         limitations: null,
-        missingEvidence: [],
+        missingEvidence: ["need-more"],
       });
 
       const body = recorded[0]!.body!;
