@@ -11,7 +11,7 @@ export const opencodeGoAdapterId = "opencode-go/@effect/ai-anthropic";
 export const defaultOpencodeGoApiKeyEnvVar = "OPENCODE_API_KEY";
 export const defaultOpencodeGoApiUrl = "https://opencode.ai/zen/go";
 /** OpenCode Go monitors User-Agent; identify as difmp, not a generic HTTP library. */
-export const opencodeGoUserAgent = "difmp/0.0.4";
+export const opencodeGoUserAgent = "difmp/0.0.5";
 
 /**
  * OpenCode Go models that speak the Anthropic Messages API (`/v1/messages`). Other Go models use
