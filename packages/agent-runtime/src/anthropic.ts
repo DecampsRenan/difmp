@@ -48,6 +48,12 @@ export interface AnthropicAdapterOptions extends AnthropicProviderOptions {
   readonly transformClient?: (client: HttpClient.HttpClient) => HttpClient.HttpClient;
   /** Recorded on `ModelProvider.id`. Defaults to {@link anthropicProviderId}. */
   readonly providerId?: string;
+  /**
+   * Override Effect AI's per-model structured-output capability detection. `false` forces the
+   * tool-JSON fallback instead of Anthropic's native `output_config.json_schema` — needed for
+   * gateways/models that speak Messages but do not honour that format (OpenCode Go / Qwen).
+   */
+  readonly structuredOutputs?: boolean;
 }
 
 const providerError = (reason: string): ProviderError =>
@@ -160,6 +166,9 @@ export const anthropicRequestConfig = (
   ...(options.topP === undefined ? {} : { top_p: options.topP }),
   ...(options.topK === undefined ? {} : { top_k: options.topK }),
   ...(options.stopSequences === undefined ? {} : { stop_sequences: [...options.stopSequences] }),
+  ...(options.structuredOutputs === undefined
+    ? {}
+    : { structuredOutputs: options.structuredOutputs }),
 });
 
 export const anthropicLanguageModelLayer = (
