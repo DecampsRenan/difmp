@@ -16,6 +16,11 @@ import type { CriterionVerdictShape } from "./verdict.js";
  * the evidence snapshot taken before the evaluation. Core's record pass re-applies the same
  * rules against the run store's inventory; the double enforcement is deliberate, and both
  * passes say WHY in the same strings.
+ *
+ * `confidence` is carried through UNTOUCHED and read by nothing here. It is an observation about
+ * the evaluator, recorded next to the verdict so the two can be compared after the fact; no rule
+ * above — nor `screenProposal` — consults it, and a high value never spares a verdict a single
+ * downgrade.
  */
 export const validateVerdict = (options: {
   readonly verdict: CriterionVerdictShape;
@@ -41,6 +46,7 @@ export const validateVerdict = (options: {
     // The frozen text, verbatim. The evaluator never gets to restate the expectation.
     expected: criterion.text,
     observed: verdict.observed,
+    ...(verdict.confidence === null ? {} : { confidence: verdict.confidence }),
     // Cited-as-is: `screenProposal` strips what does not exist, and records that it did.
     evidence: verdict.evidence,
     ...(limitations.length === 0 ? {} : { limitations: limitations.join(" | ") }),

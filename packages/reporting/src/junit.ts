@@ -77,6 +77,10 @@ const caseBody = (criterion: CriterionView): string =>
     `expected: ${criterion.expected ?? "—"}`,
     `observed: ${criterion.observed ?? "—"}`,
     criterion.limitations === undefined ? undefined : `limitations: ${criterion.limitations}`,
+    criterion.confidence === undefined
+      ? undefined
+      : `confidence declared by the evaluator: ${(criterion.confidence * 100).toFixed(0)} % ` +
+        "(self-reported, recorded for diagnosis, read by no harness rule)",
     criterion.absence === undefined ? undefined : `absence branch: ${criterion.absence}`,
     `evidence: ${criterion.evidence.map((e) => e.artifactId).join(", ") || "none"}`,
     criterion.danglingEvidence.length === 0

@@ -17,6 +17,7 @@ describe("CriterionVerdict decode tolerance", () => {
         status: "passed",
         expected: "",
         observed: "The login form is visible.",
+        confidence: null,
         evidence: [],
         limitations: null,
         missingEvidence: [],
@@ -64,13 +65,53 @@ describe("CriterionVerdict decode tolerance", () => {
         missingEvidence: [],
         evidenceHint: null,
         absence: null,
-        reasoning: "I looked at the screenshot carefully.",
         confidence: 0.91,
+        reasoning: "I looked at the screenshot carefully.",
       });
       expect(verdict.status).toBe("failed");
       expect(verdict.evidence).toEqual(["art_1"]);
+      // Narration is still refused; `confidence` is a known field now, kept as an observation.
       expect(verdict).not.toHaveProperty("reasoning");
-      expect(verdict).not.toHaveProperty("confidence");
+      expect(verdict.confidence).toBe(0.91);
+    }),
+  );
+
+  it.effect("normalises a confidence reported as a percentage", () =>
+    Effect.gen(function* () {
+      const verdict = yield* decode({
+        criterionId: "c1",
+        status: "passed",
+        observed: "Home rendered.",
+        evidence: ["art_1"],
+        confidence: 85,
+      });
+      expect(verdict.confidence).toBe(0.85);
+    }),
+  );
+
+  it.effect("records an unusable confidence as absent rather than inventing a number", () =>
+    Effect.gen(function* () {
+      // A weak evaluator answering in words, or not answering at all. Mapping "high" onto 0.9 would
+      // manufacture a self-assessment the model never made.
+      for (const reported of ["high", "", null, -1, 250, "n/a"]) {
+        const verdict = yield* decode({
+          criterionId: "c1",
+          status: "passed",
+          observed: "Home rendered.",
+          evidence: ["art_1"],
+          confidence: reported,
+        });
+        expect(verdict.confidence).toBeNull();
+      }
+
+      const parsed = yield* decode({
+        criterionId: "c1",
+        status: "passed",
+        observed: "Home rendered.",
+        evidence: ["art_1"],
+        confidence: "0.72",
+      });
+      expect(parsed.confidence).toBe(0.72);
     }),
   );
 

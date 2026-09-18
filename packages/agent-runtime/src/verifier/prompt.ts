@@ -23,6 +23,11 @@ export const verifierSystemPrompt = (): string =>
     "  `inconclusive`.",
     "- If you are missing a piece of evidence, leave `status` at `inconclusive`, list what is missing in",
     "  `missingEvidence` and suggest a capture in `evidenceHint`. Do not guess.",
+    "- `confidence` is a number between 0 and 1 describing how firmly the evidence settles the status",
+    "  you just chose. It is recorded for diagnosis and changes NOTHING: it never softens a `failed`,",
+    "  never strengthens a `passed`, and never replaces a piece of evidence you do not have. Choose the",
+    "  status on the evidence alone, then report your confidence in it. If you cannot assess it, omit it",
+    "  rather than inventing a number.",
     "",
     "Reply only with the structured object that was requested.",
   ].join("\n");

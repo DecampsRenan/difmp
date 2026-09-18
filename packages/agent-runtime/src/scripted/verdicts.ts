@@ -17,6 +17,8 @@ const defaults = (criterionId: string): CriterionVerdictShape => ({
   status: "inconclusive",
   expected: "(scripted verifier: expectation not restated)",
   observed: "(scripted verifier: no observation supplied)",
+  // The double declares nothing: a canned number would read as an evaluator's self-assessment.
+  confidence: null,
   evidence: [],
   limitations: "scripted test double — this is not a model judgement",
   missingEvidence: [],
