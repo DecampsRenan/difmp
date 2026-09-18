@@ -4,12 +4,14 @@ import {
   Crypto,
   DateTime,
   Deferred,
+  Duration,
   Effect,
   Exit,
   FiberSet,
   Option,
   Schema,
 } from "effect";
+import type { Result } from "effect/Result";
 import type { Scope } from "effect/Scope";
 import { strictQuietParseOptions } from "../domain/decode.js";
 import type { RunStage } from "../domain/errors.js";
@@ -467,6 +469,63 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
     const emit = (event: Parameters<typeof store.emit>[0]) => journal(event).pipe(Effect.ignore);
 
     /**
+     * Transport-level retry for a model call the provider reports as RETRYABLE (a 429 with
+     * `Retry-After`, a 5xx, a transport blip). This is the consumer `ProviderError.retryable`
+     * existed for; the policy lives here, in the runner, next to the budgets it reads.
+     *
+     * `budgets.modelCallRetries` bounds how many times ONE call is re-attempted. Each retry
+     * journals `modelCallRetried` and waits — 250 ms doubling, capped at 4 s, overridden by a
+     * provider-reported `retryAfterMs`. The sleep is interruptible, so a cancellation or a
+     * timeout of the surrounding attempt is honoured during the backoff, not after it. The input
+     * is an `Effect.result` outcome, so the helper only ever inspects the failure channel: a
+     * success passes through untouched and a non-retryable failure surfaces exactly as it would
+     * have without the helper. Retries are TRANSPORT-level — they happen before any tool has run,
+     * never replay a browser action, and the logical call still counts once against
+     * `maxModelCalls`.
+     */
+    const withModelRetry =
+      <
+        E extends {
+          readonly retryable?: boolean;
+          readonly retryAfterMs?: number;
+          readonly message: string;
+        },
+      >(options: {
+        readonly role: ModelRole;
+        readonly callId?: string;
+      }) =>
+      <A, R>(
+        effect: Effect.Effect<Result<A, E>, never, R>,
+      ): Effect.Effect<Result<A, E>, never, R> =>
+        Effect.suspend(() =>
+          Effect.gen(function* () {
+            let outcome = yield* effect;
+            let attempt = 0;
+            while (
+              outcome._tag === "Failure" &&
+              outcome.failure.retryable === true &&
+              attempt < contract.budgets.modelCallRetries
+            ) {
+              attempt += 1;
+              const delayMs =
+                outcome.failure.retryAfterMs ?? Math.min(250 * 2 ** (attempt - 1), 4_000);
+              yield* emit({
+                type: "modelCallRetried",
+                attemptId,
+                role: options.role,
+                ...(options.callId === undefined ? {} : { callId: options.callId }),
+                attempt,
+                delayMs,
+                reason: outcome.failure.message,
+              });
+              yield* Effect.sleep(Duration.millis(delayMs));
+              outcome = yield* effect;
+            }
+            return outcome;
+          }),
+        );
+
+    /**
      * Mandatory evidence this attempt could not persist. spec §13 and design-contracts §8: a
      * failure to save mandatory evidence must not end in a silent success — the criterion cannot
      * be `passed`, and the run itself resolves to `error`.
@@ -796,37 +855,41 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             // apply to the verifier too: a wedged evaluation call used to consume the whole attempt
             // budget with `attemptTimeoutMs` as the only backstop. The signal goes with it so the
             // request is aborted rather than abandoned.
-            const response = yield* withAbortSignal((signal) =>
-              verifier.verify({
-                attemptId,
-                criterion,
-                criterionHash: hash,
-                evidence: evidenceItems(),
-                scenario: {
-                  id: contract.id,
-                  body: contract.body,
-                  inputs: contract.inputs,
-                  // The model sees PUBLIC fixture values only, and even those go through the redactor.
-                  fixturePublic: redactor.deep(deps.fixtureSession?.publicValues ?? {}),
-                },
-                baseUrl: config.baseUrl,
-                seq,
-                signal,
-              }),
-            ).pipe(
-              Effect.timeoutOrElse({
-                duration: contract.budgets.operationTimeoutMs,
-                orElse: () =>
-                  Effect.fail(
-                    new VerifierError({
-                      criterionId,
-                      reason:
-                        `the evaluation call exceeded the per-operation timeout ` +
-                        `(${contract.budgets.operationTimeoutMs} ms)`,
-                    }),
-                  ),
-              }),
-              Effect.result,
+            const response = yield* withModelRetry({ role: "verifier" })(
+              withAbortSignal((signal) =>
+                verifier.verify({
+                  attemptId,
+                  criterion,
+                  criterionHash: hash,
+                  evidence: evidenceItems(),
+                  scenario: {
+                    id: contract.id,
+                    body: contract.body,
+                    inputs: contract.inputs,
+                    // The model sees PUBLIC fixture values only, and even those go through the redactor.
+                    fixturePublic: redactor.deep(deps.fixtureSession?.publicValues ?? {}),
+                  },
+                  baseUrl: config.baseUrl,
+                  seq,
+                  signal,
+                }),
+              ).pipe(
+                Effect.timeoutOrElse({
+                  duration: contract.budgets.operationTimeoutMs,
+                  orElse: () =>
+                    Effect.fail(
+                      new VerifierError({
+                        criterionId,
+                        reason:
+                          `the evaluation call exceeded the per-operation timeout ` +
+                          `(${contract.budgets.operationTimeoutMs} ms)`,
+                        // A wedged evaluation is transport, not evidence: the runner may retry it.
+                        retryable: true,
+                      }),
+                    ),
+                }),
+                Effect.result,
+              ),
             );
 
             if (response._tag === "Failure") {
@@ -1508,38 +1571,40 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
           // really aborted, and a race against the cancellation request so honouring a cancel does
           // not wait for a wedged call to return.
           const raced = yield* racingCancellation(
-            withAbortSignal((signal) =>
-              provider.generate({ role: "browser", prompt: { messages }, tools, signal }),
-            ).pipe(
-              // A provider that DIES (an SDK that throws where the seam declares a typed failure)
-              // used to kill the attempt fiber, and the generic handler at the end of the attempt
-              // attributes a dead fiber to the `browser` stage — so an exploding model adapter was
-              // reported as a browser failure. The defect is named here, where we know whose it is.
-              Effect.catchDefect((defect) =>
-                Effect.fail(
-                  new ProviderError({
-                    provider: provider.id,
-                    reason: `the provider raised a defect: ${
-                      defect instanceof Error ? defect.message : String(defect)
-                    }`,
-                    retryable: false,
-                  }),
-                ),
-              ),
-              Effect.timeoutOrElse({
-                duration: contract.budgets.operationTimeoutMs,
-                orElse: () =>
+            withModelRetry({ role: "browser", callId })(
+              withAbortSignal((signal) =>
+                provider.generate({ role: "browser", prompt: { messages }, tools, signal }),
+              ).pipe(
+                // A provider that DIES (an SDK that throws where the seam declares a typed failure)
+                // used to kill the attempt fiber, and the generic handler at the end of the attempt
+                // attributes a dead fiber to the `browser` stage — so an exploding model adapter was
+                // reported as a browser failure. The defect is named here, where we know whose it is.
+                Effect.catchDefect((defect) =>
                   Effect.fail(
                     new ProviderError({
                       provider: provider.id,
-                      reason:
-                        `the model call exceeded the per-operation timeout ` +
-                        `(${contract.budgets.operationTimeoutMs} ms)`,
-                      retryable: true,
+                      reason: `the provider raised a defect: ${
+                        defect instanceof Error ? defect.message : String(defect)
+                      }`,
+                      retryable: false,
                     }),
                   ),
-              }),
-              Effect.result,
+                ),
+                Effect.timeoutOrElse({
+                  duration: contract.budgets.operationTimeoutMs,
+                  orElse: () =>
+                    Effect.fail(
+                      new ProviderError({
+                        provider: provider.id,
+                        reason:
+                          `the model call exceeded the per-operation timeout ` +
+                          `(${contract.budgets.operationTimeoutMs} ms)`,
+                        retryable: true,
+                      }),
+                    ),
+                }),
+                Effect.result,
+              ),
             ),
           );
           budget = recordModelCall(budget);

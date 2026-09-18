@@ -215,6 +215,17 @@ re-packing over the same filename silently reinstalls the previous bytes.)
   attempt body; without it a fixture that never returned hung the run forever) and `maxIdleTurns`.
   Each is printed with the resolved configuration, frozen into `contract.budgets`, recorded in
   `manifest.json`, and emits `budgetExhausted` with a matching kind.
+- **Model-call retries are transport-level, bounded, and never a retry-until-green.** A 429 with
+  `Retry-After`, a 5xx or a transport blip used to kill the whole attempt: `retryable` was computed
+  on every `ProviderError` and read by nobody. `budgets.modelCallRetries` (default 2) now bounds how
+  many times ONE call is re-attempted; each retry journals `modelCallRetried` and backs off 250 ms
+  doubling, capped at 4 s, overridden by the server's `retryAfterMs`. The retries run INSIDE the
+  cancellation race, so a cancel during a backoff is honoured immediately, and before any tool has
+  run — a browser action is never replayed, and the logical call still counts once against
+  `maxModelCalls`. It is the one non-blocking `budgets` member: exhausting it emits no
+  `budgetExhausted` and degrades nothing; the call fails as it always did. The same policy covers a
+  verifier evaluation, through `VerifierError.retryable`. What is still deliberately absent is the
+  ATTEMPT-level retry: see §5.
 - **`verifierReserveTokens` is a pool, not a subtraction.** The browsing loop is refused a new model
   call at `maxTokens - verifierReserveTokens`; the verifier may always spend up to
   `verifierReserveTokens` _whatever_ the browsing loop consumed. Rule 2 is what makes the reserve
@@ -473,6 +484,14 @@ Two more are deferred by the design rather than by §3: **one attempt per run** 
 `a1` — the identifier space exists so retries can be added without a format change, and there is no
 automatic scenario retry in the MVP, deliberately, because retrying a mutating action that may have
 succeeded is worse than reporting it), and **no watch mode**.
+
+The attempt-level retry stays deferred even though transport-level retries exist (§2): they are
+different tools for different failures. `budgets.modelCallRetries` covers the transient — a 429, a
+5xx, a blip — where re-sending the SAME request before any tool ran cannot double a mutation. An
+attempt-level retry would replay browser actions after a crash that may have landed one, and a
+retry of a `failed`/`inconclusive` run would be verdict shopping. If it ever lands, the sane shape
+is: retry only attempts that ended in `error`, in a fresh browser context, on `a2`/`a3`…, with
+`{{ attempt.id }}` available to inputs for data isolation.
 
 Textual expectation evaluation is explicitly _in_ the MVP — see the first limitation in §4 for what
 that means in practice.

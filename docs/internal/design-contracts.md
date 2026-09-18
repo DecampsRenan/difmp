@@ -80,6 +80,7 @@ export default defineConfig({
     fixtureCleanupTimeoutMs: 15_000,
     maxIdleTurns: 3, // consecutive model turns with no tool call
     maxEvidenceRequests: 1, // "needs more evidence" answers per criterion
+    modelCallRetries: 2, // retryable model-call failures retried per call — see §7
   },
   capture: {
     trace: "on" | "off", // default "on"
@@ -199,10 +200,13 @@ durationMs?: number, type: string, ... payload }`. `seq` increases by 1 per run.
 
 Types (exhaustive, discriminated union):
 `runStarted`, `configResolved`, `contractFrozen`, `fixtureReady`, `fixtureCleaned`,
-`browserContextOpened`, `observationTaken`, `modelCallStarted`, `modelCallFinished`
-(both carry `role: "browser" | "verifier"`), `actionStarted`, `actionFinished`,
-`evidenceRequested`, `verificationFinished`, `artifactAvailable`, `actionGuidanceExceeded`,
-`budgetExhausted`, `progressStalled`, `error`, `cancellationRequested`, `runFinished`.
+`browserContextOpened`, `observationTaken`, `modelCallStarted`, `modelCallFinished`,
+`modelCallRetried` (carries `role`, the logical `callId` when the browsing loop is the caller,
+the 1-based `attempt`, the `delayMs` it waits, and the `reason` — emitted once per retried
+attempt of a model call the provider reported as retryable; see §7), `actionStarted`,
+`actionFinished`, `evidenceRequested`, `verificationFinished`, `artifactAvailable`,
+`actionGuidanceExceeded`, `budgetExhausted`, `progressStalled`, `error`,
+`cancellationRequested`, `runFinished`.
 
 Action events carry `actionId`; verification events carry `criterionId`; evidence links via
 `artifactId` and `sourceSeq`. Writes are serialised through a single queue to preserve order; a
@@ -249,6 +253,16 @@ exhausting it emits `budgetExhausted` with a matching `BudgetKind`
   `inconclusive`, never `failed`.
 - `maxEvidenceRequests` caps how many times ONE criterion may come back as "needs more evidence"
   before the verifier settles for `inconclusive`.
+- `modelCallRetries` caps how many times ONE model call is re-attempted when the provider reports
+  the failure as retryable (a 429 with `Retry-After`, a 5xx, a transport blip). It is the one
+  NON-blocking member of `budgets`: exhausting it emits no `budgetExhausted` and changes no
+  verdict — the call simply fails with the error that triggered the retries, exactly as it did
+  before retries existed. Each retry journals `modelCallRetried` and waits 250 ms doubling,
+  capped at 4 s, overridden by a provider-reported `retryAfterMs`. Retries are TRANSPORT-level:
+  they happen before any tool has run, never replay a browser action, and the logical call still
+  counts ONCE against `maxModelCalls`. The policy is implemented in the runner, applied to the
+  browsing call and to a verifier evaluation alike; `ProviderError.retryable` /
+  `VerifierError.retryable` is the seam the decision reads.
 
 **Late work after a budget is exhausted — the exact rule.** "No late actions or requests" binds the
 AGENT and the MODEL: after `budgetExhausted` there is no further agent tool call and no further
