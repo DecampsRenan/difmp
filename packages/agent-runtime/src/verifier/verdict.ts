@@ -3,6 +3,7 @@ import { Effect, Schema, SchemaTransformation } from "effect";
 const emptyStrings = Effect.succeed<ReadonlyArray<string>>([]);
 const emptyExpected = Effect.succeed("");
 const nullString = Effect.succeed<string | null>(null);
+const nullConfidence = Effect.succeed<number | null>(null);
 const nullAbsence = Effect.succeed<"uncertain-navigation" | "established-at-checkpoint" | null>(
   null,
 );
@@ -29,6 +30,38 @@ const StringListFromLoose = Schema.NullOr(
   Schema.withDecodingDefaultKey(emptyStrings),
 );
 
+/**
+ * The evaluator's self-assessment, normalised to [0, 1].
+ *
+ * OBSERVATIONAL ONLY. No harness rule reads it: it never moves a status, never stands in for
+ * evidence and never unlocks a `passed`. It is recorded so the calibration of the evaluators we
+ * actually run can be MEASURED against the verdicts they produced, before anyone considers making
+ * a threshold on it decisive.
+ *
+ * Transport tolerance follows the rest of this file. A percentage (`85`) is read as `0.85`, since
+ * the prompt asks for a fraction and a model answering in percent means the same thing. Anything
+ * that is not a usable number — `null`, `"high"`, a negative, a value above 100 — is recorded as
+ * "not reported" rather than turned into a number the evaluator never gave.
+ */
+const normaliseConfidence = (value: number | string | null): number | null => {
+  if (value === null) return null;
+  const parsed = typeof value === "number" ? value : Number.parseFloat(value.trim());
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  if (parsed <= 1) return parsed;
+  return parsed <= 100 ? parsed / 100 : null;
+};
+
+const ConfidenceFromLoose = Schema.NullOr(Schema.Union([Schema.Number, Schema.String])).pipe(
+  Schema.decodeTo(
+    Schema.NullOr(Schema.Finite),
+    SchemaTransformation.transform({
+      decode: normaliseConfidence,
+      encode: (value): number | string | null => value,
+    }),
+  ),
+  Schema.withDecodingDefaultKey(nullConfidence),
+);
+
 /** Same idea for free-text fields the model may null out instead of omitting. */
 const StringFromNullish = Schema.NullOr(Schema.String).pipe(
   Schema.decodeTo(
@@ -50,8 +83,10 @@ const StringFromNullish = Schema.NullOr(Schema.String).pipe(
  * expected are normalised on decode. Harness authority rules (evidence citations, absence, …) still
  * apply after a successful decode. `observed`, `criterionId` and `status` stay required.
  *
- * There is deliberately no `confidence` and no free-form reasoning field. The evaluator states what
- * it expected, what it observed, and which artifacts it read — nothing else is admissible.
+ * There is deliberately no free-form reasoning field: the evaluator states what it expected, what it
+ * observed, and which artifacts it read — narration is not admissible. `confidence` is the one
+ * self-assessment accepted, and it is accepted as an OBSERVATION only: nothing in the harness reads
+ * it to decide anything.
  */
 export const CriterionVerdict = Schema.Struct({
   /** Must equal the criterion under evaluation; a mismatch forces `inconclusive`. */
@@ -63,6 +98,11 @@ export const CriterionVerdict = Schema.Struct({
    */
   expected: StringFromNullish,
   observed: Schema.String,
+  /**
+   * Self-reported confidence in the verdict above, in [0, 1], or `null` when the evaluator gave
+   * nothing usable. RECORDED AND REPORTED, NEVER ACTED UPON — see `ConfidenceFromLoose`.
+   */
+  confidence: ConfidenceFromLoose,
   /** artifactIds actually read. Every one is checked against the attempt's evidence. */
   evidence: StringListFromLoose,
   limitations: Schema.NullOr(Schema.String).pipe(Schema.withDecodingDefaultKey(nullString)),
@@ -81,6 +121,7 @@ export type CriterionVerdictShape = {
   readonly status: "passed" | "failed" | "inconclusive";
   readonly expected: string;
   readonly observed: string;
+  readonly confidence: number | null;
   readonly evidence: ReadonlyArray<string>;
   readonly limitations: string | null;
   readonly missingEvidence: ReadonlyArray<string>;

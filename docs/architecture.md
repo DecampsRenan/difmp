@@ -333,6 +333,32 @@ a reader has to be able to see, per criterion, whether a verdict came from a mod
 must be exact, bind it to a TS check with `checks: { c3: <name> }` and accept that this is the
 escape hatch, not the default path.
 
+#### The declared confidence is measured, not trusted
+
+The evaluator returns a `confidence` in `[0, 1]` next to its verdict. **Nothing in the harness reads
+it.** It does not move a status, it does not stand in for a missing piece of evidence, it does not
+spare a verdict a single downgrade, and there is no threshold configuration key. It is recorded on
+the `CriterionResult`, carried into `events.jsonl` and printed on the report — always with the
+caveat attached, so a confident verdict the harness refused is never read as a safer one.
+
+It is collected for one purpose: to find out whether the evaluators we actually run are calibrated,
+by comparing what they declared with what their verdicts turned out to be worth. Until that has been
+measured, a threshold on that number would be a dial that looks rigorous and is not:
+
+- a self-reported score is not a probability. It is produced by the same pass as the verdict it
+  grades, conditioned on it, and it clusters near the top of the range whatever the evidence was;
+- the failure mode worth catching — a hallucinated observation — is the one that comes back
+  confident. A threshold would mostly filter the borderline cases and leave the harmful ones through;
+- it is not comparable across evaluators. The models this harness has to tolerate (see the transport
+  tolerance in `verifier/verdict.ts`) answer `null`, `"high"` or `85` where a fraction was asked for;
+  `0.8` does not mean the same thing from two of them, and the harness has no way to find out.
+
+If a threshold is ever wanted, the quantity to put it on is **agreement across repeated evaluations**
+of the same criterion on the same frozen evidence: that one is measured by the harness, it is
+auditable in the journal, and the model votes instead of deciding. It costs one verifier call per
+sample, which is a budget question (`budgets.maxModelCalls`, `verifierReserveTokens`), not a free
+switch. Nothing of the sort is implemented today.
+
 The harness's own guarantees are about what it _refuses_ to conclude, not about the model being
 right: a criterion with no sufficient evidence stays `inconclusive`; a verdict citing an artifact
 that does not exist or was not persisted is forced to `inconclusive`, never `passed`; `finish` alone

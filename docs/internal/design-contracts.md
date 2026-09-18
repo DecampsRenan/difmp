@@ -316,6 +316,7 @@ interface CriterionResult {
     | { kind: "code"; checkName: string };
   expected: string;
   observed: string;
+  confidence?: number; // [0, 1], self-reported: recorded and reported, read by NO rule
   evidence: string[]; // artifactIds, MUST exist, belong to this attempt AND be persisted
   limitations?: string;
   absence?: "uncertain-navigation" | "established-at-checkpoint";
@@ -356,6 +357,14 @@ Evidence minted DURING an evaluation (a code check's probe output) is part of th
 artifact inventory is re-read after the evaluation, before the reference check. Vague wording is never turned into an
 invented threshold. `evaluator.kind === "scripted-model"` marks the deterministic test double so it
 is never confused with a real model judgement.
+
+`confidence` is the evaluator's self-assessment, and it is INERT as far as every rule above is
+concerned: nothing reads it, no threshold exists, and a verdict at `0.99` is downgraded by exactly
+the same rules as one at `0.2`. It is decoded tolerantly (a percentage is normalised; `"high"` or
+`null` is recorded as "not reported" rather than turned into a number the evaluator never gave),
+carried onto the `CriterionResult` and shown on the report, so the calibration of an evaluator can
+be measured against the verdicts it produced. `architecture.md` §4 says why it is not a gate, and
+what would have to be measured before one is built.
 
 Aggregation (exact order): explicit cancellation → `cancelled`; else blocking execution error or a
 failure to persist mandatory evidence → `error`; else any criterion `failed` → `failed`;

@@ -81,6 +81,15 @@ export const CriterionResult = Schema.Struct({
   evaluator: Evaluator,
   expected: Schema.String,
   observed: Schema.String,
+  /**
+   * The evaluator's self-reported confidence in [0, 1], absent when it reported nothing usable.
+   *
+   * OBSERVATIONAL. No rule in the harness reads it: it is not a threshold, it does not move a
+   * status, and it never stands in for evidence. It is recorded and reported so the calibration of
+   * an evaluator can be measured against the verdicts it actually produced — a self-declared number
+   * is not a probability until someone has checked that it behaves like one.
+   */
+  confidence: Schema.optionalKey(Schema.Finite),
   /** artifactIds; every one MUST exist and belong to this attempt or the criterion is forced inconclusive. */
   evidence: Schema.Array(ArtifactId),
   limitations: Schema.optionalKey(Schema.String),
