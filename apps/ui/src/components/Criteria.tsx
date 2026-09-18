@@ -121,6 +121,16 @@ export const Criteria = (props: { readonly criteria: ReadonlyArray<CriterionView
                     <dt>Evaluator</dt>
                     <dd>{evaluatorLabel(result.evaluator)}</dd>
                   </div>
+                  {result.confidence === undefined ? null : (
+                    <div>
+                      {/* Self-reported, and labelled as such: no harness rule reads it, so it must
+                          never be mistaken for a probability that the verdict is right. */}
+                      <dt>Confidence (declared)</dt>
+                      <dd data-testid={`criterion-confidence-${criterion.id}`}>
+                        {`${(result.confidence * 100).toFixed(0)} % — self-reported, not used to decide`}
+                      </dd>
+                    </div>
+                  )}
                   {result.absence === undefined ? null : (
                     <div>
                       <dt>Absence rule</dt>

@@ -73,6 +73,8 @@ export interface CriterionResult {
   readonly evaluator: Evaluator;
   readonly expected: string;
   readonly observed: string;
+  /** Self-reported by the evaluator, in [0, 1]. Displayed as an observation; no rule reads it. */
+  readonly confidence?: number;
   readonly evidence: ReadonlyArray<ArtifactId>;
   readonly limitations?: string;
   readonly absence?: AbsenceBranch;
