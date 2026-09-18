@@ -193,6 +193,15 @@ const oneOfEachEvent: {
       finishReason: "stop",
       durationMs: 900,
     }),
+  modelCallRetried: (e) =>
+    e("modelCallRetried", {
+      role: "browser",
+      callId: "m1",
+      attempt: 1,
+      delayMs: 250,
+      reason: "RateLimitError: 429",
+      durationMs: 250,
+    }),
   actionStarted: (e) =>
     e("actionStarted", {
       actionId: "a1",

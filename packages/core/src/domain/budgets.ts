@@ -15,6 +15,7 @@ export const defaultBudgets = {
   fixtureCleanupTimeoutMs: 15_000,
   maxIdleTurns: 3,
   maxEvidenceRequests: 1,
+  modelCallRetries: 2,
 } as const;
 
 /**
@@ -61,6 +62,18 @@ export const Budgets = Schema.Struct({
    */
   maxEvidenceRequests: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed(defaultBudgets.maxEvidenceRequests)),
+  ),
+  /**
+   * How many times ONE model call is retried when the provider reports the failure as RETRYABLE
+   * (a 429 with `Retry-After`, a 5xx, a transport blip) before the call fails as before. Unlike
+   * the blocking budgets above, exhausting it changes nothing on its own: the call simply ends
+   * with the error that triggered the retries, exactly as it did before the retry existed — so
+   * exhausting it emits no `budgetExhausted`. The retries are transport-level: they happen before
+   * any tool has run and the logical call still counts once against `maxModelCalls`. Backoff is
+   * 250 ms doubling, capped at 4 s, overridden by a provider-reported `retryAfterMs`.
+   */
+  modelCallRetries: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(defaultBudgets.modelCallRetries)),
   ),
 })
   .check(

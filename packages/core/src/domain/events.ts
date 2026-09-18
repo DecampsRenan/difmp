@@ -81,6 +81,20 @@ export const ModelCallFinishedEvent = event("modelCallFinished", {
   finishReason: Schema.optionalKey(Schema.String),
 });
 
+/**
+ * Emitted once per RETRIED attempt of a model call the provider reported as retryable. Shares the
+ * `callId` of the logical call it belongs to (absent for a verifier evaluation, which has none);
+ * `attempt` is the 1-based retry number. Exhausting `budgets.modelCallRetries` emits no further
+ * event — the call then fails exactly as it did before retries existed.
+ */
+export const ModelCallRetriedEvent = event("modelCallRetried", {
+  role: ModelRole,
+  callId: Schema.optionalKey(Schema.String),
+  attempt: Schema.Int,
+  delayMs: Schema.Int,
+  reason: Schema.String,
+});
+
 export const ActionStartedEvent = event("actionStarted", {
   actionId: ActionId,
   tool: ToolName,
@@ -170,6 +184,7 @@ export const HarnessEvent = Schema.Union([
   ObservationTakenEvent,
   ModelCallStartedEvent,
   ModelCallFinishedEvent,
+  ModelCallRetriedEvent,
   ActionStartedEvent,
   ActionFinishedEvent,
   EvidenceRequestedEvent,
@@ -196,6 +211,7 @@ export const harnessEventTypes: ReadonlyArray<HarnessEventType> = [
   "observationTaken",
   "modelCallStarted",
   "modelCallFinished",
+  "modelCallRetried",
   "actionStarted",
   "actionFinished",
   "evidenceRequested",

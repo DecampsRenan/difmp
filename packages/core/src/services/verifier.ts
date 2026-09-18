@@ -5,6 +5,14 @@ import type { Criterion, InputsRecord } from "../domain/spec.js";
 export class VerifierError extends Schema.TaggedError<VerifierError>()("VerifierError", {
   criterionId: Schema.String,
   reason: Schema.String,
+  /**
+   * Copied from the underlying `ProviderError` when the failure is transient, so the runner can
+   * retry the evaluation call the same way it retries a browsing call. Absent for local failures
+   * (a malformed verdict, a bad criterion hash), which are never retried.
+   */
+  retryable: Schema.optionalKey(Schema.Boolean),
+  /** Milliseconds the provider asked the caller to wait, when the provider reported one. */
+  retryAfterMs: Schema.optionalKey(Schema.Int),
 }) {
   override get message(): string {
     return `verification of ${this.criterionId} failed: ${this.reason}`;

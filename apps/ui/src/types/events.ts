@@ -218,6 +218,17 @@ export type ModelCallFinishedEvent = Ev<
   }
 >;
 
+export type ModelCallRetriedEvent = Ev<
+  "modelCallRetried",
+  {
+    readonly role: ModelRole;
+    readonly callId?: string;
+    readonly attempt: number;
+    readonly delayMs: number;
+    readonly reason: string;
+  }
+>;
+
 export type ActionStartedEvent = Ev<
   "actionStarted",
   {
@@ -333,6 +344,7 @@ export type HarnessEvent =
   | ObservationTakenEvent
   | ModelCallStartedEvent
   | ModelCallFinishedEvent
+  | ModelCallRetriedEvent
   | ActionStartedEvent
   | ActionFinishedEvent
   | EvidenceRequestedEvent
@@ -357,6 +369,7 @@ export const harnessEventTypes: ReadonlyArray<HarnessEventType> = [
   "observationTaken",
   "modelCallStarted",
   "modelCallFinished",
+  "modelCallRetried",
   "actionStarted",
   "actionFinished",
   "evidenceRequested",

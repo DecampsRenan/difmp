@@ -1,10 +1,17 @@
 import { ProviderError } from "@difmp/core";
+import { Duration } from "effect";
 import type { AiError } from "effect/unstable/ai";
 
 const statusOf = (reason: AiError.AiErrorReason): number | undefined => {
   const http = (reason as { readonly http?: { readonly response?: { readonly status?: number } } })
     .http;
   return http?.response?.status;
+};
+
+/** A rate-limited call carries the server's `Retry-After`; hand it to the runner's backoff. */
+const retryAfterMsOf = (reason: AiError.AiErrorReason): number | undefined => {
+  const retryAfter = (reason as { readonly retryAfter?: Duration.Duration }).retryAfter;
+  return retryAfter === undefined ? undefined : Math.ceil(Duration.toMillis(retryAfter));
 };
 
 /**
@@ -15,11 +22,13 @@ export const providerErrorFromAiError =
   (provider: string) =>
   (error: AiError.AiError): ProviderError => {
     const status = statusOf(error.reason);
+    const retryAfterMs = retryAfterMsOf(error.reason);
     return new ProviderError({
       provider,
       reason: `${error.reason._tag}: ${error.message}`,
       retryable: error.isRetryable,
       ...(status === undefined ? {} : { status }),
+      ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
     });
   };
 

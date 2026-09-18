@@ -48,8 +48,11 @@ export const evaluatorFor = (provider: {
     ? { kind: "scripted-model" }
     : { kind: "model", provider: provider.id, model: provider.modelId };
 
-const verifierError = (criterionId: string, reason: string): VerifierError =>
-  new VerifierError({ criterionId, reason });
+const verifierError = (
+  criterionId: string,
+  reason: string,
+  extra: { readonly retryable?: true; readonly retryAfterMs?: number } = {},
+): VerifierError => new VerifierError({ criterionId, reason, ...extra });
 
 export const makeVerifier = (
   options: VerifierOptions = {},
@@ -113,7 +116,16 @@ export const makeVerifier = (
             // on is what turns "the evaluation was abandoned" into "the HTTP request was aborted".
             ...(request.signal === undefined ? {} : { signal: request.signal }),
           })
-          .pipe(Effect.mapError((error) => verifierError(criterion.id, error.message)));
+          .pipe(
+            // Retryability survives the error mapping: the runner retries a verification call the
+            // same way it retries a browsing call, from the same `budgets.modelCallRetries`.
+            Effect.mapError((error) =>
+              verifierError(criterion.id, error.message, {
+                ...(error.retryable ? { retryable: true } : {}),
+                ...(error.retryAfterMs === undefined ? {} : { retryAfterMs: error.retryAfterMs }),
+              }),
+            ),
+          );
 
         const verdict: CriterionVerdictShape = yield* decodeVerdict(response.object).pipe(
           Effect.mapError((error) =>

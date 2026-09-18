@@ -15,7 +15,15 @@ import {
   Verifier,
   VerifierError,
 } from "../src/index.js";
-import type { Check, Fixture, HarnessEvent, LoadedSpec, RunId, RunResult } from "../src/index.js";
+import type {
+  Check,
+  Fixture,
+  HarnessEvent,
+  LoadedSpec,
+  RunId,
+  RunResult,
+  VerificationResponse,
+} from "../src/index.js";
 import { fakeBrowser, fakeFixtures, scriptedProvider, scriptedVerifier } from "./fakes.js";
 import { expectSuccess, platform, readFixture } from "./helpers.js";
 
@@ -461,5 +469,172 @@ describe("budgets", () => {
       const encoded = Schema.encodeUnknownSync(Schema.Unknown)(project.config.budgets);
       expect(encoded).toBeDefined();
     }).pipe(Effect.provide(platform)),
+  );
+});
+
+/** A provider that fails its first `failures` wire attempts, then idles like `scriptedProvider([])`. */
+const flakyProvider = (failures: number, retryable: boolean, seen: { calls: number }) =>
+  Layer.succeed(
+    ModelProvider,
+    ModelProvider.of({
+      id: "flaky",
+      modelId: "flaky-v1",
+      generate: () =>
+        Effect.suspend(() => {
+          seen.calls += 1;
+          if (seen.calls <= failures) {
+            return Effect.fail(
+              new ProviderError({
+                provider: "flaky",
+                reason: "RateLimitError: too many requests",
+                retryable,
+                status: 429,
+                retryAfterMs: 1,
+              }),
+            );
+          }
+          return Effect.succeed({
+            toolCalls: [],
+            usage: { inputTokens: 10, outputTokens: 5 },
+          });
+        }),
+    }),
+  );
+
+/** A verifier whose evaluation calls fail `failures` times with a retryable error. */
+const flakyVerifier = (failures: number, seen: { calls: number }) =>
+  Layer.succeed(
+    Verifier,
+    Verifier.of({
+      id: "flaky-verifier",
+      verify: (request) =>
+        Effect.suspend((): Effect.Effect<VerificationResponse, VerifierError> => {
+          seen.calls += 1;
+          if (seen.calls <= failures) {
+            return Effect.fail(
+              new VerifierError({
+                criterionId: request.criterion.id,
+                reason: "RateLimitError: too many requests",
+                retryable: true,
+                retryAfterMs: 1,
+              }),
+            );
+          }
+          return Effect.succeed({
+            outcome: {
+              _tag: "verdict",
+              result: {
+                criterionId: request.criterion.id,
+                criterionHash: request.criterionHash,
+                status: "passed",
+                method: "model",
+                evaluator: { kind: "scripted-model" },
+                expected: request.criterion.text,
+                observed: "scripted observation",
+                evidence: request.evidence.map((e) => e.artifactId),
+                evaluatedAtSeq: request.seq,
+              },
+            },
+            usage: { inputTokens: 20, outputTokens: 10 },
+          } satisfies VerificationResponse);
+        }),
+    }),
+  );
+
+describe("model-call retries", () => {
+  it.live("a retryable provider failure is retried and the run still passes", () =>
+    Effect.gen(function* () {
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"));
+      const seen = { calls: 0 };
+      const wired = yield* wire({
+        spec: loaded,
+        provider: flakyProvider(2, true, seen),
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) },
+      });
+
+      const result = yield* wired.run;
+      expect(result.status).toBe("passed");
+
+      const events = yield* wired.journal;
+      const retried = events.filter((e) => e.type === "modelCallRetried");
+      expect(retried.map((e) => e.attempt)).toEqual([1, 2]);
+      expect(retried.every((e) => e.role === "browser")).toBe(true);
+      // The browsing retries share the callId of the logical call they belong to.
+      expect(retried.every((e) => typeof e.callId === "string" && e.callId.startsWith("mc_"))).toBe(
+        true,
+      );
+      expect(retried.every((e) => e.delayMs === 1)).toBe(true);
+
+      // Two failed wire attempts ran before the three idle turns; the budget saw 3 agent calls.
+      expect(seen.calls).toBe(5);
+      // model.calls counts every LOGICAL model call: 3 agent turns + 3 verifier evaluations.
+      expect(result.attempts[0]?.model.calls).toBe(6);
+    }).pipe(Effect.provide(platform), Effect.scoped),
+  );
+
+  it.live("a non-retryable provider failure is not retried", () =>
+    Effect.gen(function* () {
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"));
+      const seen = { calls: 0 };
+      const wired = yield* wire({
+        spec: loaded,
+        provider: flakyProvider(Number.POSITIVE_INFINITY, false, seen),
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) },
+      });
+
+      const result = yield* wired.run;
+      expect(result.status).toBe("error");
+
+      const events = yield* wired.journal;
+      expect(events.filter((e) => e.type === "modelCallRetried")).toEqual([]);
+      expect(seen.calls).toBe(1);
+    }).pipe(Effect.provide(platform), Effect.scoped),
+  );
+
+  it.live("exhausting modelCallRetries fails the call exactly as before the retry existed", () =>
+    Effect.gen(function* () {
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"));
+      const seen = { calls: 0 };
+      const wired = yield* wire({
+        spec: loaded,
+        provider: flakyProvider(Number.POSITIVE_INFINITY, true, seen),
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) },
+        configOverrides: { budgets: { modelCallRetries: 1 } },
+      });
+
+      const result = yield* wired.run;
+      expect(result.status).toBe("error");
+
+      const events = yield* wired.journal;
+      expect(events.filter((e) => e.type === "modelCallRetried").map((e) => e.attempt)).toEqual([
+        1,
+      ]);
+      // Exhausting the budget emits no budgetExhausted — it is not a blocking stop.
+      expect(events.some((e) => e.type === "budgetExhausted")).toBe(false);
+      expect(seen.calls).toBe(2);
+    }).pipe(Effect.provide(platform), Effect.scoped),
+  );
+
+  it.live("a verifier evaluation is retried through VerifierError.retryable", () =>
+    Effect.gen(function* () {
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"));
+      const seen = { calls: 0 };
+      const wired = yield* wire({
+        spec: loaded,
+        provider: scriptedProvider([{ toolCalls: [{ name: "finish", params: {} }] }]),
+        verifierLayer: flakyVerifier(1, seen),
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) },
+      });
+
+      const result = yield* wired.run;
+      expect(result.status).toBe("passed");
+
+      const events = yield* wired.journal;
+      const retried = events.filter((e) => e.type === "modelCallRetried");
+      expect(retried.map((e) => e.attempt)).toEqual([1]);
+      expect(retried.every((e) => e.role === "verifier" && e.callId === undefined)).toBe(true);
+      // project-create has 3 criteria; only the first evaluation needed a retry.
+      expect(seen.calls).toBe(4);
+    }).pipe(Effect.provide(platform), Effect.scoped),
   );
 });

@@ -6,6 +6,8 @@ export class ProviderError extends Schema.TaggedError<ProviderError>()("Provider
   reason: Schema.String,
   retryable: Schema.Boolean,
   status: Schema.optionalKey(Schema.Int),
+  /** Milliseconds the provider asked the caller to wait (a 429 `Retry-After`), when reported. */
+  retryAfterMs: Schema.optionalKey(Schema.Int),
 }) {
   override get message(): string {
     return `${this.provider}: ${this.reason}${this.status === undefined ? "" : ` (status ${this.status})`}`;

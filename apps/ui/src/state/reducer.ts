@@ -243,6 +243,15 @@ export const runReducer = (model: RunModel, action: RunAction): RunModel => {
         model: { ...base.model, started: base.model.started + 1 },
       };
 
+    case "modelCallRetried":
+      return row({
+        kind: "model",
+        tone: "warn",
+        label: `Model call retried (${event.role})`,
+        detail: `attempt ${event.attempt} after ${event.delayMs} ms — ${event.reason}`,
+        ...(event.durationMs === undefined ? {} : { durationMs: event.durationMs }),
+      });
+
     case "modelCallFinished": {
       const input = event.inputTokens ?? 0;
       const output = event.outputTokens ?? 0;

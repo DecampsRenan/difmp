@@ -222,6 +222,7 @@ const eventCategories: Record<HarnessEvent["type"], TimelineCategory> = {
   observationTaken: "observation",
   modelCallStarted: "model",
   modelCallFinished: "model",
+  modelCallRetried: "model",
   actionStarted: "action",
   actionFinished: "action",
   evidenceRequested: "evidence",
@@ -292,6 +293,16 @@ const describeEvent = (
           field("output tokens", event.outputTokens),
           field("tools", event.toolCalls),
           field("finish", event.finishReason),
+        ],
+      };
+    case "modelCallRetried":
+      return {
+        title: `Model call retried (${event.role})`,
+        fields: [
+          field("callId", event.callId),
+          field("attempt", event.attempt),
+          field("wait", `${event.delayMs} ms`),
+          field("reason", event.reason),
         ],
       };
     case "actionStarted":
