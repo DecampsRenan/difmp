@@ -841,21 +841,21 @@ it from your own project, with whatever package manager that project already use
 
 ```sh
 cd apps/cli && pnpm pack --pack-destination /tmp
-# -> /tmp/decampsrenan-difmp-0.0.7.tgz
+# -> /tmp/decampsrenan-difmp-0.0.8.tgz
 ```
 
 `pnpm pack` runs `prepack`, which bundles the four private `@difmp/*` workspace packages into the
 artifact, so the tarball depends on no unpublished package. In your project:
 
 ```sh
-npm  i   -D /tmp/decampsrenan-difmp-0.0.7.tgz
-pnpm add -D --allow-build=esbuild /tmp/decampsrenan-difmp-0.0.7.tgz
+npm  i   -D /tmp/decampsrenan-difmp-0.0.8.tgz
+pnpm add -D --allow-build=esbuild /tmp/decampsrenan-difmp-0.0.8.tgz
 yarn add -D ./difmp-local.tgz            # Yarn 1: copy the tarball in first
 ```
 
 > **If you re-pack, give the tarball a fresh name before installing it with Yarn 1.** Yarn 1 caches a
-> local tarball by name and version, so `yarn add -D ./decampsrenan-difmp-0.0.7.tgz` after a
-> rebuild silently reinstalls the previous bytes. `cp decampsrenan-difmp-0.0.7.tgz
+> local tarball by name and version, so `yarn add -D ./decampsrenan-difmp-0.0.8.tgz` after a
+> rebuild silently reinstalls the previous bytes. `cp decampsrenan-difmp-0.0.8.tgz
 decampsrenan-difmp-$(date +%s).tgz` first. npm, pnpm and
 > Yarn 4 via corepack do not need this.
 
