@@ -9,7 +9,7 @@ import {
   Verifier,
 } from "@difmp/core";
 import * as BrowserPlaywright from "@difmp/browser-playwright";
-import { makeVerifier } from "@difmp/agent-runtime";
+import { makeVerifier, openJevEvaluator } from "@difmp/agent-runtime";
 import { Crypto, Effect, Exit, FiberSet, FileSystem, Layer, Path, Stream } from "effect";
 import { ExecutionError } from "./errors.js";
 import { modelProviderFor } from "./providers.js";
@@ -96,6 +96,9 @@ export const runOne = (
         Effect.orElseSucceed(() => ({})),
       );
 
+      const jev = yield* openJevEvaluator(config).pipe(
+        Effect.mapError((error) => new ExecutionError({ message: error.message })),
+      );
       const provider = yield* modelProviderFor(config, spec, registries, {
         runId,
         attemptId,
@@ -131,6 +134,7 @@ export const runOne = (
             // A blocking budget like any other: declared in `difmp.config.ts`, printed with the
             // resolved configuration, recorded in `manifest.json`.
             maxEvidenceRequests: config.budgets.maxEvidenceRequests,
+            ...(jev === undefined ? {} : { jev }),
             recordEvidence: (entry) =>
               runEvidence(
                 Effect.gen(function* () {

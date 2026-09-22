@@ -51,6 +51,7 @@
     "@effect/ai-anthropic": "4.0.0-rc.113",
     "@effect/platform-node": "4.0.0-rc.113",
     "effect": "4.0.0-rc.113",
+    "jev-use": "0.7.1",
     "playwright": "1.63.0",
     "tinyglobby": "^0.2.17",
     "tsx": "^4.23.13",

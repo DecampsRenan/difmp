@@ -14,6 +14,31 @@ export const ScreenshotPolicy = Schema.Literals(["checkpoints", "every-action", 
 export const TraceRetention = Schema.Literals(["all", "failure"]);
 export const ProviderName = Schema.Literals(["scripted", "anthropic", "opencode-go"]);
 export type ProviderName = (typeof ProviderName)["Type"];
+
+/** Backends `jev-use` can judge with. `mock` is a keyless dry run, not the scripted adapter. */
+export const JevBackendName = Schema.Literals(["typesafe", "openrouter", "vercel", "mock"]);
+export type JevBackendName = (typeof JevBackendName)["Type"];
+
+const unitInterval = Schema.Finite.check(Schema.isBetween({ minimum: 0, maximum: 1 }));
+
+/**
+ * Criterion judge, separate from the navigation `provider`. Omitted means the navigation model
+ * also evaluates the criteria. Jev answers typed questions about evidence text; it does not
+ * navigate and it does not see screenshot pixels.
+ */
+export const JevEvaluatorConfig = Schema.Struct({
+  provider: Schema.Literal("jev"),
+  /** Pinned model id (`jev-latest` moves). Never defaulted in code. */
+  model: Schema.NonEmptyString,
+  backend: Schema.optionalKey(JevBackendName),
+  /**
+   * Escalate every verdict below this confidence, whichever source produced it. Omit it to keep
+   * jev-use's own bars (0.5 reported, 0.4 estimated). This is evaluator policy, not a threshold
+   * invented from the wording of a criterion.
+   */
+  confidenceThreshold: Schema.optionalKey(unitInterval),
+}).annotate({ identifier: "JevEvaluatorConfig" });
+export type JevEvaluatorConfig = (typeof JevEvaluatorConfig)["Type"];
 export const ReporterName = Schema.Literals(["console", "json", "junit", "html"]);
 export type ReporterName = (typeof ReporterName)["Type"];
 
@@ -68,6 +93,8 @@ export const ResolvedConfig = Schema.Struct({
   provider: withDefault(ProviderName, defaultConfig.provider),
   /** Provider-specific model id. Never defaulted in core. */
   model: Schema.optionalKey(Schema.NonEmptyString),
+  /** Absent: the navigation provider evaluates criteria too. */
+  evaluator: Schema.optionalKey(JevEvaluatorConfig),
   providerOptions: withDefault(
     Schema.Record(Schema.String, Schema.Unknown),
     defaultConfig.providerOptions,

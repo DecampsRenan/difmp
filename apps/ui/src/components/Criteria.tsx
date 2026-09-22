@@ -32,8 +32,15 @@ const labelOf = (status: string): string => statusLabel[status as CriterionStatu
 
 const evaluatorLabel = (evaluator: Evaluator): string => {
   switch (evaluator.kind) {
-    case "model":
-      return `model ${evaluator.provider}/${evaluator.model}`;
+    case "model": {
+      const confidence =
+        evaluator.confidence === undefined
+          ? ""
+          : ` · confidence ${evaluator.confidence.toFixed(2)}${
+              evaluator.confidenceFrom === undefined ? "" : ` (${evaluator.confidenceFrom})`
+            }`;
+      return `model ${evaluator.provider}/${evaluator.model}${confidence}`;
+    }
     case "scripted-model":
       // Never present a deterministic double as a real model judgement (design-contracts §8).
       return "scripted double (not a model judgement)";

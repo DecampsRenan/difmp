@@ -3,6 +3,7 @@ import type {
   BrowserSession,
   CaptureOutcome,
   CriterionResult,
+  EvaluatorIdentity,
   EvidenceItem,
   FixtureSession,
   ObserveResult,
@@ -124,11 +125,13 @@ export const scriptedVerifier = (
   verdicts: Readonly<Record<string, ScriptedVerdict>> = {},
   fallback: ScriptedVerdict = { status: "passed" },
   seen?: Array<VerificationRequest>,
+  identity?: EvaluatorIdentity,
 ) =>
   Layer.succeed(
     Verifier,
     Verifier.of({
       id: "scripted-verifier",
+      ...(identity === undefined ? {} : { identity }),
       verify: (request) =>
         Effect.sync((): VerificationResponse => {
           seen?.push(request);

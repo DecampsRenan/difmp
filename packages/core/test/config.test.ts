@@ -126,6 +126,70 @@ describe("config resolution", () => {
   );
 });
 
+describe("jev evaluator config", () => {
+  it.effect("accepts a pinned model and backend", () =>
+    Effect.gen(function* () {
+      const project = yield* expectSuccess(
+        resolveConfig({
+          source: "difmp.config.ts",
+          config: defineConfig({
+            provider: "scripted",
+            evaluator: { provider: "jev", model: "jev-1.13.0", backend: "mock" },
+          }),
+        }),
+      );
+      expect(project.config.evaluator).toEqual({
+        provider: "jev",
+        model: "jev-1.13.0",
+        backend: "mock",
+      });
+      expect(project.config.provider).toBe("scripted");
+    }),
+  );
+
+  it.effect(
+    "rejects an unknown backend, a missing model, a pasted key, and a threshold outside 0..1",
+    () =>
+      Effect.gen(function* () {
+        const backend = yield* expectFailure(
+          resolveConfig({
+            source: "difmp.config.ts",
+            config: { evaluator: { provider: "jev", model: "jev-1.13.0", backend: "nope" } },
+          }),
+        );
+        expect(backend.problems.join("\n")).toContain("evaluator.backend");
+
+        const model = yield* expectFailure(
+          resolveConfig({
+            source: "difmp.config.ts",
+            config: { evaluator: { provider: "jev" } },
+          }),
+        );
+        expect(model.problems.join("\n")).toContain("evaluator.model");
+
+        const key = yield* expectFailure(
+          resolveConfig({
+            source: "difmp.config.ts",
+            config: {
+              evaluator: { provider: "jev", model: "jev-1.13.0", apiKey: "secret" },
+            },
+          }),
+        );
+        expect(key.problems.join("\n")).toContain("apiKey");
+
+        const threshold = yield* expectFailure(
+          resolveConfig({
+            source: "difmp.config.ts",
+            config: {
+              evaluator: { provider: "jev", model: "jev-1.13.0", confidenceThreshold: 1.5 },
+            },
+          }),
+        );
+        expect(threshold.problems.join("\n")).toContain("confidenceThreshold");
+      }),
+  );
+});
+
 describe("input precedence", () => {
   const base = {
     source: "difmp.config.ts",

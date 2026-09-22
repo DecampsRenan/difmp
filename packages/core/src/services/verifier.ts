@@ -1,5 +1,5 @@
 import { Context, Effect, Schema } from "effect";
-import type { ArtifactKind, CriterionResult } from "../domain/result.js";
+import type { ArtifactKind, CriterionResult, EvaluatorIdentity } from "../domain/result.js";
 import type { Criterion, InputsRecord } from "../domain/spec.js";
 
 export class VerifierError extends Schema.TaggedError<VerifierError>()("VerifierError", {
@@ -51,8 +51,11 @@ export interface VerificationRequest {
   readonly seq: number;
   /**
    * Aborted when the run is cancelled or the evaluation exceeds `budgets.operationTimeoutMs`.
-   * An implementation that calls a model MUST pass it on as `GenerateRequest.signal`, so the
-   * in-flight HTTP request is aborted instead of being left to finish unobserved.
+   * An implementation that calls a model MUST honour it by abandoning the observation (stop
+   * waiting, fail the verification as aborted). Aborting the in-flight HTTP transport is
+   * best-effort: pass the signal through when the client supports it (`GenerateRequest.signal`);
+   * when the backend cannot plumb `AbortSignal` (current `jev-use` limitation), the HTTP call
+   * may still finish — the harness must not leave a late rejection unobserved.
    */
   readonly signal?: AbortSignal;
 }
@@ -81,6 +84,11 @@ export class Verifier extends Context.Service<
   Verifier,
   {
     readonly id: string;
+    /**
+     * Set when the criterion judge is not the navigation model. The runner copies it onto
+     * `manifest.evaluator` so a report cannot imply the browsing model decided the criteria.
+     */
+    readonly identity?: EvaluatorIdentity;
     readonly verify: (
       request: VerificationRequest,
     ) => Effect.Effect<VerificationResponse, VerifierError>;

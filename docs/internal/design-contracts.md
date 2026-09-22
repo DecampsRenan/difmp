@@ -275,18 +275,21 @@ and it is the one the code implements.
 **Cancellation and interruption.** A cancellation (the Deferred the CLI/dashboard completes) is
 RACED against the in-flight model call, the tool dispatch loop and the final verification loop, and
 the `AbortSignal` that race interrupts is threaded into the provider, the verifier, the browser
-driver, a fixture's setup and a TS check — so the in-flight HTTP request or Playwright call is
-ABORTED, not abandoned. Interrupting the run fiber (Ctrl-C, a supervisor) is treated as a
-cancellation too. Either way the finalize tail — aggregate the outcome, run the fixture cleanup,
-write `result.json`, journal `runFinished` — is UNINTERRUPTIBLE and always runs, because §9 requires
-the result file to exist and §12 maps exit 130 off it. Everything inside that tail is separately
-bounded (`fixtureCleanupTimeoutMs`, the driver's own finalizer deadline), so it cannot wedge.
-`Effect.exit` does not catch interruption in Effect v4 — `Effect.onExit` / `Effect.uninterruptibleMask`
-are the constructs that make this hold. The process's signal handling belongs to the runtime alone:
-the driver launches Playwright with `handleSIGINT/handleSIGTERM/handleSIGHUP: false`, because
-Playwright's own handlers call `process.exit()` and would kill the run before the tail could run
-(api-playwright.md §launch). A cancelled attempt settles its evidence like any other: the trace,
-the console and network logs are captured AND recorded in `artifacts.json`.
+driver, a fixture's setup and a TS check. Observation MUST stop (the race wins; the harness moves
+on). Aborting the in-flight HTTP or Playwright call is required when the client accepts a signal,
+and **best-effort** when it cannot (today: `jev-use` has no public `AbortSignal` — the verifier
+abandons the observation and swallows a late rejection). Interrupting the run fiber (Ctrl-C, a
+supervisor) is treated as a cancellation too. Either way the finalize tail — aggregate the outcome,
+run the fixture cleanup, write `result.json`, journal `runFinished` — is UNINTERRUPTIBLE and always
+runs, because §9 requires the result file to exist and §12 maps exit 130 off it. Everything inside
+that tail is separately bounded (`fixtureCleanupTimeoutMs`, the driver's own finalizer deadline),
+so it cannot wedge. `Effect.exit` does not catch interruption in Effect v4 — `Effect.onExit` /
+`Effect.uninterruptibleMask` are the constructs that make this hold. The process's signal handling
+belongs to the runtime alone: the driver launches Playwright with
+`handleSIGINT/handleSIGTERM/handleSIGHUP: false`, because Playwright's own handlers call
+`process.exit()` and would kill the run before the tail could run (api-playwright.md §launch). A
+cancelled attempt settles its evidence like any other: the trace, the console and network logs are
+captured AND recorded in `artifacts.json`.
 
 `verifierReserveTokens` is a **pool**, not a subtraction, and that is two rules:
 
@@ -311,7 +314,13 @@ interface CriterionResult {
   status: "pending" | "passed" | "failed" | "inconclusive" | "error";
   method: "model" | "code";
   evaluator:
-    | { kind: "model"; provider: string; model: string }
+    | {
+        kind: "model";
+        provider: string;
+        model: string;
+        confidence?: number;
+        confidenceFrom?: "reported" | "estimated";
+      }
     | { kind: "scripted-model" }
     | { kind: "code"; checkName: string };
   expected: string;
@@ -463,8 +472,10 @@ request where the provider allows it, and close resources so no late action land
 
 `signal` is not optional in practice: the RUNNER always supplies one (it is the signal of the scope
 that the per-operation timeout and the cancellation race interrupt), and a provider that drops it
-turns a cancellation into an abandoned request. The `Verifier` seam carries the same field for the
-same reason and must pass it through to `generate`.
+turns a cancellation into an abandoned request. The `Verifier` seam carries the same field: it MUST
+abandon the observation when the signal fires. Passing the signal through to `generate` (or the
+evaluator client) so the HTTP transport is aborted is required when the client supports it, and
+best-effort when it cannot — see the Jev path and `VerificationRequest.signal`.
 
 ## 11. Fixtures and TS checks (registered in config, resolved by name only)
 

@@ -24,7 +24,14 @@ export type RunStatus = (typeof RunStatus)["Type"];
 
 /** `scripted-model` marks the deterministic test double so it is never read as a real judgement. */
 export const Evaluator = Schema.Union([
-  Schema.Struct({ kind: Schema.tag("model"), provider: Schema.String, model: Schema.String }),
+  Schema.Struct({
+    kind: Schema.tag("model"),
+    provider: Schema.String,
+    model: Schema.String,
+    /** Calibrated confidence of the answer that drove the status, when the evaluator reports one. */
+    confidence: Schema.optionalKey(Schema.Finite),
+    confidenceFrom: Schema.optionalKey(Schema.Literals(["reported", "estimated"])),
+  }),
   Schema.Struct({ kind: Schema.tag("scripted-model") }),
   Schema.Struct({ kind: Schema.tag("code"), checkName: Schema.String }),
 ]).annotate({ identifier: "Evaluator" });
@@ -202,6 +209,20 @@ export const ModelIdentity = Schema.Struct({
 export type ModelIdentity = (typeof ModelIdentity)["Type"];
 
 /**
+ * Who judged the criteria, when that is not the navigation model. `manifest.model` stays the
+ * browsing adapter either way.
+ */
+export const EvaluatorIdentity = Schema.Struct({
+  provider: Schema.String,
+  modelId: Schema.String,
+  adapterId: Schema.String,
+  backend: Schema.optionalKey(Schema.String),
+  /** Present only when the config set an explicit threshold. The per-source defaults are not copied. */
+  confidenceThreshold: Schema.optionalKey(Schema.Finite),
+}).annotate({ identifier: "EvaluatorIdentity" });
+export type EvaluatorIdentity = (typeof EvaluatorIdentity)["Type"];
+
+/**
  * Which of the two writes of `manifest.json` produced this file.
  *
  * `initial` is written at spec §6 step 2, right after the ids are minted and BEFORE fixture setup
@@ -225,6 +246,8 @@ export const Manifest = Schema.Struct({
   nodeVersion: Schema.String,
   dependencies: Schema.Record(Schema.String, Schema.String),
   model: ModelIdentity,
+  /** Present when criteria are judged by someone other than `model` — Jev, today. */
+  evaluator: Schema.optionalKey(EvaluatorIdentity),
   /** Resolved, non-sensitive configuration. */
   config: ResolvedConfig,
   /** Absent on an `initial` manifest: nothing has been frozen yet, so there is nothing to hash. */

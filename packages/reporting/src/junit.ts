@@ -160,6 +160,16 @@ export const renderJUnitFromView = (view: ReportView): string => {
     ["harness.provider", view.model.provider],
     ["harness.model", view.model.modelId],
     ["harness.adapter", view.model.adapterId],
+    ...(view.evaluator === undefined
+      ? []
+      : [
+          [
+            "harness.evaluator",
+            [view.evaluator.provider, view.evaluator.modelId, view.evaluator.backend]
+              .filter((part) => part !== undefined && part !== "")
+              .join("/"),
+          ] as const,
+        ]),
     ["harness.finalized", String(view.finalized)],
     ...view.attempts.map((a) => [`harness.actions.${a.attemptId}`, a.actions.rendering] as const),
     ["harness.artifacts.present", String(view.artifactCounts.present)],
