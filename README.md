@@ -1010,6 +1010,7 @@ persistence criterion fails — which is the whole point of asking for evidence 
 | [`examples/fixture-app`](examples/fixture-app/README.md)               | The demo app and its four variants.                                                                                                                            |
 | [`examples/scenarios`](examples/scenarios/README.md)                   | The demo scenarios, including four deliberately invalid ones.                                                                                                  |
 | [`examples/support`](examples/support/README.md)                       | The project side of the demo: config, fixture, TS check, scripted walkthroughs.                                                                                |
+| [`examples/demo-start-ui`](examples/demo-start-ui/README.md)           | Local battery against the public https://demo.start-ui.com demo (`pnpm test:demo-start-ui`).                                                                   |
 
 ### Verifying the distributed package
 

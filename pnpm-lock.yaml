@@ -162,6 +162,15 @@ importers:
         specifier: ^7.3.6
         version: 7.3.6(@types/node@24.13.4)(lightningcss@1.33.0)(tsx@4.23.13)(yaml@2.9.0)
 
+  examples/demo-start-ui:
+    dependencies:
+      '@difmp/agent-runtime':
+        specifier: workspace:*
+        version: link:../../packages/agent-runtime
+      '@difmp/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
   examples/fixture-app: {}
 
   examples/support:

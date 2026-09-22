@@ -1,12 +1,8 @@
 import { useMemo } from "react";
-import { Artifacts } from "./components/Artifacts.js";
-import { ActionGuidance, BlockingBudgets } from "./components/Budgets.js";
-import { Criteria } from "./components/Criteria.js";
 import { Header } from "./components/Header.js";
-import { RunContext } from "./components/RunContext.js";
-import { LatestScreenshot } from "./components/Screenshot.js";
-import { SuiteProgress } from "./components/SuiteProgress.js";
-import { Timeline } from "./components/Timeline.js";
+import { LivePreview } from "./components/LivePreview.js";
+import { SuiteTree } from "./components/SuiteTree.js";
+import type { SuiteTreeFile } from "./components/SuiteTree.js";
 import { readRuntimeConfig } from "./runtime/config.js";
 import { useNow, useRunStream } from "./state/useRunStream.js";
 
@@ -31,8 +27,28 @@ export const App = () => {
     return Math.max(end - start, 0);
   }, [model.startedAt, model.finishedAt, now]);
 
+  const files = useMemo((): ReadonlyArray<SuiteTreeFile> => {
+    if (stream.scenarios.length > 0) {
+      return stream.scenarios.map((scenario) => ({
+        specPath: scenario.specPath,
+        ...(scenario.runId === undefined ? {} : { runId: scenario.runId }),
+        status: scenario.status,
+        assertions: scenario.assertions,
+      }));
+    }
+    if (model.specPath === undefined && model.runId === undefined) return [];
+    return [
+      {
+        specPath: model.specPath ?? model.runId ?? "run",
+        ...(model.runId === undefined ? {} : { runId: model.runId }),
+        status: model.status,
+        assertions: model.criteria,
+      },
+    ];
+  }, [stream.scenarios, model.specPath, model.runId, model.status, model.criteria]);
+
   return (
-    <div className="app" data-testid="app" data-run-status={model.status}>
+    <div className="app app-simple" data-testid="app" data-run-status={model.status}>
       <Header
         model={model}
         connection={stream.connection}
@@ -46,45 +62,19 @@ export const App = () => {
         suiteFinished={stream.suiteFinished}
       />
 
-      <SuiteProgress
-        scenarios={stream.scenarios}
-        {...(model.runId === undefined ? {} : { selectedRunId: model.runId })}
-        completed={stream.completed}
-        total={stream.total}
-        onSelect={stream.selectScenario}
-      />
-
-      <main className="grid">
-        <div className="col col-left">
-          <Criteria criteria={model.criteria} />
-          <BlockingBudgets model={model} pricing={config.pricing} elapsedMs={elapsedMs} />
-          <ActionGuidance model={model} />
-          <RunContext model={model} />
-        </div>
-        <div className="col col-right">
-          <LatestScreenshot
-            artifacts={model.artifacts}
-            config={config}
-            {...(stream.scenarios.length === 0 || model.runId === undefined
-              ? {}
-              : { runId: model.runId })}
-          />
-          <Timeline entries={model.timeline} />
-          <Artifacts
-            artifacts={model.artifacts}
-            criteria={model.criteria}
-            config={config}
-            {...(stream.scenarios.length === 0 || model.runId === undefined
-              ? {}
-              : { runId: model.runId })}
-          />
-        </div>
-      </main>
-
-      <footer className="app-foot">
-        Everything coming from the scenario, the model, the pages and the journals is rendered as
-        text. The MVP offers no manual takeover of the browser.
-      </footer>
+      <div className="live-layout">
+        <SuiteTree
+          files={files}
+          {...(model.runId === undefined ? {} : { selectedRunId: model.runId })}
+          onSelect={stream.selectScenario}
+        />
+        <LivePreview
+          artifacts={model.artifacts}
+          config={config}
+          {...(model.runId === undefined ? {} : { runId: model.runId })}
+          {...(model.specPath === undefined ? {} : { specPath: model.specPath })}
+        />
+      </div>
     </div>
   );
 };
