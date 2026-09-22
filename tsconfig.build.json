@@ -9,6 +9,7 @@
     { "path": "apps/cli/tsconfig.examples.json" },
     { "path": "apps/ui" },
     { "path": "examples/fixture-app" },
-    { "path": "examples/support" }
+    { "path": "examples/support" },
+    { "path": "examples/demo-start-ui" }
   ]
 }
