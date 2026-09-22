@@ -117,6 +117,59 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
     dispatch({ kind: "replace", model: next });
   }, []);
 
+  /**
+   * `contractFrozen` carries criterion ids only. Fetch the frozen contract so the tree can show
+   * verbatim criterion text. Must run per runId: on a page refresh the suite journal replays every
+   * scenario while only the last one stays selected, and enriching solely from `model.runId` would
+   * leave earlier files stuck on c1 / c2 / ….
+   */
+  const loadedContractsRef = useRef(new Set<string>());
+  const inflightContractsRef = useRef(new Set<string>());
+  const loadContract = useCallback(
+    (runId: string | undefined): void => {
+      const loadKey = runId ?? "standalone";
+      if (loadedContractsRef.current.has(loadKey) || inflightContractsRef.current.has(loadKey)) {
+        return;
+      }
+      inflightContractsRef.current.add(loadKey);
+      const load = async (): Promise<void> => {
+        try {
+          const response = await fetch(
+            withRunId(config.contractUrl, suiteModeRef.current ? runId : undefined),
+            {
+              headers: { accept: "application/json" },
+            },
+          );
+          if (!response.ok) return;
+          const json: unknown = await response.json();
+          const contract = readContract(json);
+          if (contract === undefined || contract.criteria.length === 0) return;
+          loadedContractsRef.current.add(loadKey);
+          // Re-read after the await: verification events may have landed while the fetch was in flight.
+          const previous = runId === undefined ? modelRef.current : modelsRef.current.get(runId);
+          if (previous === undefined) return;
+          const next = runReducer(previous, { kind: "contract", contract });
+          if (runId !== undefined) modelsRef.current.set(runId, next);
+          if (runId === undefined || selectedRunRef.current === runId) showModel(next);
+          if (runId !== undefined) {
+            setScenarios((current) =>
+              current.map((scenario) =>
+                scenario.runId === runId ? { ...scenario, assertions: next.criteria } : scenario,
+              ),
+            );
+          }
+        } catch {
+          // The contract is an enrichment, not a requirement: without it the dashboard still
+          // renders every criterion, by id. A retry comes on the next `contractHash` change.
+        } finally {
+          inflightContractsRef.current.delete(loadKey);
+        }
+      };
+      void load();
+    },
+    [config.contractUrl, showModel],
+  );
+
   const applyHarnessEvent = useCallback(
     (event: HarnessEvent) => {
       const previous = modelsRef.current.get(event.runId) ?? emptyRunModel;
@@ -124,6 +177,7 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
       modelsRef.current.set(event.runId, next);
       if (selectedRunRef.current === undefined) selectedRunRef.current = event.runId;
       if (selectedRunRef.current === event.runId) showModel(next);
+      if (event.type === "contractFrozen") loadContract(event.runId);
       if (!suiteModeRef.current) return;
       setScenarios((current) => {
         const index = current.findIndex(
@@ -153,7 +207,7 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
         return copy;
       });
     },
-    [showModel],
+    [loadContract, showModel],
   );
 
   // Both touch refs only, so the empty dependency array is accurate rather than a silencing
@@ -387,55 +441,13 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
     };
   }, [connect, clearTimer, closeSource]);
 
-  // The frozen contract supplies criterion text and `model` vs `code` — `contractFrozen` carries
-  // ids only. Fetched once, then retried when the contract is actually frozen.
+  // Retry enrichment when the selected run's contract hash appears/changes (e.g. first fetch
+  // 404'd before the file was on disk). Per-run loads on `contractFrozen` cover suite replay.
   const contractHash = model.contractHash;
-  const loadedContractsRef = useRef(new Set<string>());
   useEffect(() => {
-    const runId = model.runId;
-    const loadKey = runId ?? "standalone";
-    if (loadedContractsRef.current.has(loadKey)) return;
-    let cancelled = false;
-    const load = async (): Promise<void> => {
-      try {
-        const response = await fetch(
-          withRunId(config.contractUrl, suiteModeRef.current ? runId : undefined),
-          {
-            headers: { accept: "application/json" },
-          },
-        );
-        if (!response.ok) return;
-        const json: unknown = await response.json();
-        if (cancelled) return;
-        const contract = readContract(json);
-        if (contract === undefined || contract.criteria.length === 0) return;
-        loadedContractsRef.current.add(loadKey);
-        const previous = runId === undefined ? modelRef.current : modelsRef.current.get(runId);
-        if (previous === undefined) return;
-        const next = runReducer(previous, { kind: "contract", contract });
-        if (runId !== undefined) modelsRef.current.set(runId, next);
-        if (runId === undefined || selectedRunRef.current === runId) showModel(next);
-        if (runId !== undefined) {
-          setScenarios((current) =>
-            current.map((scenario) =>
-              scenario.runId === runId ? { ...scenario, assertions: next.criteria } : scenario,
-            ),
-          );
-        }
-      } catch {
-        // The contract is an enrichment, not a requirement: without it the dashboard still
-        // renders every criterion, by id. A retry comes on the next `contractHash` change.
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-    // `contractHash` is an intentional extra dependency: the effect body never reads it, but the
-    // contract is only worth re-fetching once the run has actually frozen one, and the hash
-    // changing is that signal.
-    // oxlint-disable-next-line react/exhaustive-effect-dependencies
-  }, [config.contractUrl, contractHash, model.runId, showModel]);
+    if (contractHash === undefined) return;
+    loadContract(model.runId);
+  }, [contractHash, loadContract, model.runId]);
 
   const requestCancel = useCallback(() => {
     setCancel((current) =>

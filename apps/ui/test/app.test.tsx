@@ -441,6 +441,92 @@ describe("App — frozen contract", () => {
     );
     expect(screen.getByTestId("suite-assertion-specs/checkout.e2e.md-c1")).toHaveTextContent("c1");
   });
+
+  it("enriches every scenario after a suite journal replay (page refresh)", async () => {
+    configure({ eventsUrl: "/api/events", contractUrl: "/api/contract" });
+    const contracts: Record<string, unknown> = {
+      "run-one": {
+        criteria: [{ id: "c1", text: "Home shows the Start UI mark", method: "code" }],
+      },
+      "run-two": {
+        criteria: [{ id: "c1", text: "Sign-in form accepts the demo user", method: "code" }],
+      },
+    };
+    const fetchMock = vi.fn<(input: unknown) => Promise<Response>>((input) => {
+      const url = String(input);
+      if (url.includes("cancel") || url.includes("close")) {
+        return Promise.resolve(jsonResponse({}, { ok: false, status: 404 }));
+      }
+      const runId = new URL(url, pageOrigin).searchParams.get("runId") ?? "";
+      const body = contracts[runId];
+      if (body === undefined) return Promise.resolve(jsonResponse({}, { ok: false, status: 404 }));
+      return Promise.resolve(jsonResponse(body));
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const first = eventStream("run-one");
+    const second = eventStream("run-two");
+    await renderApp();
+    await openStream();
+
+    // Mimic EventSource replaying the full suite journal after a browser refresh.
+    await deliverUi("cliStarted", { scenarios: ["specs/one.e2e.md", "specs/two.e2e.md"] });
+    await deliverUi("scenarioStarted", { specPath: "specs/one.e2e.md", runId: "run-one" });
+    await deliverUi("harness", {
+      runId: "run-one",
+      event: first("runStarted", {
+        specPath: "specs/one.e2e.md",
+        scenarioId: "one",
+        harnessVersion: "0.1.0",
+      }),
+    });
+    await deliverUi("harness", {
+      runId: "run-one",
+      event: first("contractFrozen", {
+        contractHash: "hash-one",
+        specHash: "s".repeat(64),
+        criterionIds: ["c1"],
+      }),
+    });
+    await deliverUi("harness", {
+      runId: "run-one",
+      event: first("runFinished", { status: "passed", criteriaCount: 1, failedCriteria: [] }),
+    });
+    await deliverUi("scenarioFinished", { specPath: "specs/one.e2e.md", status: "passed" });
+    await deliverUi("scenarioStarted", { specPath: "specs/two.e2e.md", runId: "run-two" });
+    await deliverUi("harness", {
+      runId: "run-two",
+      event: second("runStarted", {
+        specPath: "specs/two.e2e.md",
+        scenarioId: "two",
+        harnessVersion: "0.1.0",
+      }),
+    });
+    await deliverUi("harness", {
+      runId: "run-two",
+      event: second("contractFrozen", {
+        contractHash: "hash-two",
+        specHash: "s".repeat(64),
+        criterionIds: ["c1"],
+      }),
+    });
+    await deliverUi("cliFinished", { completed: 2, total: 2 });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("suite-assertion-specs/one.e2e.md-c1")).toHaveTextContent(
+        "Home shows the Start UI mark",
+      );
+      expect(screen.getByTestId("suite-assertion-specs/two.e2e.md-c1")).toHaveTextContent(
+        "Sign-in form accepts the demo user",
+      );
+    });
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("runId=run-one"))).toBe(
+      true,
+    );
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("runId=run-two"))).toBe(
+      true,
+    );
+  });
 });
 
 describe("App — collapsible tree", () => {
