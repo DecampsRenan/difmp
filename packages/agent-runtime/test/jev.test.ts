@@ -193,6 +193,48 @@ describe("jev evaluator", () => {
     }),
   );
 
+  it.effect("fails only when holds is rejected, contradicted, and settled", () =>
+    Effect.gen(function* () {
+      const verifier = yield* withJev(
+        scriptedBackend({
+          holds: { answer: 0.08, confidence: 0.91 },
+          contradicted: { answer: 0.94, confidence: 0.9 },
+          settled: { answer: 0.93, confidence: 0.92 },
+          absence: { answer: "not-about-absence", confidence: 0.95 },
+          missing: { answer: "none", confidence: 0.95 },
+          cite_art_1: { answer: 0.9, confidence: 0.88 },
+        }),
+      );
+      const response = yield* verifier.verify(
+        request([observation("art_1", "The list does not include Project r_1.")]),
+      );
+      if (response.outcome._tag !== "verdict") throw new Error("expected a verdict");
+      expect(response.outcome.result.status).toBe("failed");
+      expect(response.outcome.result.evidence).toEqual(["art_1"]);
+      expect(response.outcome.result.evaluator).toMatchObject({
+        kind: "model",
+        provider: "jev",
+        confidence: 0.9,
+        confidenceFrom: "reported",
+      });
+    }),
+  );
+
+  it.effect("stays inconclusive when settled but neither holds nor contradiction is decided", () =>
+    Effect.gen(function* () {
+      const verifier = yield* withJev(
+        scriptedBackend({
+          holds: { answer: 0.1, confidence: 0.9 },
+          contradicted: { answer: 0.2, confidence: 0.9 },
+          settled: { answer: 0.9, confidence: 0.9 },
+        }),
+      );
+      const response = yield* verifier.verify(request([observation("art_1", "A list.")]));
+      if (response.outcome._tag !== "verdict") throw new Error("expected a verdict");
+      expect(response.outcome.result.status).toBe("inconclusive");
+    }),
+  );
+
   it.effect("asks for one catalogued capture, then settles inconclusive at the cap", () =>
     Effect.gen(function* () {
       const verifier = yield* withJev(
