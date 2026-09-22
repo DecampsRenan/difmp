@@ -347,6 +347,13 @@ criterion that can only be settled by looking at a picture stays inconclusive un
 check covers it. Jev is not a navigation provider. Tool calls stay on `provider`, and
 `manifest.model` keeps naming that adapter.
 
+The status table is conservative on purpose: `failed` requires a decided contradiction
+(`holds` no ∧ `contradicted` yes ∧ `settled` yes). A settled “does not hold” without that
+contradiction (`settled` ∧ `holds` no ∧ `contradicted` no) stays `inconclusive` — “not shown”
+is not the same as “shown to be false”. `inconclusive` is also the right outcome when the
+evidence is incomplete or inaccessible (a widget off-viewport, a list never captured, an
+oversized state refused as-is), not only when the model itself is undecided.
+
 ### The origin allow-list is a tool-level check, not network isolation
 
 `allowedOrigins` is applied to the `navigate` tool, in two places (the runner and the driver). That

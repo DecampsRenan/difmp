@@ -281,6 +281,9 @@ export const interpretJevJudgment = (
     });
   }
 
+  // failed needs an explicit contradiction. settled ∧ ¬holds ∧ ¬contradicted stays
+  // inconclusive — “not shown” ≠ “shown false”; incomplete or inaccessible evidence
+  // (off-viewport widget, missing capture) lands here too, not only model indecision.
   const conflict = decidedYes(holds) && decidedYes(contradicted);
   const passed = decidedYes(holds) && decidedNo(contradicted) && decidedYes(settled);
   const failed = decidedNo(holds) && decidedYes(contradicted) && decidedYes(settled);
@@ -350,8 +353,9 @@ export const judgeCriterion = (
     const { jev, request } = options;
     const evidence = request.evidence.filter((item) => item.summary.trim() !== "");
     const pending = jev.judge(stateFor(request, evidence), questionsFor(evidence));
-    // A cancel does not abort Jev's HTTP request. Swallow a late rejection so it cannot
-    // surface as an unhandled rejection after the fiber has already moved on.
+    // Cancel abandons the observation (race below). Aborting Jev's HTTP transport is
+    // best-effort only: jev-use 0.7.x has no public AbortSignal. Swallow a late rejection
+    // so it cannot surface as an unhandled rejection after the fiber has moved on.
     void pending.catch(() => undefined);
     const judged = Effect.tryPromise({
       try: () => pending,
