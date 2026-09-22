@@ -4,7 +4,7 @@ import { readContract } from "../types/contract.js";
 import type { HarnessEvent } from "../types/events.js";
 import { harnessEventTypes, isHarnessEvent } from "../types/events.js";
 import { emptyRunModel } from "./model.js";
-import type { RunModel } from "./model.js";
+import type { CriterionView, RunModel } from "./model.js";
 import { runReducer } from "./reducer.js";
 
 export type ConnectionState =
@@ -45,6 +45,8 @@ export interface SuiteScenario {
   readonly specPath: string;
   readonly runId?: string;
   readonly status: "pending" | "running" | RunModel["status"];
+  /** Criteria frozen for this run — drives the nested assertion list in the live tree. */
+  readonly assertions: ReadonlyArray<CriterionView>;
 }
 
 interface UiMessage {
@@ -134,6 +136,7 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
               specPath: next.specPath ?? event.runId,
               runId: event.runId,
               status: next.status,
+              assertions: next.criteria,
             },
           ];
         }
@@ -142,6 +145,7 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
           ...row,
           runId: event.runId,
           status: next.status,
+          assertions: next.criteria,
           ...(next.specPath === undefined ? {} : { specPath: next.specPath }),
         };
         const copy = current.slice();
@@ -240,7 +244,9 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
         if (parsed.type === "cliStarted") {
           const paths = data?.["scenarios"];
           if (Array.isArray(paths) && paths.every((path) => typeof path === "string")) {
-            setScenarios(paths.map((specPath) => ({ specPath, status: "pending" })));
+            setScenarios(
+              paths.map((specPath) => ({ specPath, status: "pending", assertions: [] })),
+            );
             setSuiteProgress({ completed: 0, total: paths.length, finished: false });
           }
           return;
@@ -256,7 +262,9 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
           showModel(initial);
           setScenarios((current) => {
             const index = current.findIndex((scenario) => scenario.specPath === specPath);
-            if (index < 0) return [...current, { specPath, runId, status: "running" }];
+            if (index < 0) {
+              return [...current, { specPath, runId, status: "running", assertions: [] }];
+            }
             const copy = current.slice();
             copy[index] = { ...copy[index]!, runId, status: "running" };
             return copy;
@@ -407,6 +415,13 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
         const next = runReducer(previous, { kind: "contract", contract });
         if (runId !== undefined) modelsRef.current.set(runId, next);
         if (runId === undefined || selectedRunRef.current === runId) showModel(next);
+        if (runId !== undefined) {
+          setScenarios((current) =>
+            current.map((scenario) =>
+              scenario.runId === runId ? { ...scenario, assertions: next.criteria } : scenario,
+            ),
+          );
+        }
       } catch {
         // The contract is an enrichment, not a requirement: without it the dashboard still
         // renders every criterion, by id. A retry comes on the next `contractHash` change.

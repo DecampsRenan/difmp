@@ -69,7 +69,201 @@ code,
   min-height: 100%;
 }
 
-/* ---------- header ---------- */
+.app-simple {
+  height: 100%;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+.app-head-simple {
+  flex-wrap: nowrap;
+  gap: 12px 16px;
+  align-items: center;
+}
+.app-head-simple .head-title {
+  gap: 8px;
+}
+.app-head-simple .head-scenario {
+  color: var(--fg-faint);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.stream-stats-hidden {
+  display: none !important;
+}
+
+.live-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) 1fr;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 900px) {
+  .live-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(200px, 40vh) 1fr;
+  }
+}
+
+/* ---------- suite tree (left) ---------- */
+
+.suite-tree {
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--line);
+  padding: 10px 8px;
+}
+.suite-tree-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.suite-tree-file {
+  border-radius: 6px;
+}
+.suite-tree-file-selected {
+  background: color-mix(in srgb, var(--info) 10%, transparent);
+}
+.suite-tree-file-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.suite-tree-toggle {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--fg-faint);
+  cursor: pointer;
+  font-size: 12px;
+}
+.suite-tree-file-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+}
+.suite-tree-file-btn:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+.suite-tree-file-btn:not(:disabled):hover {
+  background: var(--bg-sunk);
+}
+.suite-tree-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 13px;
+}
+.suite-tree-assertions {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0 0 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.suite-tree-assertion {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12.5px;
+}
+.suite-tree-assertion-empty {
+  display: block;
+}
+.suite-tree-assertion-id {
+  color: var(--fg-faint);
+  font-size: 11px;
+}
+.suite-tree-assertion-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-dim);
+}
+
+/* ---------- live preview (right) ---------- */
+
+.live-preview {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.live-preview-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-panel);
+}
+.live-preview-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.live-preview-meta {
+  color: var(--fg-faint);
+  font-family: var(--mono);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.live-preview-frame {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  background: var(--bg-sunk);
+  padding: 0;
+}
+.live-preview-frame .empty {
+  margin: auto;
+  padding: 24px;
+}
+.live-preview-iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #111;
+}
+
+/* ---------- layout (legacy panels retained for unit tests) ---------- */
+
+.suite {
+  padding: 14px 14px 0;
+}
 
 .app-head {
   display: flex;
