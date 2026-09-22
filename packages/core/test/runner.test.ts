@@ -12,6 +12,7 @@ import {
 } from "../src/index.js";
 import type {
   Check,
+  EvaluatorIdentity,
   Fixture,
   HarnessEvent,
   LoadedSpec,
@@ -50,6 +51,8 @@ interface RunOptions {
   readonly verificationRequests?: Array<VerificationRequest>;
   /** Replaces the scripted model provider (used to make the provider DIE rather than fail). */
   readonly providerLayer?: Layer.Layer<ModelProvider>;
+  /** Copied onto `manifest.evaluator` when the criterion judge is not the navigation model. */
+  readonly evaluatorIdentity?: EvaluatorIdentity;
   /**
    * Run-directory entries to pre-create as DIRECTORIES, so the store's write to that path really
    * fails. A genuine filesystem failure, not a stubbed one.
@@ -124,6 +127,7 @@ const executeRaw = (options: RunOptions) =>
             options.verdicts ?? {},
             options.fallbackVerdict ?? { status: "passed" },
             options.verificationRequests,
+            options.evaluatorIdentity,
           ),
           fixtureLayer,
         ),
@@ -393,10 +397,43 @@ describe("runner", () => {
       expect(manifest.hashes).toBeUndefined();
       expect(manifest.scenarioId).toBe("project-create");
       expect(manifest.model.adapterId).toBe("scripted");
+      expect(manifest).not.toHaveProperty("evaluator");
       // The failure is journalled as an `error` event, not only folded into result.json.
       expect(
         out.events.some((e) => e.type === "error" && e.stage === "fixture-setup" && e.fatal),
       ).toBe(true);
+    }).pipe(Effect.provide(platform)),
+  );
+
+  it.effect("records a separate evaluator identity without renaming the navigation model", () =>
+    Effect.gen(function* () {
+      const loaded = yield* expectSuccess(spec("project-create.e2e.md"));
+      const out = yield* execute({
+        spec: loaded,
+        turns: [{ toolCalls: [finish] }],
+        fixtures: { "authenticated-workspace": async () => ({ public: {} }) },
+        evaluatorIdentity: {
+          provider: "jev",
+          modelId: "jev-1.13.0",
+          adapterId: "jev/jev-use",
+          backend: "typesafe",
+        },
+      });
+      const fs = yield* FileSystem.FileSystem;
+      const manifest = JSON.parse(
+        yield* fs.readFileString(`${out.runRoot}/manifest.json`).pipe(Effect.orDie),
+      ) as {
+        model: { provider: string; adapterId: string };
+        evaluator?: { provider: string; modelId: string; adapterId: string; backend?: string };
+      };
+      expect(manifest.model.provider).toBe("scripted");
+      expect(manifest.model.adapterId).toBe("scripted");
+      expect(manifest.evaluator).toEqual({
+        provider: "jev",
+        modelId: "jev-1.13.0",
+        adapterId: "jev/jev-use",
+        backend: "typesafe",
+      });
     }).pipe(Effect.provide(platform)),
   );
 

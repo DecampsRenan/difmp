@@ -311,7 +311,13 @@ interface CriterionResult {
   status: "pending" | "passed" | "failed" | "inconclusive" | "error";
   method: "model" | "code";
   evaluator:
-    | { kind: "model"; provider: string; model: string }
+    | {
+        kind: "model";
+        provider: string;
+        model: string;
+        confidence?: number;
+        confidenceFrom?: "reported" | "estimated";
+      }
     | { kind: "scripted-model" }
     | { kind: "code"; checkName: string };
   expected: string;

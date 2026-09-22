@@ -338,6 +338,15 @@ right: a criterion with no sufficient evidence stays `inconclusive`; a verdict c
 that does not exist or was not persisted is forced to `inconclusive`, never `passed`; `finish` alone
 never declares success; an unevaluated criterion makes the run `inconclusive`.
 
+### Jev judges text, not pixels
+
+`evaluator.provider: "jev"` sends one batch of typed questions per criterion (does the text hold,
+does the evidence contradict it, is it settled, which artifacts were necessary). The harness writes
+`observed` from those answers and the evidence summaries. Screenshot bytes are not sent, so a
+criterion that can only be settled by looking at a picture stays inconclusive unless a TypeScript
+check covers it. Jev is not a navigation provider. Tool calls stay on `provider`, and
+`manifest.model` keeps naming that adapter.
+
 ### The origin allow-list is a tool-level check, not network isolation
 
 `allowedOrigins` is applied to the `navigate` tool, in two places (the runner and the driver). That

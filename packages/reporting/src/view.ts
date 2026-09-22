@@ -36,6 +36,14 @@ export interface ReportView {
     readonly modelId: string;
     readonly adapterId: string;
   };
+  /** Set when criteria were judged by someone other than `model`. */
+  readonly evaluator?: {
+    readonly provider: string;
+    readonly modelId: string;
+    readonly adapterId: string;
+    readonly backend?: string;
+    readonly confidenceThreshold?: number;
+  };
   readonly harnessVersion: string;
   readonly nodeVersion: string;
   readonly baseUrl: string;
@@ -409,8 +417,15 @@ const toArtifactView = (record: ArtifactRecord): ArtifactView => ({
 
 const evaluatorLabel = (evaluator: CriterionResult["evaluator"]): string => {
   switch (evaluator.kind) {
-    case "model":
-      return `model ${evaluator.provider}/${evaluator.model}`;
+    case "model": {
+      const confidence =
+        evaluator.confidence === undefined
+          ? ""
+          : ` · confidence ${evaluator.confidence.toFixed(2)}${
+              evaluator.confidenceFrom === undefined ? "" : ` (${evaluator.confidenceFrom})`
+            }`;
+      return `model ${evaluator.provider}/${evaluator.model}${confidence}`;
+    }
     case "scripted-model":
       // Named explicitly so a deterministic double is never read as a real model judgement.
       return "deterministic scripted double (not a real model judgement)";
@@ -698,6 +713,7 @@ export const buildReportView = (input: ReportInput): ReportView => {
     finalized: input.finalized,
     contractHash: result.contractHash,
     model: manifest.model,
+    ...(manifest.evaluator === undefined ? {} : { evaluator: manifest.evaluator }),
     harnessVersion: manifest.harnessVersion,
     nodeVersion: manifest.nodeVersion,
     baseUrl: manifest.config.baseUrl,

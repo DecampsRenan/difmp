@@ -19,7 +19,8 @@
   "dependencies": {
     "@difmp/core": "workspace:*",
     "@effect/ai-anthropic": "4.0.0-rc.113",
-    "effect": "4.0.0-rc.113"
+    "effect": "4.0.0-rc.113",
+    "jev-use": "0.7.1"
   },
   "engines": {
     "node": ">=22.12.0"

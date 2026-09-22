@@ -8,6 +8,9 @@ import type {
 } from "@difmp/core";
 import { formatSchemaError, ModelProvider, Verifier, VerifierError } from "@difmp/core";
 import { Crypto, Effect, Layer, Ref, Schema } from "effect";
+import type { JevJudge } from "../jev/client.js";
+import { jevAdapterId, jevProviderId } from "../jev/client.js";
+import { judgeCriterion } from "../jev/judge.js";
 import { scriptedProviderId } from "../scripted/provider.js";
 import { verifierPrompt } from "./prompt.js";
 import { validateVerdict } from "./validate.js";
@@ -37,6 +40,11 @@ export interface VerifierOptions {
    * built outside a run (tests, probes).
    */
   readonly maxEvidenceRequests?: number;
+  /**
+   * When set, criteria are judged by Jev instead of `ModelProvider`. Navigation still uses the
+   * provider. A scripted navigation provider does not relabel these verdicts as `scripted-model`.
+   */
+  readonly jev?: JevJudge;
 }
 
 /** A scripted judgement must never be presentable as a real model judgement. */
@@ -59,6 +67,7 @@ export const makeVerifier = (
 ): Effect.Effect<VerifierService["Service"], never, ModelProvider | Crypto.Crypto> =>
   Effect.gen(function* () {
     const provider = yield* ModelProvider;
+    const jev = options.jev;
     const evidenceRequests = yield* Ref.make<Readonly<Record<string, number>>>({});
     const maxEvidenceRequests = options.maxEvidenceRequests ?? 1;
     const evaluator = evaluatorFor(provider);
@@ -92,6 +101,21 @@ export const makeVerifier = (
     ): Effect.Effect<VerificationResponse, VerifierError> =>
       Effect.gen(function* () {
         const { criterion } = request;
+        const asked = yield* Ref.get(evidenceRequests).pipe(
+          Effect.map((r) => r[criterion.id] ?? 0),
+        );
+        if (jev !== undefined) {
+          const response = yield* judgeCriterion({
+            jev,
+            request,
+            asked,
+            maxEvidenceRequests,
+          });
+          if (response.outcome._tag === "needsEvidence") {
+            yield* Ref.update(evidenceRequests, (r) => ({ ...r, [criterion.id]: asked + 1 }));
+          }
+          return response;
+        }
         // A screenshot is admissible model evidence only when the pixels are attached. Filtering
         // here also constrains verdict validation, so an adapter/capture regression cannot turn a
         // text-only screenshot label back into a citable visual observation.
@@ -140,9 +164,6 @@ export const makeVerifier = (
         );
 
         const usage = response.usage;
-        const asked = yield* Ref.get(evidenceRequests).pipe(
-          Effect.map((r) => r[criterion.id] ?? 0),
-        );
         if (
           verdict.missingEvidence.length > 0 &&
           verdict.status === "inconclusive" &&
@@ -184,7 +205,23 @@ export const makeVerifier = (
     ): Effect.Effect<VerificationResponse, VerifierError> =>
       request.criterion.method === "code" ? refuseCodeCheck(request) : runModelCheck(request);
 
-    return { id: `verifier/${provider.id}`, verify };
+    return {
+      id: jev === undefined ? `verifier/${provider.id}` : `verifier/${jevProviderId}`,
+      ...(jev === undefined
+        ? {}
+        : {
+            identity: {
+              provider: jevProviderId,
+              modelId: jev.model,
+              adapterId: jevAdapterId,
+              backend: jev.backendName,
+              ...(jev.confidenceThreshold === undefined
+                ? {}
+                : { confidenceThreshold: jev.confidenceThreshold }),
+            },
+          }),
+      verify,
+    };
   });
 
 export const verifierLayer = (

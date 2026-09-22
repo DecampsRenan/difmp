@@ -287,6 +287,15 @@ export const renderHtmlFromView = (view: ReportView): string => {
     <div><span>Contract hash</span><span class="mono">${h(shortHash(view.contractHash))}</span></div>
     <div><span>Adapter</span><span class="mono">${h(view.model.adapterId)}</span></div>
     <div><span>Model</span><span class="mono">${h(`${view.model.provider}/${view.model.modelId}`)}</span></div>
+    ${
+      view.evaluator === undefined
+        ? ""
+        : `<div><span>Evaluator</span><span class="mono">${h(
+            [`${view.evaluator.provider}/${view.evaluator.modelId}`, view.evaluator.backend]
+              .filter((part) => part !== undefined && part !== "")
+              .join(" · "),
+          )}</span></div>`
+    }
     <div><span>Base URL</span><span class="mono wrap">${h(view.baseUrl)}</span></div>
     <div><span>Harness / Node</span><span class="mono">${h(`${view.harnessVersion} / ${view.nodeVersion}`)}</span></div>
   </div>

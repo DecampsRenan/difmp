@@ -61,7 +61,13 @@ export type RunStage =
   | "report";
 
 export type Evaluator =
-  | { readonly kind: "model"; readonly provider: string; readonly model: string }
+  | {
+      readonly kind: "model";
+      readonly provider: string;
+      readonly model: string;
+      readonly confidence?: number;
+      readonly confidenceFrom?: "reported" | "estimated";
+    }
   | { readonly kind: "scripted-model" }
   | { readonly kind: "code"; readonly checkName: string };
 

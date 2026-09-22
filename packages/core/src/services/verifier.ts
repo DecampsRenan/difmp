@@ -1,5 +1,5 @@
 import { Context, Effect, Schema } from "effect";
-import type { ArtifactKind, CriterionResult } from "../domain/result.js";
+import type { ArtifactKind, CriterionResult, EvaluatorIdentity } from "../domain/result.js";
 import type { Criterion, InputsRecord } from "../domain/spec.js";
 
 export class VerifierError extends Schema.TaggedError<VerifierError>()("VerifierError", {
@@ -81,6 +81,11 @@ export class Verifier extends Context.Service<
   Verifier,
   {
     readonly id: string;
+    /**
+     * Set when the criterion judge is not the navigation model. The runner copies it onto
+     * `manifest.evaluator` so a report cannot imply the browsing model decided the criteria.
+     */
+    readonly identity?: EvaluatorIdentity;
     readonly verify: (
       request: VerificationRequest,
     ) => Effect.Effect<VerificationResponse, VerifierError>;

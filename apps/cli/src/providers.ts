@@ -15,6 +15,7 @@ import {
   opencodeGoOptionsFromConfig,
   opencodeGoModelProviderLayer,
   prematureFinishScript,
+  openJevEvaluator,
   scriptedAdapterId,
   scriptedModelId,
   scriptedModelProviderLayer,
@@ -80,32 +81,37 @@ export const validateProviderConfig = (
       yield* anthropicOptionsFromConfig(config).pipe(
         Effect.mapError((error) => new UsageError({ message: error.message })),
       );
-      return;
-    }
-    if (config.provider === "opencode-go") {
+    } else if (config.provider === "opencode-go") {
       // Session defaults to the run id at execute time; validation only checks model + options.
       yield* opencodeGoOptionsFromConfig(config, "difmp-validate").pipe(
         Effect.mapError((error) => new UsageError({ message: error.message })),
       );
-      return;
+    } else {
+      const options = yield* scriptedOptionsFromConfig(config);
+      if (options.script !== undefined) {
+        const registry = registries.scripts;
+        if (registry === undefined) {
+          return yield* Effect.fail(
+            new UsageError({
+              message: `providerOptions.script: script "${options.script}" is not registered in difmp.config.ts`,
+            }),
+          );
+        }
+        yield* registry.lookup(options.script).pipe(
+          Effect.mapError(
+            (error) => new UsageError({ message: `providerOptions.script: ${error.message}` }),
+          ),
+          Effect.asVoid,
+        );
+      }
     }
 
-    const options = yield* scriptedOptionsFromConfig(config);
-    if (options.script === undefined) return;
-    const registry = registries.scripts;
-    if (registry === undefined) {
-      return yield* Effect.fail(
-        new UsageError({
-          message: `providerOptions.script: script "${options.script}" is not registered in difmp.config.ts`,
-        }),
+    if (config.evaluator !== undefined) {
+      // Resolves the backend and checks the credential. Does not call the model.
+      yield* openJevEvaluator(config).pipe(
+        Effect.mapError((error) => new UsageError({ message: error.message })),
       );
     }
-    yield* registry.lookup(options.script).pipe(
-      Effect.mapError(
-        (error) => new UsageError({ message: `providerOptions.script: ${error.message}` }),
-      ),
-      Effect.asVoid,
-    );
   });
 
 /** Everything a script factory needs that only exists once the run id is minted. */

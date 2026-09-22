@@ -57,6 +57,14 @@ bytes is omitted from both the prompt and the citable evidence allow-list; the m
 credit for inspecting a label. Bytes remain in memory for the evaluator call and are not copied into
 the textual prompt, journal or JSON inventory.
 
+Set `evaluator: { provider: "jev", model, backend? }` to judge criteria with Jev instead of the
+navigation model. The questions are typed (`check` / `pick`): hold, contradict, settled, an absence
+branch, a fixed missing-evidence catalog, and one citation check per artifact. Prose is assembled
+by the harness. Screenshot pixels are not sent. An escalated or unreachable answer does not pass;
+unreachable is a retryable verifier error when the transport says so. `backend: "mock"` needs no
+key and is still labelled `evaluator.kind: "model"`. The scripted double is unchanged when
+`evaluator` is omitted.
+
 `method: "code"` criteria are **not** evaluated here — the runner owns the only code-check path, so
 the hash-binding guard, the evidence-integrity rule and the persistence rule apply identically to
 `code` and `model`. A `code` criterion arriving here is refused explicitly rather than handled

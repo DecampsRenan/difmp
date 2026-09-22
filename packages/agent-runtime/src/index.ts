@@ -1,4 +1,5 @@
 export * from "./anthropic.js";
+export * from "./jev/client.js";
 export * from "./opencode-go.js";
 export * from "./errors.js";
 export * from "./prompt.js";

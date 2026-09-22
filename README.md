@@ -390,6 +390,30 @@ export default defineConfig({
 });
 ```
 
+Navigation stays on `provider`. To judge criteria with Jev (TypeSafe's System One model, through
+`jev-use`) set `evaluator`. Jev answers a batch of typed questions about the evidence text. It does
+not navigate, it does not call tools, and it does not see screenshot pixels. A low-confidence answer
+is recorded as `inconclusive`. `manifest.json` keeps the browsing adapter in `model` and the judge
+in `evaluator`.
+
+```ts
+export default defineConfig({
+  provider: "anthropic",
+  model: "claude-sonnet-5",
+  evaluator: {
+    provider: "jev",
+    model: "jev-1.13.0", // pin a version; jev-latest moves
+    backend: "typesafe", // typesafe | openrouter | vercel | mock
+  },
+});
+```
+
+The key is `TYPESAFE_API_KEY`, `OPENROUTER_API_KEY`, or `AI_GATEWAY_API_KEY`, depending on
+`backend`. Omit `backend` and Jev uses the first of those it finds. `backend: "mock"` is a keyless
+dry run of the Jev client. It is not the scripted adapter, and its verdicts are still
+`evaluator.kind: "model"`. `scripted` navigation plus a Jev evaluator is allowed: the script walks
+the app, Jev judges the evidence text.
+
 `model` is never defaulted in code — set it in the config or pass `--model`. The API key is read as a
 redacted configuration value that never reaches a prompt, `manifest.json` or a report. It is read
 from the environment only; there is nowhere to write it into a config file.

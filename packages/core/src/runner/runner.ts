@@ -22,6 +22,7 @@ import type {
   ArtifactRecord,
   AttemptResult,
   CriterionResult,
+  Evaluator,
   Manifest,
   ModelAccounting,
   RunResult,
@@ -200,6 +201,7 @@ export const runScenario = (
       nodeVersion: typeof process === "undefined" ? "unknown" : process.version,
       dependencies: { ...request.dependencies },
       model: { provider: provider.id, modelId: provider.modelId, adapterId: provider.id },
+      ...(verifier.identity === undefined ? {} : { evaluator: verifier.identity }),
       config: safeConfig,
     };
     yield* store
@@ -462,6 +464,11 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
   Effect.gen(function* () {
     const { contract, driver, provider, redactor, registries, request, store, verifier } = deps;
     const { attemptId, config } = request;
+    /** Budget and final-pass placeholders name the judge that would have run, not always the browser model. */
+    const fallbackModelEvaluator = (): Evaluator =>
+      verifier.identity === undefined
+        ? { kind: "model", provider: provider.id, model: provider.modelId }
+        : { kind: "model", provider: verifier.identity.provider, model: verifier.identity.modelId };
     const layout = store.layout;
     // Every journalled event goes through the redactor: the journal is the source of the report,
     // the live stream and `result.json`, so stripping known secrets here covers all three (§13).
@@ -844,7 +851,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             });
             produced = {
               ...pendingResult(criterion, hash),
-              evaluator: { kind: "model", provider: provider.id, model: provider.modelId },
+              evaluator: fallbackModelEvaluator(),
               status: "inconclusive",
               observed: "the token budget was exhausted before this criterion could be evaluated",
               limitations: decision.error.message,
@@ -919,7 +926,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
                 if (requestedBy !== "runner") return;
                 produced = {
                   ...pendingResult(criterion, hash),
-                  evaluator: { kind: "model", provider: provider.id, model: provider.modelId },
+                  evaluator: fallbackModelEvaluator(),
                   status: "inconclusive",
                   observed: `the available evidence does not settle this criterion: ${outcomeValue.missing.join(
                     "; ",

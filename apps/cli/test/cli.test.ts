@@ -217,6 +217,30 @@ describe("validate", () => {
     expect(allOutput(result)).toContain("omit temperature, topP and topK");
   });
 
+  it("rejects a Jev backend that is not one of the four names", async () => {
+    const result = await exec(["validate", "--json", "--config", "jev-bad-backend.config.ts"], {
+      cwd: validationProject,
+    });
+    expect(result.code).toBe(2);
+    expect(result.stderr).toEqual([]);
+    const parsed = JSON.parse(result.stdout.join("\n")) as {
+      valid: boolean;
+      problems: ReadonlyArray<string>;
+    };
+    expect(parsed.valid).toBe(false);
+    expect(parsed.problems.join("\n")).toContain("evaluator.backend");
+  });
+
+  it("accepts a scripted navigation provider with a mock Jev evaluator", async () => {
+    const result = await exec(["validate", "--json", "--config", "jev-mock.config.ts"], {
+      cwd: validationProject,
+    });
+    expect(result.code).toBe(0);
+    expect(result.stderr).toEqual([]);
+    const parsed = JSON.parse(result.stdout.join("\n")) as { valid: boolean };
+    expect(parsed.valid).toBe(true);
+  });
+
   it("keeps sampling options available for Anthropic models that support them", async () => {
     const result = await exec(
       ["validate", "--config", "anthropic-sonnet-4-temperature.config.ts"],
