@@ -107,6 +107,8 @@ export interface CriterionView {
   readonly expected?: string;
   readonly observed?: string;
   readonly limitations?: string;
+  /** The evaluator's self-reported confidence, in [0, 1]. Shown as an observation, never as a verdict. */
+  readonly confidence?: number;
   readonly absence?: AbsenceBranch;
   /**
    * Every status the harness imposed on the evaluator's answer. A criterion showing `inconclusive`
@@ -646,6 +648,7 @@ export const buildReportView = (input: ReportInput): ReportView => {
             attemptId: found.attemptId,
           }),
       ...(found?.result.limitations === undefined ? {} : { limitations: found.result.limitations }),
+      ...(found?.result.confidence === undefined ? {} : { confidence: found.result.confidence }),
       ...(found?.result.absence === undefined ? {} : { absence: found.result.absence }),
     };
   });

@@ -322,13 +322,17 @@ describe("App — applying the journal", () => {
       }),
       emit("verificationFinished", {
         criterionId: "c1",
-        result: criterionResult({ status: "passed", evidence: ["shot-1"] }),
+        result: criterionResult({ status: "passed", evidence: ["shot-1"], confidence: 0.83 }),
       }),
       emit("runFinished", { status: "passed", criteriaCount: 1, failedCriteria: [] }),
     );
 
     expect(screen.getByTestId("app")).toHaveAttribute("data-run-status", "passed");
     expect(screen.getByTestId("criterion-status-c1")).toHaveTextContent("passed");
+    // Declared confidence is shown next to the verdict, and labelled as playing no part in it.
+    expect(screen.getByTestId("criterion-confidence-c1")).toHaveTextContent(
+      "83 % — self-reported, not used to decide",
+    );
     expect(screen.getByTestId("screenshot-image")).toHaveAttribute("alt", "Screenshot shot-1");
     // The base the CLI injected is what the rendered src is actually built from.
     expect(screen.getByTestId("screenshot-image")).toHaveAttribute(

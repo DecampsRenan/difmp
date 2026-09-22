@@ -23,6 +23,10 @@ export interface VerdictValidation {
  * - `passed` with no evidence at all is `inconclusive`;
  * - `expected` is always the FROZEN contract text, never the evaluator's restatement.
  *
+ * `confidence` is carried through UNTOUCHED and read by nothing here. It is an observation about
+ * the evaluator, recorded next to the verdict so the two can be compared after the fact; no rule
+ * above consults it, and a high value never spares a verdict a single downgrade.
+ *
  * Core's `enforceEvidenceIntegrity` applies the same rule once more against the run store's
  * inventory; the two are deliberately redundant.
  */
@@ -105,6 +109,7 @@ export const validateVerdict = (options: {
     // The frozen text, verbatim. The evaluator never gets to restate the expectation.
     expected: criterion.text,
     observed: verdict.observed,
+    ...(verdict.confidence === null ? {} : { confidence: verdict.confidence }),
     evidence: accepted,
     ...(limitations.length === 0 ? {} : { limitations: limitations.join(" | ") }),
     ...(verdict.absence === null ? {} : { absence: verdict.absence }),

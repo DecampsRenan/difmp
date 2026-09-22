@@ -81,6 +81,17 @@ const expectationItem = (criterion: CriterionView): string => {
 };
 
 /**
+ * The evaluator's self-assessment, shown for what it is. It is NOT a probability that the verdict
+ * is right, and no harness rule reads it — printing it without that caveat would invite a reader to
+ * treat a confident wrong verdict as a safer one.
+ */
+const confidenceLabel = (confidence: number | undefined): string | undefined =>
+  confidence === undefined
+    ? undefined
+    : `${(confidence * 100).toFixed(0)} % — self-reported by the evaluator, recorded for diagnosis: ` +
+      "no harness rule reads it, and it did not influence the status above";
+
+/**
  * The harness refusing to conclude is INFORMATION. A criterion that reads `inconclusive` because a
  * rule downgraded it must say which rule, what the evaluator had answered, and why — otherwise the
  * reader cannot tell "the evaluator was unsure" from "the harness would not take its word".
@@ -170,6 +181,7 @@ const evaluationItem = (criterion: CriterionView): string => {
     <dt>Expected (evaluator)</dt><dd><pre>${h(criterion.expected ?? "—")}</pre></dd>
     <dt>Observed (evaluator)</dt><dd><pre>${h(criterion.observed ?? "—")}</pre></dd>
     ${definition("Declared limitations", criterion.limitations)}
+    ${definition("Confidence declared by the evaluator", confidenceLabel(criterion.confidence))}
     ${definition(
       "Branch of the absence rule",
       criterion.absence === undefined
