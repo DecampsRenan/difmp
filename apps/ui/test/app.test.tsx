@@ -469,48 +469,56 @@ describe("App — frozen contract", () => {
     await renderApp();
     await openStream();
 
-    // Mimic EventSource replaying the full suite journal after a browser refresh.
-    await deliverUi("cliStarted", { scenarios: ["specs/one.e2e.md", "specs/two.e2e.md"] });
-    await deliverUi("scenarioStarted", { specPath: "specs/one.e2e.md", runId: "run-one" });
-    await deliverUi("harness", {
-      runId: "run-one",
-      event: first("runStarted", {
-        specPath: "specs/one.e2e.md",
-        scenarioId: "one",
-        harnessVersion: "0.1.0",
-      }),
+    // Mimic EventSource replaying the full suite journal after a browser refresh: all in one
+    // task, so React never renders (nor runs effects for) the intermediate selections.
+    const source = latestSource();
+    const queue = (type: string, data: unknown): void => {
+      const message = { seq: ++uiSeq, ts: "2026-09-12T10:00:00.000Z", type, data };
+      source.dispatchEvent(new MessageEvent(type, { data: JSON.stringify(message) }));
+    };
+    await act(async () => {
+      queue("cliStarted", { scenarios: ["specs/one.e2e.md", "specs/two.e2e.md"] });
+      queue("scenarioStarted", { specPath: "specs/one.e2e.md", runId: "run-one" });
+      queue("harness", {
+        runId: "run-one",
+        event: first("runStarted", {
+          specPath: "specs/one.e2e.md",
+          scenarioId: "one",
+          harnessVersion: "0.1.0",
+        }),
+      });
+      queue("harness", {
+        runId: "run-one",
+        event: first("contractFrozen", {
+          contractHash: "hash-one",
+          specHash: "s".repeat(64),
+          criterionIds: ["c1"],
+        }),
+      });
+      queue("harness", {
+        runId: "run-one",
+        event: first("runFinished", { status: "passed", criteriaCount: 1, failedCriteria: [] }),
+      });
+      queue("scenarioFinished", { specPath: "specs/one.e2e.md", status: "passed" });
+      queue("scenarioStarted", { specPath: "specs/two.e2e.md", runId: "run-two" });
+      queue("harness", {
+        runId: "run-two",
+        event: second("runStarted", {
+          specPath: "specs/two.e2e.md",
+          scenarioId: "two",
+          harnessVersion: "0.1.0",
+        }),
+      });
+      queue("harness", {
+        runId: "run-two",
+        event: second("contractFrozen", {
+          contractHash: "hash-two",
+          specHash: "s".repeat(64),
+          criterionIds: ["c1"],
+        }),
+      });
+      queue("cliFinished", { completed: 2, total: 2 });
     });
-    await deliverUi("harness", {
-      runId: "run-one",
-      event: first("contractFrozen", {
-        contractHash: "hash-one",
-        specHash: "s".repeat(64),
-        criterionIds: ["c1"],
-      }),
-    });
-    await deliverUi("harness", {
-      runId: "run-one",
-      event: first("runFinished", { status: "passed", criteriaCount: 1, failedCriteria: [] }),
-    });
-    await deliverUi("scenarioFinished", { specPath: "specs/one.e2e.md", status: "passed" });
-    await deliverUi("scenarioStarted", { specPath: "specs/two.e2e.md", runId: "run-two" });
-    await deliverUi("harness", {
-      runId: "run-two",
-      event: second("runStarted", {
-        specPath: "specs/two.e2e.md",
-        scenarioId: "two",
-        harnessVersion: "0.1.0",
-      }),
-    });
-    await deliverUi("harness", {
-      runId: "run-two",
-      event: second("contractFrozen", {
-        contractHash: "hash-two",
-        specHash: "s".repeat(64),
-        criterionIds: ["c1"],
-      }),
-    });
-    await deliverUi("cliFinished", { completed: 2, total: 2 });
 
     await waitFor(() => {
       expect(screen.getByTestId("suite-assertion-specs/one.e2e.md-c1")).toHaveTextContent(
