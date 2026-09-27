@@ -21,14 +21,12 @@ npx vitest run --config apps/ui/vitest.config.ts   # the same thing, spelled out
 A **component** suite, under jsdom, in four layers:
 
 - **Per component**, rendered with Testing Library and driven through `user-event`, fed run models
-  built by `test/factories.ts`: the header with its connection state and Cancel flow, the run
-  context, the criteria and their method, the blocking budgets and the `unavailable` cost, the
-  timeline and its filters, the artifact list, the latest screenshot, and the shared primitives
-  (panel, badge, gauge, time and duration formatting). Each one is checked in every state it can
-  actually reach — including the ones before any event has arrived, where the rule is that a user
-  sees a dash, never `undefined`.
+  built by `test/factories.ts`: the header with its connection state and Cancel flow, the mapping
+  from run and criterion status to the live tree's status (`test/liveStatus.test.ts`), and the
+  shared badge. Each one is checked in every state it can actually reach — including the ones
+  before any event has arrived, where the rule is that a user sees a dash, never `undefined`.
 - **The whole dashboard** (`test/app.test.tsx`), driven through its real data path —
-  `App` → `useRunStream` → `runReducer` → the panels — against a fake `EventSource` and a stubbed
+  `App` → `useRunStream` → `runReducer` → the suite tree and the live preview — against a fake `EventSource` and a stubbed
   `fetch`. This is where the stream's contracts are pinned: `seq > lastSeq` dedupe across an
   inclusive resume, malformed frames counted and never rendered, the backoff takeover reconnecting
   with the cursor, cancellation, and the degradation path when `contractUrl` is unavailable.
@@ -42,8 +40,8 @@ A **component** suite, under jsdom, in four layers:
   on its object identity. This is the one place in the suite where a DOM assertion cannot reach the
   rule.
 
-The suite is mutation-checked: breaking the dedupe guard, the URL scheme gate, the cost fallback,
-the gauge clamp, the pending→`inconclusive` rule, its immutability, or the malformed-frame counter
+The suite is mutation-checked: breaking the dedupe guard, the URL scheme gate,
+the pending→`inconclusive` rule, its immutability, or the malformed-frame counter
 each fails a test that names the rule it broke.
 
 It **launches no browser**. Nothing here proves the bundle loads, the SSE stream arrives or a real
@@ -68,22 +66,26 @@ The CLI overrides the endpoints by injecting one script tag before the bundle:
 </script>
 ```
 
-`pricing` is optional. It is absent by default and there is no price table anywhere in
-the harness, so **cost renders as the literal string `unavailable`** — never an estimate, never `0`.
+`pricing` is optional and still read tolerantly, but the live view no longer renders cost. There is
+no price table anywhere in the harness, so nothing ever shows an estimate.
 
 ## What it shows, and where each part comes from
 
 The CLI injects its suite stream: one monotonic SSE cursor wraps scenario lifecycle messages and raw
-`HarnessEvent`s. The dashboard retains one reducer model per run, shows completed/running/pending
-suite progress, and lets the user select an earlier run without losing its timeline. The criteria
-have to be visible with their **text** and their `model` / `code` **method** from
-the moment the contract is frozen — before any verification has happened — and `contractFrozen`
-carries ids only. So the app fetches `contractUrl` on that event. It also reads a `criteria` field on
+`HarnessEvent`s. The live view is deliberately two things: on the left a **suite tree** — one row
+per spec file with its live status, expandable to its assertions — and on the right a **live
+preview** of the browser, the latest screenshot of the selected run. Selecting a file switches the
+preview without losing that run's state: the dashboard retains one reducer model per run. The
+assertions have to be visible with their **text** from the moment the contract is frozen — before
+any verification has happened — and `contractFrozen` carries ids only. So the app fetches
+`contractUrl` on that event, for every run it sees (on a page refresh the suite journal replays
+every scenario, not only the selected one). It also reads a `criteria` field on
 `contractFrozen` and prefers it when present, so widening that event later closes the gap without a
 UI change.
 
-Everything else is derived from the stream by a plain reducer: status, the timeline, the action count
-against the indicative threshold, the blocking budgets, the artifact list and the latest screenshot.
+Everything else is derived from the stream by a plain reducer: status, criterion results and the
+latest screenshot. Detailed Jev verdicts, the timeline, budgets, the artifact list and the run
+context are not shown here; they live in the run's report and artifacts.
 
 ## Resume
 

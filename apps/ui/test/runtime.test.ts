@@ -99,7 +99,7 @@ describe("readRuntimeConfig — pricing", () => {
   ])("omits the pricing key when $label", ({ pricing }) => {
     inject({ pricing });
     const config = readRuntimeConfig();
-    // Absent, not zeroed: the Budgets panel prints the literal "unavailable" when the key is
+    // Absent, not zeroed: a consumer must treat cost as "unavailable" when the key is
     // missing, and a zero rate would make it invent a cost of 0 instead.
     expect(config).not.toHaveProperty("pricing");
     expect(config).toStrictEqual(defaults);
