@@ -1,7 +1,5 @@
 import type {
-  Check,
   Evaluator,
-  Registry,
   VerificationRequest,
   VerificationResponse,
   Verifier as VerifierService,
@@ -18,17 +16,6 @@ import type { CriterionVerdictShape } from "./verdict.js";
 import { CriterionVerdict, criterionVerdictParseOptions } from "./verdict.js";
 
 export interface VerifierOptions {
-  /**
-   * Accepted for compatibility and IGNORED: `method: "code"` criteria are evaluated by the runner,
-   * which is the only place that can re-read the artifact inventory after a check has run.
-   */
-  readonly checks?: Registry<Check>;
-  readonly runId?: string;
-  /** Accepted and IGNORED — see `checks`. The runner journals a check's probe output itself. */
-  readonly recordEvidence?: (entry: {
-    readonly label: string;
-    readonly data: unknown;
-  }) => Promise<string>;
   /**
    * How many times one criterion may come back as "needs more evidence" before the verifier stops
    * asking and settles for `inconclusive`. Without this, a stubborn evaluator would spend the
@@ -185,7 +172,7 @@ export const makeVerifier = (
           };
         }
 
-        const validated = validateVerdict({
+        const result = validateVerdict({
           verdict,
           criterion,
           criterionHash: request.criterionHash,
@@ -194,7 +181,7 @@ export const makeVerifier = (
           seq: request.seq,
         });
         return {
-          outcome: { _tag: "verdict", result: validated.result },
+          outcome: { _tag: "verdict", result },
           ...(usage === undefined ? {} : { usage }),
           modelCalls: 1,
         };

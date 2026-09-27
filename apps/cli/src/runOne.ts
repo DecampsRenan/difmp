@@ -6,11 +6,10 @@ import {
   resolveInputs,
   RunStore,
   runScenario,
-  Verifier,
 } from "@difmp/core";
 import * as BrowserPlaywright from "@difmp/browser-playwright";
-import { makeVerifier, openJevEvaluator } from "@difmp/agent-runtime";
-import { Crypto, Effect, Exit, FiberSet, FileSystem, Layer, Path, Stream } from "effect";
+import { openJevEvaluator, verifierLayer } from "@difmp/agent-runtime";
+import { Crypto, Effect, Exit, FileSystem, Layer, Path, Stream } from "effect";
 import { ExecutionError } from "./errors.js";
 import { modelProviderFor } from "./providers.js";
 import { fixtureManagerLayer } from "./fixtures.js";
@@ -118,47 +117,15 @@ export const runOne = (
         fixtureManagerLayer(registries),
       );
 
-      // The verifier journals a code check's probe output through the store, so it is built once the
-      // store exists rather than being wired from the outside.
-      const verifier = Layer.effect(
-        Verifier,
-        Effect.gen(function* () {
-          const store = yield* RunStore;
-          // Writes run on fibers owned by the LAYER's scope, not on detached root fibers: when the
-          // run's scope closes, an outstanding write is interrupted instead of landing in
-          // `artifacts.json` after `result.json` has been written.
-          const runEvidence = yield* FiberSet.makeRuntimePromise<never, string>();
-          return yield* makeVerifier({
-            checks: registries.checks,
-            runId,
-            // A blocking budget like any other: declared in `difmp.config.ts`, printed with the
-            // resolved configuration, recorded in `manifest.json`.
-            maxEvidenceRequests: config.budgets.maxEvidenceRequests,
-            ...(jev === undefined ? {} : { jev }),
-            recordEvidence: (entry) =>
-              runEvidence(
-                Effect.gen(function* () {
-                  const artifactId = yield* store.mintArtifactId(attemptId);
-                  const relative = `attempts/${attemptId}/evidence/${artifactId}.json`;
-                  yield* store.writeRunFile(
-                    relative,
-                    `${JSON.stringify({ label: entry.label, data: entry.data }, null, 2)}\n`,
-                  );
-                  yield* store.recordArtifact({
-                    artifactId,
-                    attemptId,
-                    kind: "check-evidence",
-                    label: entry.label,
-                    path: relative,
-                    state: "present",
-                    ts: new Date().toISOString(),
-                  });
-                  return artifactId;
-                }).pipe(Effect.orDie),
-              ),
-          });
-        }),
-      );
+      // The verifier needs no run services any more: `method: "code"` criteria are evaluated by
+      // the runner's check path, which journals their probe evidence. All the verifier takes is
+      // its own budget and, when configured, the Jev judge.
+      const verifier = verifierLayer({
+        // A blocking budget like any other: declared in `difmp.config.ts`, printed with the
+        // resolved configuration, recorded in `manifest.json`.
+        maxEvidenceRequests: config.budgets.maxEvidenceRequests,
+        ...(jev === undefined ? {} : { jev }),
+      });
 
       const services = verifier.pipe(Layer.provideMerge(base));
 

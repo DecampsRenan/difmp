@@ -232,7 +232,7 @@ export const interpretJevJudgment = (
       model,
       ...confidenceFields(driving),
     };
-    const validated = validateVerdict({
+    const result = validateVerdict({
       verdict,
       criterion,
       criterionHash: options.criterionHash,
@@ -241,7 +241,7 @@ export const interpretJevJudgment = (
       seq: options.seq,
     });
     return Effect.succeed({
-      outcome: { _tag: "verdict", result: validated.result },
+      outcome: { _tag: "verdict", result },
       ...(usage === undefined ? {} : { usage }),
       modelCalls: 1,
     });

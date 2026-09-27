@@ -42,11 +42,9 @@ import {
   makeBudgetState,
   recordModelCall,
 } from "../policy/budgets.js";
-import { enforceAbsenceRule } from "../policy/absence.js";
-import { enforceEvidenceIntegrity, enforceEvidencePersistence } from "../policy/evidence.js";
+import { adjudicate } from "../policy/adjudicate.js";
 import type { Redactor } from "../policy/redact.js";
 import { collectSensitiveValues, makeRedactor, sanitizeConfig } from "../policy/redact.js";
-import { admitVerdict } from "../policy/verdict.js";
 import { checkNavigationOrigin } from "../policy/origins.js";
 import type { Registries } from "../registry/index.js";
 import { validateSpecRegistries, verifyCriterionBinding } from "../registry/index.js";
@@ -638,7 +636,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
      * refused is therefore NOT a known artifact: it never enters the evidence index (so no
      * evaluator can cite it), the failure is journalled as an `error`, and the call sites that
      * treat a capture as mandatory evidence (checkpoint captures, check payloads) see a `failed`
-     * state and let `enforceEvidencePersistence` downgrade the criterion.
+     * state and let the adjudication downgrade the criterion.
      *
      * Returns the reason the record could not be persisted, or `undefined` on success.
      */
@@ -808,7 +806,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
 
         // The checkpoint capture is MANDATORY evidence for this evaluation: it is what a reader
         // (and the evaluator) has to look at. If it could not be persisted, this criterion can no
-        // longer be `passed` — see enforceEvidencePersistence below.
+        // longer be `passed` — see `adjudicate` below.
         // Recorded in BOTH places as soon as it happens: the local list demotes this criterion,
         // the attempt-level one makes the run an `error` even if this evaluation returns early.
         const evidenceFailures: Array<string> = [];
@@ -946,27 +944,17 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
         // The integrity rule is unchanged — the id must exist and belong to this attempt.
         const knownArtifacts = yield* store.attemptArtifacts(attemptId);
 
-        // The four rules that stand between an evaluator's answer and a recorded verdict. They
-        // apply to `model` AND `code` criteria alike: a TS check lives in another package and is
-        // no more trusted than a model. Each one records WHY it changed the status.
-        //   1. every cited artifact must exist, belong to this attempt and have been persisted;
-        //   2. an absence only establishes a failure at the checkpoint the criterion names;
-        //   3. mandatory evidence that could not be saved forbids `passed`;
-        //   4. a terminal verdict is not re-decided by the agent asking again.
-        const checked = enforceEvidenceIntegrity({
-          result: produced,
+        // The law between an evaluator's answer and a recorded verdict — its rules, their order
+        // and their strings live in `policy/adjudicate`, and the verifier crosses the same code
+        // over the pre-evaluation snapshot (`screenProposal`).
+        const admission = adjudicate({
+          proposed: produced,
+          current,
+          requestedBy,
           attemptArtifacts: knownArtifacts,
-        });
-        const absenceChecked = enforceAbsenceRule({
-          result: checked,
           facts: { navigationSettled, checkpointReached: currentObservation !== undefined },
+          persistenceFailures: evidenceFailures,
         });
-        const persisted = enforceEvidencePersistence({
-          result: absenceChecked,
-          failures: evidenceFailures,
-        });
-
-        const admission = admitVerdict({ current, incoming: persisted, requestedBy });
         results.set(criterionId, admission.result);
         yield* emit({
           type: "verificationFinished",
