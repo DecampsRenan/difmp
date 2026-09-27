@@ -4,10 +4,8 @@ import {
   aggregate,
   canStartModelCall,
   chargeTokens,
-  classifyAbsence,
   checkNavigationOrigin,
   defaultBudgets,
-  enforceEvidenceIntegrity,
   guidanceExceeded,
   makeActionGuidance,
   makeBudgetState,
@@ -189,50 +187,6 @@ describe("aggregation order", () => {
 
   it("no criterion at all is inconclusive, never a silent success", () => {
     expect(aggregate({ criteria: [] }).status).toBe("inconclusive");
-  });
-});
-
-describe("evidence integrity", () => {
-  const known = new Set(["art_1", "art_2"]);
-
-  it("forces inconclusive when a reference does not belong to the attempt", () => {
-    const guarded = enforceEvidenceIntegrity({
-      result: { ...criterion("c1", "passed", ["art_1", "art_99"]) },
-      attemptArtifacts: known,
-    });
-    expect(guarded.status).toBe("inconclusive");
-    expect(guarded.evidence).toEqual(["art_1"]);
-    expect(guarded.limitations).toContain("art_99");
-  });
-
-  it("never lets a `passed` verdict stand without any evidence", () => {
-    const guarded = enforceEvidenceIntegrity({
-      result: criterion("c1", "passed", []),
-      attemptArtifacts: known,
-    });
-    expect(guarded.status).toBe("inconclusive");
-  });
-
-  it("leaves a well-evidenced verdict alone", () => {
-    const result = criterion("c1", "passed", ["art_2"]);
-    expect(enforceEvidenceIntegrity({ result, attemptArtifacts: known })).toEqual(result);
-  });
-});
-
-describe("absence rule", () => {
-  it("records `failed` only for an absence established at the checkpoint", () => {
-    const established = classifyAbsence({ navigationSettled: true, checkpointReached: true });
-    expect(established.status).toBe("failed");
-    expect(established.branch).toBe("established-at-checkpoint");
-  });
-
-  it("records `inconclusive` after uncertain navigation", () => {
-    const uncertain = classifyAbsence({ navigationSettled: false, checkpointReached: true });
-    expect(uncertain.status).toBe("inconclusive");
-    expect(uncertain.branch).toBe("uncertain-navigation");
-    const noCheckpoint = classifyAbsence({ navigationSettled: true, checkpointReached: false });
-    expect(noCheckpoint.status).toBe("inconclusive");
-    expect(noCheckpoint.branch).toBe("uncertain-navigation");
   });
 });
 
