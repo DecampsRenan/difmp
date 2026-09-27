@@ -140,8 +140,10 @@ export const useRunStream = (config: UiRuntimeConfig): RunStream => {
               headers: { accept: "application/json" },
             },
           );
-          if (!response.ok) return;
+          if (disposedRef.current || !response.ok) return;
           const json: unknown = await response.json();
+          // The hook may have unmounted while the fetch was in flight: no state updates then.
+          if (disposedRef.current) return;
           const contract = readContract(json);
           if (contract === undefined || contract.criteria.length === 0) return;
           loadedContractsRef.current.add(loadKey);
