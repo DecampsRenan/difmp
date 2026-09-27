@@ -2,8 +2,7 @@ import type { LoadedSpec, ReportInput, ResolvedConfig, Registries, RunResult } f
 import {
   attemptId as makeAttemptId,
   makeRunId,
-  resolveInputPrecedence,
-  resolveInputs,
+  resolveRunInputs,
   RunStore,
   runScenario,
 } from "@difmp/core";
@@ -73,27 +72,20 @@ export const runOne = (
       if (options.bus !== undefined) {
         yield* options.bus.startRun({ runId, directory: runDirectory, specPath: options.specPath });
       }
-      // A scripted script factory needs the values the run will actually use, so the same input
-      // resolution the runner performs is done here first. It is pure and deterministic, so doing it
-      // twice cannot diverge; a failure is left for the runner to journal and report properly.
-      const scriptInputs = yield* resolveInputPrecedence({
-        source: options.configSource,
-        configInputs: config.inputs,
-        specInputs: spec.frontmatter.inputs ?? {},
+      // A scripted script factory needs the values the run will actually use, so the input stage
+      // of the preparation — the very function `prepareRun` runs first inside the runner — is done
+      // here on its own. It is pure and cheap, so computing it twice cannot diverge (issue #42);
+      // a failure is left for the runner to journal and report properly.
+      const scriptInputs = yield* resolveRunInputs({
+        spec,
+        specPath: options.specPath,
+        config,
+        runId,
+        attemptId,
+        configSource: options.configSource,
         ...(options.fileInputs === undefined ? {} : { fileInputs: options.fileInputs }),
         ...(options.cliInputs === undefined ? {} : { cliInputs: options.cliInputs }),
-      }).pipe(
-        Effect.flatMap((declared) =>
-          resolveInputs({
-            declared,
-            source: spec.specPath,
-            run: { id: runId },
-            attempt: { id: attemptId },
-            ...(spec.fieldLines === undefined ? {} : { anchors: spec.fieldLines }),
-          }),
-        ),
-        Effect.orElseSucceed(() => ({})),
-      );
+      }).pipe(Effect.orElseSucceed(() => ({})));
 
       const jev = yield* openJevEvaluator(config).pipe(
         Effect.mapError((error) => new ExecutionError({ message: error.message })),

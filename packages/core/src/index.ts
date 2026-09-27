@@ -19,7 +19,7 @@ export * from "./config/index.js";
 export * from "./policy/index.js";
 export * from "./store/index.js";
 export * from "./services/index.js";
-export * from "./runner/contract.js";
+export * from "./prepare/index.js";
 export * from "./runner/prompt.js";
 export * from "./runner/runner.js";
 export * from "./runner/stableJson.js";

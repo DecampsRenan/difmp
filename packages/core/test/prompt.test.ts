@@ -2,8 +2,9 @@ import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
 import {
   defaultBudgets,
-  freezeContract,
+  makeRegistry,
   parseSpec,
+  prepareRun,
   resolveConfig,
   systemPrompt,
 } from "../src/index.js";
@@ -30,16 +31,21 @@ const frozen = Effect.gen(function* () {
       },
     }),
   );
-  return yield* expectSuccess(
-    freezeContract({
+  const prepared = yield* expectSuccess(
+    prepareRun({
       spec,
       specPath: "project-create.e2e.md",
       config: project.config,
+      registries: {
+        fixtures: makeRegistry("fixture", { "authenticated-workspace": async () => ({}) }),
+        checks: makeRegistry("check", {}),
+      },
       runId: "r_abcdefghijklm",
       attemptId: "a1",
-      inputs: { projectName: "Demo project" },
+      cliInputs: { projectName: "Demo project" },
     }),
   );
+  return yield* expectSuccess(prepared.contract());
 });
 
 /**

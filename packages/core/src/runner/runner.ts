@@ -26,8 +26,7 @@ import type {
 } from "../domain/result.js";
 import type { ResolvedConfig } from "../domain/config.js";
 import type { Criterion, InputsRecord, LoadedSpec, ScenarioContract } from "../domain/spec.js";
-import { resolveInputPrecedence } from "../config/index.js";
-import { resolveInputs } from "../interpolate/index.js";
+import { prepareRun } from "../prepare/index.js";
 import { aggregate } from "../policy/aggregate.js";
 import type { BudgetState } from "../policy/budgets.js";
 import {
@@ -40,7 +39,7 @@ import { adjudicate } from "../policy/adjudicate.js";
 import type { Redactor } from "../policy/redact.js";
 import { collectSensitiveValues, makeRedactor, sanitizeConfig } from "../policy/redact.js";
 import type { Registries } from "../registry/index.js";
-import { validateSpecRegistries, verifyCriterionBinding } from "../registry/index.js";
+import { verifyCriterionBinding } from "../registry/index.js";
 import { BrowserDriver } from "../services/browser.js";
 import type { BrowserSession, CaptureOutcome } from "../services/browser.js";
 import { FixtureManager } from "../services/fixture.js";
@@ -50,7 +49,6 @@ import type { PromptMessage, PromptPart } from "../services/model.js";
 import { Verifier, VerifierError } from "../services/verifier.js";
 import { RunStore } from "../store/runStore.js";
 import { makeDispatcher } from "./dispatcher.js";
-import { freezeContract } from "./contract.js";
 import { makeEvidenceRecorder } from "./evidence.js";
 import { systemPrompt, toolDefinitions } from "./prompt.js";
 
@@ -198,36 +196,23 @@ export const runScenario = (
       });
 
     // --- step 1: inputs, references and REGISTRIES --------------------------------------------
-    const declaredInputs = yield* resolveInputPrecedence({
-      source: request.configSource ?? spec.specPath,
-      configInputs: config.inputs,
-      specInputs: spec.frontmatter.inputs ?? {},
+    // The whole pre-navigation chain has one owner (core/prepare, ADR-0006): precedence,
+    // phase-1 interpolation and the registry names, in that order, behind one call.
+    const prepared = yield* prepareRun({
+      spec,
+      specPath: request.specPath,
+      config,
+      registries,
+      runId: request.runId,
+      attemptId,
+      ...(request.configSource === undefined ? {} : { configSource: request.configSource }),
       ...(request.fileInputs === undefined ? {} : { fileInputs: request.fileInputs }),
       ...(request.cliInputs === undefined ? {} : { cliInputs: request.cliInputs }),
     }).pipe(Effect.result);
-    if (declaredInputs._tag === "Failure") {
-      return yield* failEarly("validate", declaredInputs.failure.message);
+    if (prepared._tag === "Failure") {
+      return yield* failEarly("validate", prepared.failure.message);
     }
-
-    const resolvedInputs = yield* resolveInputs({
-      declared: declaredInputs.success,
-      source: spec.specPath,
-      run: { id: request.runId },
-      attempt: { id: attemptId },
-      anchors: spec.fieldLines,
-    }).pipe(Effect.result);
-    if (resolvedInputs._tag === "Failure") {
-      return yield* failEarly("validate", resolvedInputs.failure.message);
-    }
-    const inputs = resolvedInputs.success;
-
-    // Registries are validated HERE, not at verification time: a `checks: { c3: not-registered }`
-    // mapping must be refused before a browser is opened, not discovered as a criterion `error`
-    // once the whole walkthrough has already run.
-    const references = yield* validateSpecRegistries({ spec, registries }).pipe(Effect.result);
-    if (references._tag === "Failure") {
-      return yield* failEarly("validate", references.failure.message);
-    }
+    const inputs = prepared.success.inputs;
 
     // --- step 3a: optional fixture ------------------------------------------------------------
     let fixtureSession: FixtureSession | undefined;
@@ -326,17 +311,13 @@ export const runScenario = (
     // inside still put `fixtureCleaned` in the journal before `runFinished`.
     return yield* Effect.gen(function* () {
       // --- step 3b: freeze the contract BEFORE any navigation -----------------------------------
-      const frozen = yield* freezeContract({
-        spec,
-        specPath: request.specPath,
-        config,
-        runId: request.runId,
-        attemptId,
-        inputs,
-        ...(fixtureSession === undefined
-          ? {}
-          : { fixturePublic: redactor.deep(fixtureSession.publicValues) }),
-      }).pipe(Effect.result);
+      const frozen = yield* prepared.success
+        .contract(
+          fixtureSession === undefined
+            ? {}
+            : { fixturePublic: redactor.deep(fixtureSession.publicValues) },
+        )
+        .pipe(Effect.result);
       if (frozen._tag === "Failure") {
         yield* cleanupFixture;
         return yield* failEarly("contract", frozen.failure.message);
