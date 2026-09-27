@@ -1,11 +1,11 @@
 ---
 name: release
-description: Cut a new release of @stylishedcoyote/difmp and publish it to npm. Use when the user wants to release, cut a release, bump the difmp version, publish difmp to npm, tag a new version, or asks for a new difmp release.
+description: Cut a new release of @decampsrenan/difmp and publish it to npm. Use when the user wants to release, cut a release, bump the difmp version, publish difmp to npm, tag a new version, or asks for a new difmp release.
 ---
 
 # release — cut and publish a new difmp version
 
-The distributable is `@stylishedcoyote/difmp` (`apps/cli`); the private `@difmp/*` workspace
+The distributable is `@decampsrenan/difmp` (`apps/cli`); the private `@difmp/*` workspace
 packages are bundled into its artifact and never published. Releasing = bump the version, land it on
 `main` through a PR (the branch is protected), tag it, and let `.github/workflows/release.yml`
 publish to npm with **trusted publishing** (OIDC, no npm token).
@@ -16,13 +16,13 @@ registry: the workflow's guard skips an existing version, and npm rejects a repu
 ## Steps
 
 1. **Pick the next version.** Semver, strictly greater than the published one
-   (`npm view @stylishedcoyote/difmp version`). The repo is pre-stable (0.x), so keep bumping
+   (`npm view @decampsrenan/difmp version`). The repo is pre-stable (0.x), so keep bumping
    within 0.x per semver intent. The number you pick is what the tag will carry.
    Completion: a version, greater than the published one, that you could write in a tag.
 
 2. **Bump the version.** Edit `version` in `apps/cli/package.json` — the only published field that
    matters; leave the private `@difmp/*` packages at their own versions. If the old version appears
-   as a literal elsewhere (README tarball names `stylishedcoyote-difmp-<ver>.tgz`, the
+   as a literal elsewhere (README tarball names `decampsrenan-difmp-<ver>.tgz`, the
    `consumer-smoke` comments), update those too.
    Completion: `apps/cli/package.json` and every literal reference agree on the new version.
 
@@ -54,10 +54,10 @@ main`), get it merged. Then `git fetch origin main` and reset local `main` to `o
    `gh run watch --run-id <release-run-id>` (filter with `gh run list --workflow=release`).
    Completion: the `release` workflow finishes green, with either a publish or an explicit skip.
 
-8. **Verify the publish.** `npm view @stylishedcoyote/difmp version` returns the new version. Then
+8. **Verify the publish.** `npm view @decampsrenan/difmp version` returns the new version. Then
    install-and-run from a scratch consumer to prove the shipped artifact works:
    - `mkdir /tmp/difmp-verify && cd /tmp/difmp-verify && npm init -y`
-   - `npm i -D @stylishedcoyote/difmp` then `npx --no-install difmp --version` → prints the new
+   - `npm i -D @decampsrenan/difmp` then `npx --no-install difmp --version` → prints the new
      version, and a scripted run against the bundled example turns green.
      Completion: `difmp --version` prints the new version and a `scripted` run passes.
 
@@ -66,15 +66,15 @@ main`), get it merged. Then `git fetch origin main` and reset local `main` to `o
 - **If trusted publishing is not configured**, the workflow cannot publish. On npmjs.com: package
   settings → Trusted Publisher → GitHub Actions → owner `DecampsRenan`, repo `difmp`, workflow
   `release.yml`. Until then, publish manually with an OTP from the user's authenticator:
-  `pnpm --filter @stylishedcoyote/difmp publish --no-git-checks --otp <6-digit>`. The tag still
+  `pnpm --filter @decampsrenan/difmp publish --no-git-checks --otp <6-digit>`. The tag still
   triggers the workflow, but the guard skips the now-published version.
 - **The OIDC path is unproven in CI.** 0.0.1 was published manually; the first `release` run only
   exercised the skip guard. If `pnpm publish` does not relay the GitHub OIDC token on a real
   release, switch `release.yml` to `npm publish` (it already has `id-token: write` and
   `registry-url`) — the npm CLI handles OIDC natively.
 - **pnpm consumers:** `esbuild` arrives transitively through `tsx`, and pnpm ≥ 12 refuses ignored
-  build scripts — `pnpm i -D @stylishedcoyote/difmp` needs `--allow-build=esbuild`.
+  build scripts — `pnpm i -D @decampsrenan/difmp` needs `--allow-build=esbuild`.
 - **prepack replaces `apps/cli/dist`** with the bundled artifact. If you then work in-repo, restore
-  the `tsc -b` layout with `pnpm --filter @stylishedcoyote/difmp build`.
+  the `tsc -b` layout with `pnpm --filter @decampsrenan/difmp build`.
 - The tag must equal the `apps/cli/package.json` version. A mismatch does not fail the workflow
   loudly (it publishes whatever the manifest says), so check it before pushing the tag.
