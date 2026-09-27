@@ -19,7 +19,6 @@ import { BudgetExhaustedError, RunFailure } from "../domain/errors.js";
 import type { ModelRole } from "../domain/events.js";
 import type { ActionId, ArtifactId, AttemptId, RunId } from "../domain/ids.js";
 import type {
-  ArtifactRecord,
   AttemptResult,
   CriterionResult,
   Evaluator,
@@ -55,9 +54,9 @@ import type { FixtureCleanupReport, FixtureSession } from "../services/fixture.j
 import { ModelProvider, ProviderError } from "../services/model.js";
 import type { PromptMessage, PromptPart } from "../services/model.js";
 import { Verifier, VerifierError } from "../services/verifier.js";
-import type { EvidenceItem } from "../services/verifier.js";
 import { RunStore } from "../store/runStore.js";
 import { freezeContract } from "./contract.js";
+import { makeEvidenceRecorder } from "./evidence.js";
 import { systemPrompt, toolDefinitions } from "./prompt.js";
 
 export interface RunScenarioRequest {
@@ -474,6 +473,15 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
     const emit = (event: Parameters<typeof store.emit>[0]) => journal(event).pipe(Effect.ignore);
 
     /**
+     * The attempt's Preuve recorder (runner/evidence.ts): the only thing that writes artifacts,
+     * the owner of the evidence index, and the keeper of "mandatory evidence could not be
+     * persisted" — spec §13 and design-contracts §8: a failure to save mandatory evidence must
+     * not end in a silent success, so the criterion cannot be `passed` and the run resolves to
+     * `error` (checked against `recorder.mandatoryFailures` at the end of the attempt).
+     */
+    const recorder = makeEvidenceRecorder({ store, attemptId, emitEvent: emit });
+
+    /**
      * Transport-level retry for a model call the provider reports as RETRYABLE (a 429 with
      * `Retry-After`, a 5xx, a transport blip). This is the consumer `ProviderError.retryable`
      * existed for; the policy lives here, in the runner, next to the budgets it reads.
@@ -530,12 +538,6 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
           }),
         );
 
-    /**
-     * Mandatory evidence this attempt could not persist. spec §13 and design-contracts §8: a
-     * failure to save mandatory evidence must not end in a silent success — the criterion cannot
-     * be `passed`, and the run itself resolves to `error`.
-     */
-    const mandatoryEvidenceFailures: Array<string> = [];
     /** What the driver last reported about settling — the input of the absence rule (§8). */
     let navigationSettled = false;
 
@@ -555,11 +557,10 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
         pendingResult(criterion, contract.hashes.criteria[criterion.id] ?? ""),
       );
     }
-    const evidenceIndex = new Map<string, EvidenceItem>();
 
     const outcome = (): AttemptOutcome => ({
       criteria: contract.criteria.map((c) => results.get(c.id)!),
-      artifacts: [...evidenceIndex.keys()] as ReadonlyArray<ArtifactId>,
+      artifacts: recorder.artifactIds(),
       model: {
         calls: budget.modelCalls,
         inputTokens: budget.inputTokens,
@@ -622,166 +623,6 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
         return emit({ type: "cancellationRequested", attemptId, reason, source: "api" });
       });
 
-    /**
-     * An `AbortSignal` wired to the interruption of THIS call: a timeout or a cancellation closes
-     * the scope, which aborts the signal, which is what a provider needs to abort its request.
-     */
-    /**
-     * Persist one artifact record, and say so when the store could not.
-     *
-     * spec §10 forbids hiding a capture failure, and design-contracts §9 makes `artifacts.json`
-     * the inventory of every artifact the run produced. An `Effect.ignore` here used to swallow
-     * the inventory write while the artifact still entered the evidence index, so `result.json`
-     * could cite an `art_*` id `artifacts.json` on disk had never received. A record the store
-     * refused is therefore NOT a known artifact: it never enters the evidence index (so no
-     * evaluator can cite it), the failure is journalled as an `error`, and the call sites that
-     * treat a capture as mandatory evidence (checkpoint captures, check payloads) see a `failed`
-     * state and let the adjudication downgrade the criterion.
-     *
-     * Returns the reason the record could not be persisted, or `undefined` on success.
-     */
-    const persistArtifact = (record: ArtifactRecord): Effect.Effect<string | undefined> =>
-      store.recordArtifact(record).pipe(
-        Effect.result,
-        Effect.flatMap((written) => {
-          if (written._tag === "Success") return Effect.succeed(undefined);
-          const reason =
-            `artifact ${record.artifactId} (${record.kind}) could not be recorded in ` +
-            `the inventory: ${written.failure.message}`;
-          return emit({ type: "error", attemptId, stage: "evidence", reason, fatal: false }).pipe(
-            Effect.as(reason),
-          );
-        }),
-      );
-
-    const registerArtifact = (
-      capture: CaptureOutcome,
-      options?: {
-        readonly summary?: string;
-        readonly data?: unknown;
-        readonly sourceSeq?: number;
-      },
-    ) =>
-      Effect.gen(function* () {
-        const id = yield* store.mintArtifactId(attemptId);
-        const now = DateTime.formatIso(yield* DateTime.now);
-        const record: ArtifactRecord = {
-          artifactId: id,
-          attemptId,
-          kind: capture.kind,
-          ...(capture.label === undefined ? {} : { label: capture.label }),
-          ...(capture.path === undefined ? {} : { path: layout.relative(capture.path) }),
-          state: capture.state,
-          ...(capture.reason === undefined ? {} : { reason: capture.reason }),
-          ...(capture.bytes === undefined ? {} : { bytes: capture.bytes }),
-          ts: now,
-          ...(options?.sourceSeq === undefined ? {} : { sourceSeq: options.sourceSeq }),
-        };
-        const notPersisted = yield* persistArtifact(record);
-        if (capture.state === "present" && notPersisted === undefined) {
-          evidenceIndex.set(id, {
-            artifactId: id,
-            kind: capture.kind,
-            ...(capture.label === undefined ? {} : { label: capture.label }),
-            capturedAt: now,
-            ...(options?.sourceSeq === undefined ? {} : { sourceSeq: options.sourceSeq }),
-            summary: options?.summary ?? `${capture.kind} ${capture.label ?? ""}`.trim(),
-            ...(options?.data === undefined ? {} : { data: options.data }),
-          });
-        }
-        return id;
-      });
-
-    /**
-     * `sourceSeq` links the capture to the journal entry that motivated it (spec §10: evidence is
-     * linked by event number). Observations already carried it; screenshots did not, so a reader
-     * could not tell which checkpoint or action a PNG belonged to.
-     */
-    const takeScreenshot = (
-      session: BrowserSession,
-      label: string,
-      options?: { readonly fullPage?: boolean; readonly sourceSeq?: number },
-    ) =>
-      Effect.gen(function* () {
-        const id = yield* store.mintArtifactId(attemptId);
-        const capture = yield* session.screenshot({
-          fileName: `${id}.png`,
-          label,
-          ...(options?.fullPage === undefined ? {} : { fullPage: options.fullPage }),
-        });
-        const now = DateTime.formatIso(yield* DateTime.now);
-        const record: ArtifactRecord = {
-          artifactId: id,
-          attemptId,
-          kind: "screenshot",
-          label,
-          ...(capture.path === undefined ? {} : { path: layout.relative(capture.path) }),
-          state: capture.state,
-          ...(capture.reason === undefined ? {} : { reason: capture.reason }),
-          ...(capture.bytes === undefined ? {} : { bytes: capture.bytes }),
-          ts: now,
-          ...(options?.sourceSeq === undefined ? {} : { sourceSeq: options.sourceSeq }),
-        };
-        const notPersisted = yield* persistArtifact(record);
-        if (capture.state === "present" && notPersisted === undefined) {
-          evidenceIndex.set(id, {
-            artifactId: id,
-            kind: "screenshot",
-            label,
-            capturedAt: now,
-            ...(options?.sourceSeq === undefined ? {} : { sourceSeq: options.sourceSeq }),
-            summary: `screenshot "${label}"`,
-            ...(capture.image === undefined ? {} : { image: capture.image }),
-          });
-        }
-        // A capture nobody can look up is a failed capture, whatever the browser managed to write:
-        // this is what makes a checkpoint whose record was lost demote its criterion instead of
-        // passing it on evidence that is not in the inventory.
-        return notPersisted === undefined
-          ? { artifactId: id, state: capture.state, reason: capture.reason }
-          : { artifactId: id, state: "failed" as const, reason: notPersisted };
-      });
-
-    const recordObservation = (observation: ObserveResult, seq: number) =>
-      Effect.gen(function* () {
-        const id = yield* store.mintArtifactId(attemptId);
-        const relative = `attempts/${attemptId}/observations/${id}.txt`;
-        const body = `url: ${observation.url}\ntitle: ${observation.title}\n\n${observation.snapshot}`;
-        const written = yield* store.writeRunFile(relative, body).pipe(Effect.result);
-        const now = DateTime.formatIso(yield* DateTime.now);
-        const failed = written._tag === "Failure";
-        const record: ArtifactRecord = {
-          artifactId: id,
-          attemptId,
-          kind: "aria-snapshot",
-          label: observation.observationId,
-          ...(failed ? {} : { path: relative }),
-          state: failed ? "failed" : "present",
-          ...(failed ? { reason: written.failure.message } : {}),
-          ts: now,
-          sourceSeq: seq,
-        };
-        const notPersisted = yield* persistArtifact(record);
-        if (!failed && notPersisted === undefined) {
-          evidenceIndex.set(id, {
-            artifactId: id,
-            kind: "aria-snapshot",
-            label: observation.observationId,
-            capturedAt: now,
-            sourceSeq: seq,
-            summary: `page observation ${observation.observationId} at ${observation.url} (${observation.title})\n${observation.snapshot}`,
-            data: {
-              url: observation.url,
-              title: observation.title,
-              elements: observation.elements,
-            },
-          });
-        }
-        return id;
-      });
-
-    const evidenceItems = (): ReadonlyArray<EvidenceItem> => [...evidenceIndex.values()];
-
     const verifyCriterion = (
       session: BrowserSession,
       criterionId: string,
@@ -812,10 +653,10 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
         const evidenceFailures: Array<string> = [];
         const evidenceFailed = (message: string) => {
           evidenceFailures.push(message);
-          mandatoryEvidenceFailures.push(message);
+          recorder.noteMandatoryFailure(message);
         };
         if (config.capture.screenshots !== "off") {
-          const shot = yield* takeScreenshot(session, `checkpoint-${criterionId}`, {
+          const shot = yield* recorder.takeScreenshot(session, `checkpoint-${criterionId}`, {
             sourceSeq: seq,
           });
           if (shot.state !== "present") {
@@ -866,7 +707,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
                   attemptId,
                   criterion,
                   criterionHash: hash,
-                  evidence: evidenceItems(),
+                  evidence: recorder.items(),
                   scenario: {
                     id: contract.id,
                     body: contract.body,
@@ -1027,42 +868,17 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
         }): Promise<string> =>
           runEvidence(
             Effect.gen(function* () {
-              const id = yield* store.mintArtifactId(attemptId);
-              const relative = `attempts/${attemptId}/evidence/${id}.json`;
-              const body = `${JSON.stringify({ label: e.label, data: e.data }, null, 2)}\n`;
-              const written = yield* store.writeRunFile(relative, body).pipe(Effect.result);
-              const now = DateTime.formatIso(yield* DateTime.now);
-              const failed = written._tag === "Failure";
-              const notPersisted = yield* persistArtifact({
-                artifactId: id,
-                attemptId,
-                kind: "check-evidence",
+              const payload = yield* recorder.recordCheckPayload({
                 label: e.label,
-                ...(failed ? {} : { path: relative }),
-                state: failed ? "failed" : "present",
-                ...(failed ? { reason: written.failure.message } : {}),
-                ts: now,
-                sourceSeq: seq,
+                data: e.data,
+                seq,
               });
-              if (failed || notPersisted !== undefined) {
+              if (payload.failed !== undefined) {
                 // A check's probe output is mandatory evidence for its own criterion: a citation the
-                // report cannot open is not a proof, so this forbids a `passed` further down. The
-                // payload not reaching `artifacts.json` counts the same as the payload not reaching
-                // disk: either way nothing can be looked up behind the id.
-                const why = written._tag === "Failure" ? written.failure.message : notPersisted;
-                options.evidenceFailed(`check evidence "${e.label}" (${id}): ${why}`);
-              } else {
-                evidenceIndex.set(id, {
-                  artifactId: id,
-                  kind: "check-evidence",
-                  label: e.label,
-                  capturedAt: now,
-                  sourceSeq: seq,
-                  summary: `check evidence "${e.label}"`,
-                  data: e.data,
-                });
+                // report cannot open is not a proof, so this forbids a `passed` further down.
+                options.evidenceFailed(payload.failed);
               }
-              return id;
+              return payload.artifactId;
             }),
           );
 
@@ -1329,7 +1145,10 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
               title: observation.title,
               elementCount: observation.elements.length,
             }).pipe(Effect.result);
-            yield* recordObservation(observation, event._tag === "Success" ? event.success.seq : 0);
+            yield* recorder.recordObservation(
+              observation,
+              event._tag === "Success" ? event.success.seq : 0,
+            );
             return yield* finishAction(observation, false);
           }
           case "navigate": {
@@ -1434,7 +1253,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
           }
           case "screenshot": {
             const label = params["label"] === undefined ? "agent" : String(params["label"]);
-            const shot = yield* takeScreenshot(session, label, {
+            const shot = yield* recorder.takeScreenshot(session, label, {
               ...(params["fullPage"] === undefined
                 ? {}
                 : { fullPage: Boolean(params["fullPage"]) }),
@@ -1748,7 +1567,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
               config.capture.screenshots === "every-action" &&
               browserTools.has(call.name as ToolName)
             ) {
-              yield* takeScreenshot(session, `after-${call.name}`);
+              yield* recorder.takeScreenshot(session, `after-${call.name}`);
             }
             if (finishRequested || executionError !== undefined) break;
           }
@@ -1788,7 +1607,9 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
           ? Effect.void
           : session.finalize({ retainTrace: true }).pipe(
               Effect.flatMap((captures) =>
-                Effect.forEach(captures, (capture) => registerArtifact(capture), { discard: true }),
+                Effect.forEach(captures, (capture) => recorder.registerCapture(capture), {
+                  discard: true,
+                }),
               ),
               Effect.timeoutOrElse({
                 duration: contract.budgets.operationTimeoutMs,
@@ -1859,7 +1680,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
         }),
       );
       for (const capture of captures) {
-        yield* registerArtifact(capture);
+        yield* recorder.registerCapture(capture);
       }
     });
 
@@ -1917,11 +1738,11 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
     // blocking execution error and above a product failure. The individual criterion statuses are
     // preserved either way — `finalize` carries them into `result.json` whatever the aggregate is.
     if (
-      mandatoryEvidenceFailures.length > 0 &&
+      recorder.mandatoryFailures.length > 0 &&
       executionError === undefined &&
       cancellation === undefined
     ) {
-      const reason = `mandatory evidence could not be persisted: ${mandatoryEvidenceFailures.join("; ")}`;
+      const reason = `mandatory evidence could not be persisted: ${recorder.mandatoryFailures.join("; ")}`;
       executionError = { stage: "evidence", reason };
       yield* emit({ type: "error", attemptId, stage: "evidence", reason, fatal: true });
     }
