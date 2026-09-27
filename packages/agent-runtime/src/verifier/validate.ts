@@ -1,30 +1,21 @@
-import type {
-  Criterion,
-  CriterionDowngrade,
-  CriterionResult,
-  EvidenceItem,
-  Evaluator,
-} from "@difmp/core";
+import type { Criterion, CriterionResult, EvidenceItem, Evaluator } from "@difmp/core";
+import { appendLimitation, recordDowngrade, screenProposal } from "@difmp/core";
 import type { CriterionVerdictShape } from "./verdict.js";
 
-export interface VerdictValidation {
-  readonly result: CriterionResult;
-  /** References the evaluator produced that do not exist in this attempt's evidence. */
-  readonly rejectedReferences: ReadonlyArray<string>;
-}
-
 /**
- * Harness-side validation of what the evaluator returned. Structure is already guaranteed by the
- * Schema decode; what is checked here is authority:
+ * Authority checks over what the evaluator returned — the part ONLY the verifier can do, at the
+ * moment the answer arrives:
  *
  * - the verdict must be about the criterion we asked about;
- * - every `artifactId` must EXIST and belong to this attempt's evidence set;
- * - an invented or absent reference forces `inconclusive` — never `passed`;
- * - `passed` with no evidence at all is `inconclusive`;
- * - `expected` is always the FROZEN contract text, never the evaluator's restatement.
+ * - `expected` is always the FROZEN contract text, never the evaluator's restatement;
+ * - `missingEvidence` is either a refusal (`passed` cannot claim to still need proof) or a
+ *   recorded limitation.
  *
- * Core's `enforceEvidenceIntegrity` applies the same rule once more against the run store's
- * inventory; the two are deliberately redundant.
+ * The evidence law itself is not re-implemented here: the raw result — invented references
+ * included — goes through `screenProposal`, core's first application of the adjudication, over
+ * the evidence snapshot taken before the evaluation. Core's record pass re-applies the same
+ * rules against the run store's inventory; the double enforcement is deliberate, and both
+ * passes say WHY in the same strings.
  */
 export const validateVerdict = (options: {
   readonly verdict: CriterionVerdictShape;
@@ -33,83 +24,50 @@ export const validateVerdict = (options: {
   readonly evaluator: Evaluator;
   readonly evidence: ReadonlyArray<EvidenceItem>;
   readonly seq: number;
-}): VerdictValidation => {
+}): CriterionResult => {
   const { criterion, evaluator, seq, verdict } = options;
   const known = new Set(options.evidence.map((item) => item.artifactId));
-  const accepted = verdict.evidence.filter((id) => known.has(id));
-  const rejected = verdict.evidence.filter((id) => !known.has(id));
 
   const limitations: Array<string> = [];
   if (verdict.limitations !== null && verdict.limitations !== "")
     limitations.push(verdict.limitations);
 
-  let status: CriterionResult["status"] = verdict.status;
-  // Every status the harness imposes is recorded, so a report can say WHY it refused to conclude
-  // instead of showing a bare `inconclusive`.
-  const downgrades: Array<CriterionDowngrade> = [];
-  const downgrade = (reason: CriterionDowngrade["reason"], detail: string) => {
-    if (status !== "inconclusive")
-      downgrades.push({ reason, from: status, to: "inconclusive", detail });
-    status = "inconclusive";
-    limitations.push(detail);
-  };
-
-  if (verdict.criterionId !== criterion.id) {
-    downgrade(
-      "rejected-evidence",
-      `the evaluator answered about ${verdict.criterionId} instead of ${criterion.id}; the verdict was rejected`,
-    );
-  }
-
-  if (rejected.length > 0) {
-    downgrade(
-      "rejected-evidence",
-      `evidence references do not exist in this attempt and were rejected: ${rejected.join(", ")}`,
-    );
-  }
-
-  if (status === "passed" && accepted.length === 0) {
-    downgrade(
-      "rejected-evidence",
-      "no usable evidence was attached, so the criterion cannot be considered verified",
-    );
-  }
-
-  if (verdict.missingEvidence.length > 0) {
-    if (status === "passed") {
-      downgrade(
-        "rejected-evidence",
-        `evidence still missing: ${verdict.missingEvidence.join(", ")}`,
-      );
-    } else {
-      limitations.push(`evidence still missing: ${verdict.missingEvidence.join(", ")}`);
-    }
-  }
-
-  // spec §9: an absence observed after an uncertain navigation cannot establish a failure. The
-  // runner re-derives the branch from what the driver reported; this is the cheap half of the
-  // rule — an evaluator that reports its own uncertainty never gets to answer `failed`.
-  if (verdict.absence === "uncertain-navigation" && status === "failed") {
-    downgrade(
-      "absence-uncertain-navigation",
-      "the evaluator reported an absence after an uncertain navigation, which cannot establish a failure",
-    );
-  }
-
-  const result: CriterionResult = {
+  let result: CriterionResult = {
     criterionId: criterion.id,
     criterionHash: options.criterionHash,
-    status,
+    status: verdict.status,
     method: criterion.method,
     evaluator,
     // The frozen text, verbatim. The evaluator never gets to restate the expectation.
     expected: criterion.text,
     observed: verdict.observed,
-    evidence: accepted,
+    // Cited-as-is: `screenProposal` strips what does not exist, and records that it did.
+    evidence: verdict.evidence,
     ...(limitations.length === 0 ? {} : { limitations: limitations.join(" | ") }),
     ...(verdict.absence === null ? {} : { absence: verdict.absence }),
-    ...(downgrades.length === 0 ? {} : { downgrades }),
     evaluatedAtSeq: seq,
   };
-  return { result, rejectedReferences: rejected };
+
+  if (verdict.criterionId !== criterion.id) {
+    result = recordDowngrade(result, {
+      reason: "rejected-evidence",
+      to: "inconclusive",
+      detail: `the evaluator answered about ${verdict.criterionId} instead of ${criterion.id}; the verdict was rejected`,
+    });
+  }
+
+  // Rejected/absent references and `passed` without usable Preuve — the shared rules, the shared
+  // strings. The evaluator's own uncertainty claim is honoured here; re-deriving the absence
+  // branch from driver facts belongs to the record pass, which holds those facts.
+  result = screenProposal({ proposed: result, knownArtifacts: known });
+
+  if (verdict.missingEvidence.length > 0) {
+    const detail = `evidence still missing: ${verdict.missingEvidence.join(", ")}`;
+    result =
+      result.status === "passed"
+        ? recordDowngrade(result, { reason: "rejected-evidence", to: "inconclusive", detail })
+        : { ...result, limitations: appendLimitation(result, detail) };
+  }
+
+  return result;
 };
