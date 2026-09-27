@@ -75,6 +75,14 @@ cité = artefact seul. Une preuve doit exister et appartenir à l'attempt jugée
 le verdict à inconclusif.
 _Avoid_ : evidence (en français), capture (comme synonyme de preuve)
 
+**Enregistrement de la preuve** :
+Le chemin unique par lequel une capture, une observation ou une sonde de check devient artefact
+inventorié : frapper l'id, écrire, consigner, et n'admettre dans l'index de preuve que ce qui a
+réellement survécu. Une capture ratée y est enregistrée comme ratée, jamais avalée ; un refus du
+magasin retire l'artefact de l'index et, s'il était obligatoire, condamne le critère à n'être plus
+`passed` et le run à `error`.
+_Avoid_ : sauvegarde (ne couvre pas l'index ni les échecs), logging
+
 ### Exécution
 
 **Run** :
@@ -104,6 +112,14 @@ _Avoid_ : archive, output, rapport (le rapport n'en est qu'une pièce)
 Le modèle qui agit sur la page via les outils du harnais. Il ne juge jamais : il peut demander une
 re-vérification, pas modifier un critère ni un verdict.
 _Avoid_ : driver, opérateur, LLM (générique)
+
+**Distributeur d'actions** :
+La pièce du harnais qui exécute les huit outils et possède la mémoire de la page : dernière
+observation, settling, compteur d'actions, action en cours. Ses transitions sont les seules ; le
+reste du harnais les consulte — ce sont les faits que reçoit l'adjudication pour la branche
+d'absence. Il ne juge rien : `check` lui prête la fonction d'évaluation, la loi reste l'affaire de
+l'adjudication.
+_Avoid_ : exécuteur, tool loop (comme nom de domaine)
 
 **Évaluateur** :
 Ce qui _propose_ le statut d'un critère. Trois sortes : le vérificateur (modèle), le check (code),

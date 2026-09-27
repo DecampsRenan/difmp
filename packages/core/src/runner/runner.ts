@@ -9,15 +9,13 @@ import {
   Exit,
   FiberSet,
   Option,
-  Schema,
 } from "effect";
 import type { Result } from "effect/Result";
 import type { Scope } from "effect/Scope";
-import { strictQuietParseOptions } from "../domain/decode.js";
 import type { RunStage } from "../domain/errors.js";
 import { BudgetExhaustedError, RunFailure } from "../domain/errors.js";
 import type { ModelRole } from "../domain/events.js";
-import type { ActionId, ArtifactId, AttemptId, RunId } from "../domain/ids.js";
+import type { ArtifactId, AttemptId, RunId } from "../domain/ids.js";
 import type {
   AttemptResult,
   CriterionResult,
@@ -28,12 +26,9 @@ import type {
 } from "../domain/result.js";
 import type { ResolvedConfig } from "../domain/config.js";
 import type { Criterion, InputsRecord, LoadedSpec, ScenarioContract } from "../domain/spec.js";
-import type { ObserveResult, ToolErrorCode, ToolErrorResult, ToolName } from "../domain/tools.js";
-import { toolParamSchemas, toolResultSchemas } from "../domain/tools.js";
 import { resolveInputPrecedence } from "../config/index.js";
 import { resolveInputs } from "../interpolate/index.js";
 import { aggregate } from "../policy/aggregate.js";
-import { makeActionGuidance, recordAction } from "../policy/actions.js";
 import type { BudgetState } from "../policy/budgets.js";
 import {
   canStartModelCall,
@@ -44,7 +39,6 @@ import {
 import { adjudicate } from "../policy/adjudicate.js";
 import type { Redactor } from "../policy/redact.js";
 import { collectSensitiveValues, makeRedactor, sanitizeConfig } from "../policy/redact.js";
-import { checkNavigationOrigin } from "../policy/origins.js";
 import type { Registries } from "../registry/index.js";
 import { validateSpecRegistries, verifyCriterionBinding } from "../registry/index.js";
 import { BrowserDriver } from "../services/browser.js";
@@ -55,6 +49,7 @@ import { ModelProvider, ProviderError } from "../services/model.js";
 import type { PromptMessage, PromptPart } from "../services/model.js";
 import { Verifier, VerifierError } from "../services/verifier.js";
 import { RunStore } from "../store/runStore.js";
+import { makeDispatcher } from "./dispatcher.js";
 import { freezeContract } from "./contract.js";
 import { makeEvidenceRecorder } from "./evidence.js";
 import { systemPrompt, toolDefinitions } from "./prompt.js";
@@ -88,16 +83,6 @@ interface AttemptOutcome {
   readonly budgetDetail?: string;
 }
 
-const browserTools = new Set<ToolName>([
-  "observe",
-  "navigate",
-  "click",
-  "fill",
-  "press",
-  "scroll",
-  "screenshot",
-]);
-
 const pendingResult = (criterion: Criterion, hash: string): CriterionResult => ({
   criterionId: criterion.id,
   criterionHash: hash,
@@ -124,18 +109,6 @@ const storeFailure = (stage: RunStage) => (cause: { readonly message: string }) 
 /** Runs `f` in a fresh scope, handing it that scope's abort signal. */
 const withAbortSignal = <A, E, R>(f: (signal: AbortSignal) => Effect.Effect<A, E, R>) =>
   Effect.scoped(Effect.flatMap(Effect.abortSignal, f));
-
-/** The shape every tool handler returns when the model asked for something it cannot have. */
-const toolError = (
-  code: ToolErrorCode,
-  message: string,
-  remedy: ToolErrorResult["remedy"],
-): ToolErrorResult => ({
-  error: true,
-  code,
-  message,
-  remedy,
-});
 
 export const runScenario = (
   request: RunScenarioRequest,
@@ -538,10 +511,6 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
           }),
         );
 
-    /** What the driver last reported about settling — the input of the absence rule (§8). */
-    let navigationSettled = false;
-
-    let guidance = makeActionGuidance(contract.maxActions);
     let budget: BudgetState = makeBudgetState(deps.startedAtMs);
     let budgetDetail: string | undefined;
     let executionError: { stage: RunStage; reason: string } | undefined;
@@ -567,8 +536,8 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
         outputTokens: budget.outputTokens,
         verifierTokens,
       },
-      actionsUsed: guidance.used,
-      guidanceExceeded: guidance.used > guidance.guidance,
+      actionsUsed: dispatcher.actionsUsed(),
+      guidanceExceeded: dispatcher.guidanceExceeded(),
       ...(cancellation === undefined ? {} : { cancellation }),
       ...(executionError === undefined ? {} : { executionError }),
       ...(budgetDetail === undefined ? {} : { budgetExhausted: true, budgetDetail }),
@@ -793,7 +762,10 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
           current,
           requestedBy,
           attemptArtifacts: knownArtifacts,
-          facts: { navigationSettled, checkpointReached: currentObservation !== undefined },
+          facts: {
+            navigationSettled: dispatcher.navigationSettled(),
+            checkpointReached: dispatcher.currentObservation() !== undefined,
+          },
           persistenceFailures: evidenceFailures,
         });
         results.set(criterionId, admission.result);
@@ -936,364 +908,27 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
 
     // --- tool dispatch -------------------------------------------------------------------------
 
-    let currentObservation: ObserveResult | undefined;
-    let finishRequested = false;
     /**
-     * The action whose `actionStarted` has been journalled and whose `actionFinished` has not.
-     * A cancellation interrupts the action mid-flight, and an unpaired `actionStarted` would read
-     * as "still running" forever in the journal and the live UI.
+     * The tool dispatcher (runner/dispatcher.ts): the whole 8-case switch and the memory it
+     * needs. It owns the live page state — `currentObservation` and `navigationSettled` are its
+     * transitions, the runner only CONSULTS them (adjudication's facts below) — and the action
+     * bookkeeping. `check` runs the evaluation through this closure: the law stays here, the
+     * mechanism is borrowed.
      */
-    let inFlightAction: { readonly actionId: ActionId; readonly tool: ToolName } | undefined;
-    /** One short nudge, injected into the next turn after the indicative threshold is crossed. */
-    let pendingNudge: string | undefined;
-
-    const dispatch = (
-      session: BrowserSession,
-      call: { readonly id: string; readonly name: string; readonly params: unknown },
-    ): Effect.Effect<
-      { readonly result: unknown; readonly isError: boolean },
-      never,
-      Crypto.Crypto
-    > =>
-      Effect.gen(function* () {
-        const name = call.name as ToolName;
-        if (!(name in toolParamSchemas)) {
-          return {
-            result: toolError(
-              "invalid-params",
-              `unknown tool "${call.name}"`,
-              "choose-another-action",
-            ),
-            isError: true,
-          };
-        }
-        const actionId = yield* store.mintActionId(attemptId);
-
-        // The counter increments here, BEFORE policy validation: an observation, a screenshot,
-        // a stale reference and a blocked navigation all count. `check` and `finish` are not
-        // browser tools and never count. Nothing is ever refused because of this counter.
-        if (browserTools.has(name)) {
-          const step = recordAction(guidance);
-          guidance = step.state;
-          if (step.notice !== undefined) {
-            yield* emit({
-              type: "actionGuidanceExceeded",
-              attemptId,
-              used: step.notice.used,
-              guidance: step.notice.guidance,
-              rendering: step.notice.rendering,
-            });
-            pendingNudge = step.notice.nudge;
-          }
-        }
-
-        const decoded = yield* Schema.decodeUnknownEffect(
-          toolParamSchemas[name],
-          strictQuietParseOptions,
-        )(call.params ?? {}).pipe(Effect.result);
-
-        const intent =
-          decoded._tag === "Success" && "intent" in decoded.success
-            ? (decoded.success as { intent?: string }).intent
-            : undefined;
-
-        const started = yield* store
-          .emit({
-            type: "actionStarted",
-            attemptId,
-            actionId,
-            tool: name,
-            params: (typeof call.params === "object" && call.params !== null
-              ? call.params
-              : {}) as Record<string, unknown>,
-            ...(intent === undefined ? {} : { intent }),
-          })
-          .pipe(Effect.result);
-        /** The journal entry this action's evidence is linked back to (spec §10). */
-        const actionSeq = started._tag === "Success" ? started.success.seq : undefined;
-        inFlightAction = { actionId, tool: name };
-
-        /**
-         * spec.md §7: the tool RESULT is Schema-validated before it reaches the model. The driver
-         * is another package behind the `BrowserSession` seam, so its return value is an untrusted
-         * boundary; a payload that does not decode is a harness/driver contract violation, not a
-         * modelling mistake, so it ends the run rather than being handed over as if it were fine.
-         */
-        const finishAction = (
-          result: unknown,
-          isError: boolean,
-          code?: ToolErrorCode,
-          message?: string,
-        ) =>
-          Effect.gen(function* () {
-            let payload = result;
-            let failed = isError;
-            let outcomeCode = code;
-            let outcomeMessage = message;
-            if (!isError) {
-              const checked = yield* Schema.decodeUnknownEffect(
-                toolResultSchemas[name],
-                strictQuietParseOptions,
-              )(result).pipe(Effect.result);
-              if (checked._tag === "Failure") {
-                const reason =
-                  `the \`${name}\` tool produced a result that does not match its declared ` +
-                  `schema: ${checked.failure.message}`;
-                executionError = { stage: "browser", reason };
-                yield* emit({ type: "error", attemptId, stage: "browser", reason, fatal: true });
-                const error = toolError("operation-failed", reason, "choose-another-action");
-                payload = error;
-                failed = true;
-                outcomeCode = error.code;
-                outcomeMessage = error.message;
-              } else {
-                payload = checked.success;
-              }
-            }
-            inFlightAction = undefined;
-            yield* emit({
-              type: "actionFinished",
-              attemptId,
-              actionId,
-              tool: name,
-              outcome: failed ? "error" : "ok",
-              ...(outcomeCode === undefined ? {} : { code: outcomeCode }),
-              ...(outcomeMessage === undefined ? {} : { message: outcomeMessage }),
-            });
-            return { result: payload, isError: failed };
-          });
-
-        if (decoded._tag === "Failure") {
-          const error = toolError(
-            "invalid-params",
-            decoded.failure.message,
-            "choose-another-action",
-          );
-          return yield* finishAction(error, true, error.code, error.message);
-        }
-        const params = decoded.success as Record<string, unknown>;
-
-        const staleCheck = (observationId: unknown): ToolErrorResult | undefined => {
-          if (observationId === undefined) return undefined;
-          if (currentObservation === undefined) {
-            return toolError(
-              "stale-observation",
-              "no observation has been taken yet",
-              "re-observe",
-            );
-          }
-          if (observationId !== currentObservation.observationId) {
-            return toolError(
-              "stale-observation",
-              `observation ${String(observationId)} is no longer live (current: ${currentObservation.observationId})`,
-              "re-observe",
-            );
-          }
-          return undefined;
-        };
-
-        const refCheck = (ref: unknown): ToolErrorResult | undefined => {
-          if (ref === undefined || currentObservation === undefined) return undefined;
-          const matches = currentObservation.elements.filter((e) => e.ref === ref);
-          if (matches.length === 0) {
-            return toolError(
-              "unknown-reference",
-              `reference ${String(ref)} is not in the current observation`,
-              "re-observe",
-            );
-          }
-          if (matches.length > 1) {
-            return toolError(
-              "ambiguous-reference",
-              `reference ${String(ref)} is ambiguous`,
-              "re-observe",
-            );
-          }
-          return undefined;
-        };
-
-        const operation = <A>(effect: Effect.Effect<A, { readonly message: string }>) =>
-          effect.pipe(
-            Effect.timeoutOrElse({
-              duration: contract.budgets.operationTimeoutMs,
-              orElse: () => Effect.fail({ message: `${name} exceeded the per-operation timeout` }),
-            }),
-            Effect.result,
-          );
-
-        switch (name) {
-          case "observe": {
-            const observationId = yield* store.mintObservationId(attemptId);
-            const observed = yield* operation(session.observe(observationId));
-            if (observed._tag === "Failure") {
-              const error = toolError(
-                "operation-failed",
-                observed.failure.message,
-                "choose-another-action",
-              );
-              return yield* finishAction(error, true, error.code, error.message);
-            }
-            // Redact ONCE here: the same value is what the model sees, what is written next to the
-            // attempt and what the verifier later reads as evidence.
-            const observation = redactor.deep(observed.success);
-            currentObservation = observation;
-            const event = yield* journal({
-              type: "observationTaken",
-              attemptId,
-              observationId: observation.observationId,
-              url: observation.url,
-              title: observation.title,
-              elementCount: observation.elements.length,
-            }).pipe(Effect.result);
-            yield* recorder.recordObservation(
-              observation,
-              event._tag === "Success" ? event.success.seq : 0,
-            );
-            return yield* finishAction(observation, false);
-          }
-          case "navigate": {
-            const allowed = yield* checkNavigationOrigin(
-              String(params["url"]),
-              config.allowedOrigins,
-            ).pipe(Effect.result);
-            if (allowed._tag === "Failure") {
-              const error = toolError(
-                "origin-not-allowed",
-                allowed.failure.message,
-                "choose-another-action",
-              );
-              return yield* finishAction(error, true, error.code, error.message);
-            }
-            const navigated = yield* operation(session.navigate({ url: allowed.success }));
-            if (navigated._tag === "Failure") {
-              const error = toolError(
-                "operation-failed",
-                navigated.failure.message,
-                "choose-another-action",
-              );
-              return yield* finishAction(error, true, error.code, error.message);
-            }
-            currentObservation = undefined;
-            navigationSettled = navigated.success.settled;
-            return yield* finishAction(navigated.success, false);
-          }
-          case "click":
-          case "fill": {
-            const stale = staleCheck(params["observationId"]) ?? refCheck(params["ref"]);
-            if (stale !== undefined)
-              return yield* finishAction(stale, true, stale.code, stale.message);
-            const acted = yield* operation(
-              name === "click"
-                ? session.click({
-                    observationId: String(params["observationId"]),
-                    ref: String(params["ref"]),
-                  })
-                : session.fill({
-                    observationId: String(params["observationId"]),
-                    ref: String(params["ref"]),
-                    value: String(params["value"]),
-                  }),
-            );
-            if (acted._tag === "Failure") {
-              const error = toolError("operation-failed", acted.failure.message, "re-observe");
-              return yield* finishAction(error, true, error.code, error.message);
-            }
-            if (acted.success.navigated) {
-              currentObservation = undefined;
-              // The driver reports no settling for an interaction-driven navigation, so the
-              // absence rule must treat what follows as uncertain until the page is observed again.
-              navigationSettled = false;
-            }
-            return yield* finishAction(acted.success, false);
-          }
-          case "press": {
-            const stale =
-              params["observationId"] === undefined
-                ? undefined
-                : (staleCheck(params["observationId"]) ?? refCheck(params["ref"]));
-            if (stale !== undefined)
-              return yield* finishAction(stale, true, stale.code, stale.message);
-            const acted = yield* operation(
-              session.press({
-                ...(params["observationId"] === undefined
-                  ? {}
-                  : { observationId: String(params["observationId"]) }),
-                ...(params["ref"] === undefined ? {} : { ref: String(params["ref"]) }),
-                key: String(params["key"]),
-              }),
-            );
-            if (acted._tag === "Failure") {
-              const error = toolError("operation-failed", acted.failure.message, "re-observe");
-              return yield* finishAction(error, true, error.code, error.message);
-            }
-            if (acted.success.navigated) {
-              currentObservation = undefined;
-              // The driver reports no settling for an interaction-driven navigation, so the
-              // absence rule must treat what follows as uncertain until the page is observed again.
-              navigationSettled = false;
-            }
-            return yield* finishAction(acted.success, false);
-          }
-          case "scroll": {
-            const acted = yield* operation(
-              session.scroll({
-                direction: params["direction"] as "up" | "down",
-                ...(params["amount"] === undefined ? {} : { amount: Number(params["amount"]) }),
-              }),
-            );
-            if (acted._tag === "Failure") {
-              const error = toolError(
-                "operation-failed",
-                acted.failure.message,
-                "choose-another-action",
-              );
-              return yield* finishAction(error, true, error.code, error.message);
-            }
-            return yield* finishAction(acted.success, false);
-          }
-          case "screenshot": {
-            const label = params["label"] === undefined ? "agent" : String(params["label"]);
-            const shot = yield* recorder.takeScreenshot(session, label, {
-              ...(params["fullPage"] === undefined
-                ? {}
-                : { fullPage: Boolean(params["fullPage"]) }),
-              ...(actionSeq === undefined ? {} : { sourceSeq: actionSeq }),
-            });
-            if (shot.state !== "present") {
-              const error = toolError(
-                "operation-failed",
-                shot.reason ?? "screenshot capture failed",
-                "choose-another-action",
-              );
-              return yield* finishAction(error, true, error.code, error.message);
-            }
-            return yield* finishAction({ artifactId: shot.artifactId, label }, false);
-          }
-          case "check": {
-            const criterionId = String(params["criterionId"]);
-            if (!results.has(criterionId)) {
-              const error = toolError(
-                "unknown-criterion",
-                `${criterionId} is not a criterion of this contract (${[...results.keys()].join(", ")})`,
-                "choose-another-action",
-              );
-              return yield* finishAction(error, true, error.code, error.message);
-            }
-            yield* verifyCriterion(session, criterionId, "agent");
-            return yield* finishAction({ criterionId, accepted: true }, false);
-          }
-          case "finish": {
-            finishRequested = true;
-            return yield* finishAction(
-              {
-                accepted: true,
-                note: "final verification will run; `finish` never decides the verdict",
-              },
-              false,
-            );
-          }
-        }
-      });
+    const dispatcher = makeDispatcher({
+      attemptId,
+      store,
+      emitEvent: emit,
+      journalEvent: journal,
+      redactor,
+      recorder,
+      operationTimeoutMs: contract.budgets.operationTimeoutMs,
+      maxActions: contract.maxActions,
+      allowedOrigins: config.allowedOrigins,
+      screenshots: config.capture.screenshots,
+      criterionIds: contract.criteria.map((c) => c.id),
+      verifyCriterion: (session, criterionId) => verifyCriterion(session, criterionId, "agent"),
+    });
 
     // --- the agent loop ------------------------------------------------------------------------
 
@@ -1341,7 +976,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             });
             return;
           }
-          if (finishRequested) return;
+          if (dispatcher.finishRequested()) return;
           // A fatal execution error raised inside a tool dispatch (for instance a driver result
           // that does not decode) ends the loop here rather than being handed another turn.
           if (executionError !== undefined) return;
@@ -1366,9 +1001,9 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             return;
           }
 
-          if (pendingNudge !== undefined) {
-            messages.push({ role: "user", parts: [{ type: "text", text: pendingNudge }] });
-            pendingNudge = undefined;
+          const nudge = dispatcher.takePendingNudge();
+          if (nudge !== undefined) {
+            messages.push({ role: "user", parts: [{ type: "text", text: nudge }] });
           }
 
           const callId = `mc_${budget.modelCalls + 1}`;
@@ -1532,30 +1167,16 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
             // through the driver's own signals; the journal stays paired because the interrupt
             // handler closes the `actionStarted` it left open.
             const dispatchedRace = yield* racingCancellation(
-              dispatch(session, call).pipe(
-                Effect.onInterrupt(() =>
-                  Effect.suspend(() => {
-                    const open = inFlightAction;
-                    if (open === undefined) return Effect.void;
-                    inFlightAction = undefined;
-                    return emit({
-                      type: "actionFinished",
-                      attemptId,
-                      actionId: open.actionId,
-                      tool: open.tool,
-                      outcome: "error",
-                      code: "operation-failed",
-                      message: "the action was interrupted by a cancellation request",
-                    });
-                  }),
-                ),
-              ),
+              dispatcher
+                .dispatch(session, call)
+                .pipe(Effect.onInterrupt(() => dispatcher.closeInterruptedAction())),
             );
             if (dispatchedRace._tag === "cancelled") {
               yield* noteCancellation(dispatchedRace.reason);
               return;
             }
             const dispatched = dispatchedRace.value;
+            if (dispatched.executionError !== undefined) executionError = dispatched.executionError;
             resultParts.push({
               type: "toolResult",
               id: call.id,
@@ -1563,13 +1184,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
               result: dispatched.result,
               isError: dispatched.isError,
             });
-            if (
-              config.capture.screenshots === "every-action" &&
-              browserTools.has(call.name as ToolName)
-            ) {
-              yield* recorder.takeScreenshot(session, `after-${call.name}`);
-            }
-            if (finishRequested || executionError !== undefined) break;
+            if (dispatcher.finishRequested() || executionError !== undefined) break;
           }
           messages.push({ role: "user", parts: resultParts });
         }
@@ -1632,7 +1247,7 @@ const runAttempt = (deps: AttemptDeps): Effect.Effect<AttemptOutcome, never, Cry
         });
       } else {
         // The absence rule starts from what the driver reported about this first load (§8).
-        navigationSettled = initial.success.settled;
+        dispatcher.noteNavigationSettled(initial.success.settled);
         yield* agentLoop(session);
       }
 
