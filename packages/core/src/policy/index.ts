@@ -1,5 +1,6 @@
 export * from "./absence.js";
 export * from "./actions.js";
+export * from "./adjudicate.js";
 export * from "./aggregate.js";
 export * from "./budgets.js";
 export * from "./evidence.js";

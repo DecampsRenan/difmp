@@ -11,7 +11,7 @@ export interface EvidenceCheck {
   readonly attemptArtifacts: ReadonlySet<string>;
 }
 
-const appendLimitation = (result: CriterionResult, message: string): string =>
+export const appendLimitation = (result: CriterionResult, message: string): string =>
   result.limitations === undefined || result.limitations === ""
     ? message
     : `${result.limitations} | ${message}`;
@@ -69,7 +69,7 @@ export const enforceEvidenceIntegrity = (input: EvidenceCheck): CriterionResult 
     return recordDowngrade(result, {
       reason: "rejected-evidence",
       to: "inconclusive",
-      detail: "no evidence was attached, so the criterion cannot be considered verified",
+      detail: "no usable evidence was attached, so the criterion cannot be considered verified",
     });
   }
 
