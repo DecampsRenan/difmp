@@ -13,8 +13,20 @@ _Avoid_ : journey, test, cas de test
 
 **Contrat** :
 Le scénario figé au début d'un run — interpolé, découpé en critères, haché — écrit dans
-`contract.json` avant toute navigation. Immuable pour la durée du run.
+`contract.json` avant toute navigation. Immuable pour la durée du run. Produit de la Préparation
+du run, jamais réécrit après le gel.
 _Avoid_ : expectation figée
+
+**Préparation du run** :
+La chaîne qui fait passer le Scénario au Contrat : précédence des entrées (config < spec <
+`--inputs-file` < `--input`), interpolation de phase 1, contrôle des noms de registres, puis gel —
+interpolation stricte, hachés, et le seul remplacement de budget qu'un scénario ait le droit
+d'imposer (`timeout` sur `attemptTimeoutMs`). Un seul chemin, deux attitudes : stricte pour le run
+(on s'arrête au premier problème), tolérante pour `difmp validate` (on accumule tout, les
+références `{{ fixture.* }}` sont admises faute de setup). Ce que la fabrique de scripts de la CLI
+utilise n'est que son étage d'entrées — le même code, pas une copie.
+_Avoid_ : pré-run (comme nom), parsing (qui n'en est qu'un morceau), validation (nommer
+« l'attitude tolérante de la Préparation »)
 
 **Spec** :
 Désigne uniquement le fichier (`spec.e2e.md`, frontmatter `specPath`). Ne pas employer comme

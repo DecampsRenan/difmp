@@ -1,15 +1,11 @@
 import type { LoadedSpec, Registries, ResolvedConfig } from "@difmp/core";
-import { resolveInputPrecedence, resolveInputs, SpecLoader, validateReferences } from "@difmp/core";
+import { checkRun, SpecLoader } from "@difmp/core";
 import { Console, Effect, FileSystem, Option, Path } from "effect";
 import { UsageError } from "../errors.js";
 import { loadProject } from "../project.js";
 import { validateProviderConfig } from "../providers.js";
 import { selectSpecs } from "../select.js";
 import type { SelectFlags } from "./types.js";
-
-/** No setup has run, so these are placeholders — `validate` never touches a browser or a model. */
-const placeholderRun = { id: "r_aaaaaaaaaaaaa" };
-const placeholderAttempt = { id: "a1" };
 
 export interface SpecReport {
   readonly specPath: string;
@@ -77,74 +73,21 @@ export const validateSpec = (options: {
   readonly registries: Registries;
   readonly source: string;
 }): Effect.Effect<SpecReport> =>
-  Effect.gen(function* () {
-    const { config, registries, spec } = options;
-    const problems: Array<string> = [];
-    const fail = (message: string) => problems.push(message);
-
-    const declared = yield* resolveInputPrecedence({
-      source: options.source,
-      configInputs: config.inputs,
-      specInputs: spec.frontmatter.inputs ?? {},
-    }).pipe(Effect.result);
-    if (declared._tag === "Failure") fail(declared.failure.message);
-
-    const inputs =
-      declared._tag === "Success"
-        ? yield* resolveInputs({
-            declared: declared.success,
-            source: spec.specPath,
-            run: placeholderRun,
-            attempt: placeholderAttempt,
-            anchors: spec.fieldLines,
-          }).pipe(Effect.result)
-        : undefined;
-    if (inputs !== undefined && inputs._tag === "Failure") fail(inputs.failure.message);
-
-    const scope = {
-      run: placeholderRun,
-      attempt: placeholderAttempt,
-      inputs: inputs !== undefined && inputs._tag === "Success" ? inputs.success : {},
-    };
-
-    const body = yield* validateReferences({
-      text: spec.body,
-      source: spec.specPath,
-      field: "body",
-      anchor: { line: spec.bodyLine, column: 1 },
-      scope,
-    }).pipe(Effect.result);
-    if (body._tag === "Failure") fail(body.failure.message);
-
-    for (const criterion of spec.criteria) {
-      const checked = yield* validateReferences({
-        text: criterion.sourceText,
-        source: spec.specPath,
-        field: criterion.id,
-        anchor: { line: criterion.line, column: criterion.column },
-        scope,
-      }).pipe(Effect.result);
-      if (checked._tag === "Failure") fail(checked.failure.message);
-
-      if (criterion.checkName !== undefined && !registries.checks.has(criterion.checkName)) {
-        const lookup = yield* registries.checks.lookup(criterion.checkName).pipe(Effect.result);
-        if (lookup._tag === "Failure") fail(`${criterion.id}: ${lookup.failure.message}`);
-      }
-    }
-
-    const fixtureName = spec.frontmatter.fixture;
-    if (fixtureName !== undefined && !registries.fixtures.has(fixtureName)) {
-      const lookup = yield* registries.fixtures.lookup(fixtureName).pipe(Effect.result);
-      if (lookup._tag === "Failure") fail(lookup.failure.message);
-    }
-
-    return {
+  Effect.map(
+    checkRun({
+      spec: options.spec,
       specPath: options.specPath,
-      scenarioId: spec.frontmatter.id,
-      criteria: spec.criteria.length,
+      config: options.config,
+      registries: options.registries,
+      source: options.source,
+    }),
+    (problems) => ({
+      specPath: options.specPath,
+      scenarioId: options.spec.frontmatter.id,
+      criteria: options.spec.criteria.length,
       problems,
-    };
-  });
+    }),
+  );
 
 export const validateHandler = (
   flags: SelectFlags,
