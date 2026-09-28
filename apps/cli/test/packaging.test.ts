@@ -21,7 +21,7 @@ const pkg = JSON.parse(readFileSync(join(cliRoot, "package.json"), "utf8")) as {
   license: string;
 };
 
-/** Source trees whose code ends up INSIDE the published bundle (tsdown `noExternal: [/^@difmp\//]`). */
+/** Source trees whose code ends up INSIDE the published bundle (tsdown `noExternal`). */
 const bundledSources = [
   join(cliRoot, "src"),
   join(repoRoot, "packages", "core", "src"),
@@ -56,6 +56,12 @@ const bareImports: Array<{ readonly specifier: string; readonly file: string }> 
     }
     return found;
   });
+
+/** Packages tsdown inlines into the JavaScript bundle, so the tarball needs no runtime entry for them. */
+const isBundled = (specifier: string): boolean =>
+  specifier.startsWith("@difmp/") ||
+  specifier.startsWith("@effect/") ||
+  /^effect(\/|$)/.test(specifier);
 
 /** `@scope/name/deep` -> `@scope/name`; `name/deep` -> `name`. */
 const packageOf = (specifier: string): string => {
@@ -106,10 +112,17 @@ describe("published package.json", () => {
 
   it("declares every package the bundle imports at runtime", () => {
     const undeclared = bareImports
-      .filter(({ specifier }) => !specifier.startsWith("@difmp/"))
+      .filter(({ specifier }) => !isBundled(specifier))
       .filter(({ specifier }) => pkg.dependencies[packageOf(specifier)] === undefined)
       .map(({ file, specifier }) => `${specifier} (${file})`);
     expect([...new Set(undeclared)]).toEqual([]);
+  });
+
+  it("declares no @effect/* runtime dependency — they are bundled with the effect they were built against", () => {
+    // `@effect/*` declare `effect` as a caret peer: left external, npm and Yarn install a second,
+    // newer `effect` for them, and 4.0.0-rc.118 crashed the CLI at startup (missing
+    // `effect/unstable/encoding/Sse.js`). `effect` itself stays a dependency for the public types.
+    expect(Object.keys(pkg.dependencies).filter((name) => name.startsWith("@effect/"))).toEqual([]);
   });
 });
 
