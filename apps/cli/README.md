@@ -202,19 +202,23 @@ CLI also works under Yarn PnP, where the resolved path lives inside a zip.
 | `pnpm test`         | `vitest run --config vitest.config.ts`                     |
 
 `build:bundle` first rebuilds `apps/ui`, copies those fresh static assets, then emits ESM with `.js`
-/ `.d.ts` extensions, keeps the shebang, and sets the executable bit. `effect`, `@effect/*`,
-`playwright`, `tsx`, `yaml` and `tinyglobby` stay **external** — bundling
-`effect` would fight its module-instance-sensitive service identity and `playwright` cannot be bundled
-at all — while the private `@difmp/*` workspace packages are bundled in.
+/ `.d.ts` extensions, keeps the shebang, and sets the executable bit. The private `@difmp/*` workspace
+packages **and** the whole `effect` / `@effect/*` family are bundled in; `playwright`, `tsx`, `yaml`,
+`tinyglobby` and `jev-use` stay **external** (`playwright` cannot be bundled at all).
+
+`effect` is bundled because `@effect/*` declare it as a caret peer while the family ships as exact,
+lockstep prereleases. Left external, npm and Yarn installed a second, newer `effect` next to the pinned
+one, and `4.0.0-rc.118` (which dropped `effect/unstable/encoding/Sse.js`) crashed the CLI at startup
+under both. Bundled, the whole family is the exact set the workspace was tested with and there is a
+single module instance, so `Context` / service identity holds. The declaration files still import
+`effect` for the public types, so `effect` stays in `dependencies`; `@effect/*` are `devDependencies`.
 
 The four `@difmp/*` workspace packages sit in **`devDependencies`**, not `dependencies`. That is
 load-bearing rather than tidy: `pnpm pack` rewrites `workspace:*` to `0.1.0`, and a runtime dependency
 on `@difmp/core@0.1.0` would send an installer looking for a version that exists on no registry. They
 are bundled in, so the tarball needs none of them at runtime. The bare imports left in the bundle are
-exactly `effect`, `effect/unstable/{ai,cli,http,encoding}`,
-`@effect/platform-node/{NodeRuntime,NodeServices,NodeHttpServer}`, `@effect/ai-anthropic`,
-`playwright`, `yaml`, `tinyglobby` and `node:*` — plus `tsx`, imported dynamically by the config
-loader.
+exactly `playwright`, `yaml`, `tinyglobby`, `jev-use` and `node:*` — plus `tsx`, imported dynamically
+by the config loader.
 
 **The `@effect/platform-node` imports are deep subpaths, never the barrel.** The barrel re-exports
 `NodeRedis`, which eagerly imports `redis` — a _non-optional_ peer dependency of that package. npm and

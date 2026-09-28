@@ -472,11 +472,18 @@ await esbuild.build({
 - esbuild emits **no `.d.ts`** — run `tsc --emitDeclarationOnly` alongside.
 - `packages: "external"` externalizes bare specifiers only; relative imports are bundled.
 
-### 4.3 Deps bundled or external? -> **external**
+### 4.3 Deps bundled or external? -> **external, except the `effect` family**
 
-Keep `effect`, `@effect/*`, `playwright`, `tsx`, `yaml` as real `dependencies`. Bundling `effect` v4
-would fight its `Context`/service identity (module-instance sensitive), and bundling `playwright`
-is impossible (native browser payloads). Only the harness's own `src/` gets bundled.
+Keep `playwright`, `tsx`, `yaml` as real `dependencies`: bundling `playwright` is impossible (native
+browser payloads).
+
+`effect` and `@effect/*` were first kept external too, for fear of fighting `Context`/service
+identity (module-instance sensitive). That broke in practice (2026-09-28): `@effect/*` declare `effect`
+as a caret peer, so npm and Yarn installed a second, newer `effect` beside the pinned one, and
+`4.0.0-rc.118` removed a module `@effect/ai-anthropic@rc.113` imports. They are now **bundled into the
+JavaScript** (tsdown `noExternal`, JS pass only), which gives a single module instance of the exact
+family that was tested. The `.d.ts` output keeps importing `effect` for the public types, so `effect`
+stays a `dependency`; `@effect/*` are build-time only.
 
 ### 4.4 Shipping static assets (built React UI + report template)
 
