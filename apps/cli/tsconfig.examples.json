@@ -4,7 +4,6 @@
     "rootDir": "examples",
     "outDir": "dist/examples",
     "tsBuildInfoFile": "dist/examples/tsconfig.tsbuildinfo",
-    "baseUrl": ".",
     "paths": {
       "@decampsrenan/difmp": ["./src/index.ts"],
       "@decampsrenan/difmp/scripted": ["./src/scripted.ts"]

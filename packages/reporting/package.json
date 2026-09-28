@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@difmp/core": "workspace:*",
-    "effect": "4.0.0-rc.113"
+    "effect": "catalog:"
   },
   "engines": {
     "node": ">=22.12.0"

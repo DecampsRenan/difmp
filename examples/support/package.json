@@ -10,6 +10,6 @@
     "@difmp/agent-runtime": "workspace:*",
     "@difmp/core": "workspace:*",
     "@difmp/fixture-app": "workspace:*",
-    "effect": "4.0.0-rc.113"
+    "effect": "catalog:"
   }
 }

@@ -48,22 +48,22 @@
     "prepack": "pnpm --filter @difmp/core --filter @difmp/agent-runtime --filter @difmp/browser-playwright --filter @difmp/reporting run build && npm run build:bundle"
   },
   "dependencies": {
-    "effect": "4.0.0-rc.113",
-    "jev-use": "0.7.1",
-    "playwright": "1.63.0",
-    "tinyglobby": "^0.2.17",
-    "tsx": "^4.23.13",
-    "yaml": "^2.9.0"
+    "effect": "catalog:",
+    "jev-use": "catalog:",
+    "playwright": "catalog:",
+    "tinyglobby": "catalog:",
+    "tsx": "catalog:",
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@difmp/agent-runtime": "workspace:*",
     "@difmp/browser-playwright": "workspace:*",
     "@difmp/core": "workspace:*",
     "@difmp/reporting": "workspace:*",
-    "@effect/ai-anthropic": "4.0.0-rc.113",
-    "@effect/platform-node": "4.0.0-rc.113",
-    "tsdown": "^0.23.0",
-    "vitest": "^5.0.0"
+    "@effect/ai-anthropic": "catalog:",
+    "@effect/platform-node": "catalog:",
+    "tsdown": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=22.12.0"

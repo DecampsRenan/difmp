@@ -17,9 +17,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "effect": "4.0.0-rc.113",
-    "tinyglobby": "^0.2.17",
-    "yaml": "^2.9.0"
+    "effect": "catalog:",
+    "tinyglobby": "catalog:",
+    "yaml": "catalog:"
   },
   "engines": {
     "node": ">=22.12.0"
