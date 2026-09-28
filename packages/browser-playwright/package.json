@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "@difmp/core": "workspace:*",
-    "effect": "4.0.0-rc.113",
-    "playwright": "1.63.0"
+    "effect": "catalog:",
+    "playwright": "catalog:"
   },
   "engines": {
     "node": ">=22.12.0"

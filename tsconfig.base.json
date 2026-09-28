@@ -20,6 +20,8 @@
     "composite": true,
     "incremental": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    // TypeScript 7 defaults this to []. "*" keeps every installed @types package in scope.
+    "types": ["*"]
   }
 }
