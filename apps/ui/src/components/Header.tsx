@@ -1,23 +1,14 @@
-import type { ConnectionState } from "../state/useRunStream.js";
-import type { CancelState } from "../state/useRunStream.js";
+import type { ConnectionState, CancelState } from "../state/useRunStream.js";
 import type { RunModel } from "../state/model.js";
-import { Badge, durationOf, timeOf } from "./ui.js";
-
-const statusTone: Record<string, string> = {
-  running: "info",
-  passed: "ok",
-  failed: "bad",
-  inconclusive: "warn",
-  error: "bad",
-  cancelled: "warn",
-};
+import { liveStatusFromRun, liveStatusTone } from "../state/liveStatus.js";
+import { Badge } from "./ui.js";
 
 const connectionLabel: Record<ConnectionState, string> = {
   connecting: "connecting…",
-  live: "live stream",
+  live: "live",
   reconnecting: "reconnecting…",
-  closed: "stream closed (run finished)",
-  unavailable: "server unreachable",
+  closed: "finished",
+  unavailable: "unreachable",
 };
 
 const connectionTone: Record<ConnectionState, string> = {
@@ -28,6 +19,11 @@ const connectionTone: Record<ConnectionState, string> = {
   unavailable: "bad",
 };
 
+/**
+ * Minimal chrome for the simplified live view: brand, connection, cancel / close.
+ * Run metadata and stream counters were removed — they can return later without cluttering
+ * the first paint.
+ */
 export const Header = (props: {
   readonly model: RunModel;
   readonly connection: ConnectionState;
@@ -36,7 +32,6 @@ export const Header = (props: {
   readonly onCancel: () => void;
   readonly onReconnect: () => void;
   readonly elapsedMs: number;
-  /** A completed historical run can be selected while the rest of the suite is still running. */
   readonly suiteRunning?: boolean;
   readonly suiteFinished?: boolean;
   readonly onCloseDashboard?: () => void;
@@ -45,39 +40,46 @@ export const Header = (props: {
   const finished = model.status !== "running";
   const cancelDisabled =
     (finished && props.suiteRunning !== true) || props.cancel.pending || props.cancel.requested;
+  const live = liveStatusFromRun(model.status);
 
   return (
-    <header className="app-head">
+    <header className="app-head app-head-simple" data-testid="app-head">
       <div className="head-main">
         <div className="head-title">
-          <h1 data-testid="scenario-id">{model.scenarioId ?? "unknown scenario"}</h1>
-          <Badge tone={statusTone[model.status] ?? "neutral"}>
-            <span data-testid="run-status">{model.status}</span>
+          <h1>difmp</h1>
+          <Badge tone={liveStatusTone(live)}>
+            <span data-testid="run-status">{live}</span>
           </Badge>
+          {/* Keep the domain scenario id for tests / grepping without crowding the title. */}
+          <span className="head-scenario" data-testid="scenario-id">
+            {model.scenarioId ?? "—"}
+          </span>
         </div>
         <p className="head-path" data-testid="spec-path">
-          {model.specPath ?? "—"}
+          {model.specPath ?? "Waiting for a run…"}
         </p>
       </div>
 
-      <dl className="head-meta">
-        <div>
-          <dt>Run</dt>
-          <dd data-testid="run-id">{model.runId ?? "—"}</dd>
-        </div>
-        <div>
-          <dt>Attempt</dt>
-          <dd data-testid="attempt-id">{model.attemptId ?? "—"}</dd>
-        </div>
-        <div>
-          <dt>Started</dt>
-          <dd>{model.startedAt === undefined ? "—" : timeOf(model.startedAt)}</dd>
-        </div>
-        <div>
-          <dt>Duration</dt>
-          <dd data-testid="elapsed">{durationOf(props.elapsedMs)}</dd>
-        </div>
-      </dl>
+      {/* Hidden stream stats for existing tests / debugging without visual chrome. */}
+      <span
+        className="stream-stats stream-stats-hidden"
+        data-testid="stream-stats"
+        data-events-applied={model.applied}
+        data-duplicates-dropped={model.duplicates}
+        data-malformed-dropped={model.malformed}
+        data-last-seq={model.lastSeq}
+        data-connect-attempts={props.attempts}
+        hidden
+      />
+      <span data-testid="run-id" hidden>
+        {model.runId ?? "—"}
+      </span>
+      <span data-testid="attempt-id" hidden>
+        {model.attemptId ?? "—"}
+      </span>
+      <span data-testid="elapsed" hidden>
+        {props.elapsedMs}
+      </span>
 
       <div className="head-actions">
         <span
@@ -87,18 +89,6 @@ export const Header = (props: {
           <i className="dot" aria-hidden="true" />
           {connectionLabel[props.connection]}
         </span>
-        <span
-          className="stream-stats"
-          data-testid="stream-stats"
-          data-events-applied={model.applied}
-          data-duplicates-dropped={model.duplicates}
-          data-malformed-dropped={model.malformed}
-          data-last-seq={model.lastSeq}
-          data-connect-attempts={props.attempts}
-          title="Events applied / duplicates dropped on resume / last seq"
-        >
-          {model.applied} event(s) · {model.duplicates} duplicate(s) dropped · seq {model.lastSeq}
-        </span>
         {props.connection === "unavailable" ? (
           <button
             type="button"
@@ -106,7 +96,7 @@ export const Header = (props: {
             onClick={props.onReconnect}
             data-testid="reconnect-button"
           >
-            Resume the stream
+            Resume
           </button>
         ) : null}
         <button
@@ -123,8 +113,8 @@ export const Header = (props: {
               : finished && props.suiteRunning !== true
                 ? "Run finished"
                 : props.suiteRunning === true
-                  ? "Cancel the suite"
-                  : "Cancel the run"}
+                  ? "Cancel suite"
+                  : "Cancel"}
         </button>
         {props.suiteFinished === true && props.onCloseDashboard !== undefined ? (
           <button
@@ -133,7 +123,7 @@ export const Header = (props: {
             onClick={props.onCloseDashboard}
             data-testid="close-dashboard-button"
           >
-            Close dashboard
+            Close
           </button>
         ) : null}
       </div>

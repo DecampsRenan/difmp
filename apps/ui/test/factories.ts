@@ -1,17 +1,11 @@
 /**
  * Builders for the shapes the components render.
  *
- * They exist so a test can state ONLY what it is about — a criterion that failed, an artifact whose
- * capture failed — and inherit a coherent run for everything else. A test that spells out all
+ * They exist so a test can state ONLY what it is about — a criterion that failed, a run that
+ * errored — and inherit a coherent run for everything else. A test that spells out all
  * thirty fields of `RunModel` hides its own subject.
  */
-import type {
-  ArtifactView,
-  BudgetBreach,
-  CriterionView,
-  RunModel,
-  TimelineEntry,
-} from "../src/state/model.js";
+import type { RunModel } from "../src/state/model.js";
 import { emptyRunModel } from "../src/state/model.js";
 import type {
   Budgets,
@@ -21,7 +15,7 @@ import type {
   ResolvedConfig,
 } from "../src/types/events.js";
 
-export const budgets: Budgets = {
+const budgets: Budgets = {
   attemptTimeoutMs: 120_000,
   operationTimeoutMs: 15_000,
   maxModelCalls: 30,
@@ -40,7 +34,7 @@ export const capture: CaptureConfig = {
 /**
  * An override may name an optional field explicitly `undefined` to mean "this one has none".
  * `exactOptionalPropertyTypes` forbids that value on the views themselves, so such a key is
- * dropped rather than set: `artifact({ path: undefined })` yields an artifact with no path.
+ * dropped rather than set: `runModel({ runId: undefined })` yields a run with no id.
  */
 type Overrides<T> = { [K in keyof T]?: T[K] | undefined };
 
@@ -86,18 +80,6 @@ export const runModel = (over: Overrides<RunModel> = {}): RunModel =>
     over,
   );
 
-export const criterion = (over: Overrides<CriterionView> = {}): CriterionView =>
-  withOverrides(
-    {
-      id: "c1",
-      text: "The order confirmation is displayed",
-      method: "model",
-      status: "pending",
-      evidenceRequested: false,
-    },
-    over,
-  );
-
 export const criterionResult = (over: Overrides<CriterionResult> = {}): CriterionResult =>
   withOverrides(
     {
@@ -110,41 +92,6 @@ export const criterionResult = (over: Overrides<CriterionResult> = {}): Criterio
       observed: "Order #4821 is visible in the confirmation panel",
       evidence: ["shot-1"],
       evaluatedAtSeq: 12,
-    },
-    over,
-  );
-
-export const artifact = (over: Overrides<ArtifactView> = {}): ArtifactView =>
-  withOverrides(
-    {
-      seq: 5,
-      ts: "2026-09-12T10:00:05.250Z",
-      artifactId: "shot-1",
-      kind: "screenshot",
-      state: "present",
-      path: "screenshots/shot-1.png",
-    },
-    over,
-  );
-
-export const timelineEntry = (over: Overrides<TimelineEntry> = {}): TimelineEntry =>
-  withOverrides(
-    {
-      seq: 1,
-      ts: "2026-09-12T10:00:01.000Z",
-      kind: "lifecycle",
-      tone: "info",
-      label: "Run started",
-    },
-    over,
-  );
-
-export const breach = (over: Overrides<BudgetBreach> = {}): BudgetBreach =>
-  withOverrides(
-    {
-      budget: "maxTokens",
-      limit: 200_000,
-      used: 200_412,
     },
     over,
   );
