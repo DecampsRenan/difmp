@@ -222,13 +222,19 @@
             renderCriteria();
           }
           if (e.type === "verificationFinished") {
-            state.criteria.set(e.criterionId, { status: e.status, expected: e.expected });
+            // The verdict lives under `result` (CriterionResult), not on the event itself (#58).
+            const r = e.result || {};
+            state.criteria.set(e.criterionId, { status: r.status, expected: r.expected });
             renderCriteria();
           }
           if (e.type === "budgetExhausted" || e.type === "actionGuidanceExceeded") {
             el("budgets").textContent = short(e);
           }
-          push(m.seq, e.type, e.intent || e.url || e.status || e.reason || "");
+          push(
+            m.seq,
+            e.type,
+            e.intent || e.url || e.status || (e.result && e.result.status) || e.reason || "",
+          );
           return;
         }
         if (m.type === "scenarioStarted") {
