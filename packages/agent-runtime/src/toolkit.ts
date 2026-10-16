@@ -7,23 +7,6 @@ import { Tool, Toolkit } from "effect/unstable/ai";
 export { toolDefinitions, toolJsonSchema };
 
 /**
- * An LLM tool definition must be self-contained: several providers do not follow `$ref` inside a
- * tool's `input_schema`. Core emits with `referencePolicy: () => undefined`, which inlines
- * everything; this is the guard that proves it stayed that way.
- */
-export const findSchemaReferences = (schema: unknown, path = "$"): ReadonlyArray<string> => {
-  if (Array.isArray(schema))
-    return schema.flatMap((item, i) => findSchemaReferences(item, `${path}[${i}]`));
-  if (typeof schema !== "object" || schema === null) return [];
-  const out: Array<string> = [];
-  for (const [key, value] of Object.entries(schema as Record<string, unknown>)) {
-    if (key === "$ref" || key === "$defs" || key === "definitions") out.push(`${path}.${key}`);
-    out.push(...findSchemaReferences(value, `${path}.${key}`));
-  }
-  return out;
-};
-
-/**
  * Tool definitions cross the `ModelProvider` boundary as plain JSON Schema, so the provider side
  * rebuilds them with `Tool.dynamic`: no handler is ever attached and `params` stay opaque. The
  * harness — not the provider — decodes them with the Effect Schema that produced the JSON Schema.

@@ -43,12 +43,3 @@ export const checkNavigationOrigin = (
     }
     return Effect.succeed(parsed.toString());
   });
-
-export const isOriginAllowed = (url: string, allowedOrigins: ReadonlyArray<string>): boolean => {
-  try {
-    const parsed = new URL(url);
-    return allowedSchemes.has(parsed.protocol) && allowedOrigins.includes(parsed.origin);
-  } catch {
-    return false;
-  }
-};
