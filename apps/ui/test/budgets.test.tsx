@@ -317,3 +317,17 @@ describe("ActionGuidance", () => {
     expect(screen.queryByTestId("guidance-exceeded")).toBeNull();
   });
 });
+
+describe("BlockingBudgets — every budget kind core can emit has a label (#58)", () => {
+  it.each([
+    ["fixtureSetupTimeout", "fixture setup timeout"],
+    ["maxIdleTurns", "idle turns"],
+  ] as const)("names a %s breach", (budget, label) => {
+    const model = runModel({
+      config: resolvedConfig(),
+      budgetBreaches: [breach({ budget, limit: 3, used: 3 })],
+    });
+    render(<BlockingBudgets model={model} pricing={undefined} elapsedMs={0} />);
+    expect(screen.getByTestId("budget-breaches")).toHaveTextContent(`${label} exhausted`);
+  });
+});

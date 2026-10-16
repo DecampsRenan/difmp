@@ -44,7 +44,14 @@ export type ToolErrorCode =
   | "operation-failed"
   | "run-finished";
 
-export type BudgetKind = "attemptTimeout" | "operationTimeout" | "maxModelCalls" | "maxTokens";
+/** Mirrors `BudgetKind` in `packages/core/src/domain/errors.ts`; `apps/cli/test/wire-mirrors.test.ts` pins the two together (#58). */
+export type BudgetKind =
+  | "attemptTimeout"
+  | "operationTimeout"
+  | "fixtureSetupTimeout"
+  | "maxModelCalls"
+  | "maxTokens"
+  | "maxIdleTurns";
 
 export type RunStage =
   | "validate"
