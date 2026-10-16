@@ -1,12 +1,15 @@
 import type { UiRuntimeConfig } from "../runtime/config.js";
 import type { RunModel } from "../state/model.js";
+import type { BudgetKind } from "../types/events.js";
 import { Empty, Gauge, Panel, countOf, durationOf } from "./ui.js";
 
-const budgetLabel: Record<string, string> = {
+const budgetLabel: Record<BudgetKind, string> = {
   attemptTimeout: "attempt timeout",
   operationTimeout: "operation timeout",
+  fixtureSetupTimeout: "fixture setup timeout",
   maxModelCalls: "model calls",
   maxTokens: "tokens",
+  maxIdleTurns: "idle turns",
 };
 
 /**
