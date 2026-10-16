@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { Argument, Flag } from "effect/unstable/cli";
+import type { Command } from "effect/unstable/cli";
 
 const InputValue = Schema.Union([Schema.String, Schema.Finite, Schema.Boolean]);
 const InputsFile = Schema.Record(Schema.String, InputValue);
@@ -127,3 +128,9 @@ export const selectConfig = {
   tag: tagFlag,
   json: jsonFlag,
 };
+
+/** The parsed shape of `difmp run` (and of the bare `difmp` alias, which shares its config). */
+export type RunFlags = Command.Command.Config.Infer<typeof runConfig>;
+
+/** The parsed shape of `difmp list` and `difmp validate`. */
+export type SelectFlags = Command.Command.Config.Infer<typeof selectConfig>;

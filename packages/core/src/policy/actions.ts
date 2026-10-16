@@ -61,9 +61,3 @@ export const recordAction = (state: ActionGuidanceState): ActionGuidanceStep => 
 
 export const guidanceExceeded = (state: ActionGuidanceState): boolean =>
   state.used > state.guidance;
-
-/**
- * Exceeding the indicative threshold is NEVER a reason to end the loop. Kept as a named
- * constant so the runner reads as the contract does.
- */
-export const actionGuidanceIsBlocking = false as const;

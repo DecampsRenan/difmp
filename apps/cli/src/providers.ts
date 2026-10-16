@@ -8,15 +8,12 @@ import type {
 import { formatSchemaError, ModelProvider } from "@difmp/core";
 import {
   anthropicOptionsFromConfig,
-  anthropicAdapterId,
   anthropicModelProviderLayer,
   happyPathScript,
-  opencodeGoAdapterId,
   opencodeGoOptionsFromConfig,
   opencodeGoModelProviderLayer,
   prematureFinishScript,
   openJevEvaluator,
-  scriptedAdapterId,
   scriptedModelId,
   scriptedModelProviderLayer,
 } from "@difmp/agent-runtime";
@@ -216,7 +213,6 @@ export interface ProviderChoice {
   readonly layer: Layer.Layer<ModelProvider, UsageError>;
   readonly providerId: string;
   readonly modelId: string;
-  readonly adapterId: string;
 }
 
 /** Wire the provider named by `--provider` or by `difmp.config.ts`. */
@@ -246,7 +242,6 @@ export const modelProviderFor = (
         ),
         providerId: "anthropic",
         modelId: config.model ?? "unknown",
-        adapterId: anthropicAdapterId,
       };
     }
     if (config.provider === "opencode-go") {
@@ -268,7 +263,6 @@ export const modelProviderFor = (
         ),
         providerId: "opencode-go",
         modelId: config.model ?? "unknown",
-        adapterId: opencodeGoAdapterId,
       };
     }
     const script = yield* scriptFor(config, spec, registries, context);
@@ -276,6 +270,5 @@ export const modelProviderFor = (
       layer: scriptedModelProviderLayer(script),
       providerId: "scripted",
       modelId: scriptedModelId,
-      adapterId: scriptedAdapterId,
     };
   });

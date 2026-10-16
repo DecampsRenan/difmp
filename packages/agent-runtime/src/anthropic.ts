@@ -195,9 +195,3 @@ export const anthropicModelProviderLayer = (
       modelId: options.model,
     }),
   ).pipe(Layer.provide(anthropicLanguageModelLayer(options, httpClient)));
-
-/** Convenience for the CLI: config in, layer out. */
-export const anthropicModelProviderLayerFromConfig = (
-  config: ResolvedConfig,
-): Layer.Layer<ModelProvider, ProviderError | Config.ConfigError> =>
-  Layer.unwrap(Effect.map(anthropicOptionsFromConfig(config), anthropicModelProviderLayer));
