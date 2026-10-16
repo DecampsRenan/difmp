@@ -4,8 +4,6 @@ import { dirname, isAbsolute, join, parse, resolve } from "node:path";
 import { importConfigModule } from "./configModule.js";
 import { UsageError } from "./errors.js";
 
-export { importConfigModule } from "./configModule.js";
-
 const extensions: ReadonlyArray<string> = ["ts", "mts", "mjs", "js"];
 
 /**

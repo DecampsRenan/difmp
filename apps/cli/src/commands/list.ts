@@ -3,7 +3,7 @@ import { Console, Effect, FileSystem, Option, Path } from "effect";
 import type { UsageError } from "../errors.js";
 import { loadProject } from "../project.js";
 import { selectSpecs } from "../select.js";
-import type { SelectFlags } from "./types.js";
+import type { SelectFlags } from "../flags.js";
 
 /** `difmp list` starts NEITHER a model NOR a browser: it only reads spec files. */
 export const listHandler = (

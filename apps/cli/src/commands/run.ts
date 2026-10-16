@@ -19,7 +19,7 @@ import type { RunBus } from "../server/bus.js";
 import { makeRunBus } from "../server/bus.js";
 import { openUiServer } from "../server/server.js";
 import { harnessVersion } from "../version.js";
-import type { RunFlags } from "./types.js";
+import type { RunFlags } from "../flags.js";
 
 /**
  * `difmp run` — discover, execute once, report, exit.

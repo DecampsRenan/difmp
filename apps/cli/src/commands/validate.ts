@@ -5,7 +5,7 @@ import { UsageError } from "../errors.js";
 import { loadProject } from "../project.js";
 import { validateProviderConfig } from "../providers.js";
 import { selectSpecs } from "../select.js";
-import type { SelectFlags } from "./types.js";
+import type { SelectFlags } from "../flags.js";
 
 export interface SpecReport {
   readonly specPath: string;

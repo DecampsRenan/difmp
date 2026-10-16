@@ -40,7 +40,8 @@ export type {
 
 export { cli, difmp, exitCodeOf, reportFailures, teardown } from "./cli.js";
 export { harnessVersion } from "./version.js";
-export { importConfigModule, findConfigUpwards, locateConfig } from "./loadConfig.js";
+export { importConfigModule } from "./configModule.js";
+export { findConfigUpwards, locateConfig } from "./loadConfig.js";
 export { loadProject } from "./project.js";
 export type { LoadedProject } from "./project.js";
 export { selectSpecs, discoverPaths } from "./select.js";
